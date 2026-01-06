@@ -1,42 +1,24 @@
 import sqlite3
-from typing import List, Tuple
+import logging
 
-
-class DatabaseBuddy:
-    """Lightweight SQLite wrapper for storing conversation messages."""
-
-    def __init__(self, db_path: str = "buddy.db"):
+class BuddyDatabase:
+    def __init__(self, db_path="buddy_memory.db"):
         self.db_path = db_path
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.init_db()
+        self._setup()
 
-    def init_db(self) -> None:
-        c = self._conn.cursor()
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-        self._conn.commit()
+    def _setup(self):
+        with sqlite3.connect(self.db_path) as conn:
+            # Tabella per la cronologia recente (RUOLO fondamentale)
+            conn.execute('''CREATE TABLE IF NOT EXISTS history 
+                            (id INTEGER PRIMARY KEY, role TEXT, text TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+            # Tabella per i ricordi a lungo termine (METADATA)
+            conn.execute('''CREATE TABLE IF NOT EXISTS memories 
+                            (id INTEGER PRIMARY KEY, content TEXT, category TEXT, importance INTEGER)''')
 
-    def save_message(self, role: str, content: str) -> None:
-        c = self._conn.cursor()
-        c.execute("INSERT INTO messages (role, content) VALUES (?, ?)", (role, content))
-        self._conn.commit()
+    def add_history(self, role: str, text: str):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT INTO history (role, text) VALUES (?, ?)", (role, text))
 
-    def get_conversation(self, limit: int = 100) -> List[Tuple[str, str]]:
-        c = self._conn.cursor()
-        c.execute("SELECT role, content FROM messages ORDER BY id DESC LIMIT ?", (limit,))
-        rows = c.fetchall()
-        return list(reversed(rows))
-
-    def close(self) -> None:
-        try:
-            self._conn.close()
-        except Exception:
-            pass
+    def add_permanent_memory(self, content: str, category="generale"):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT INTO memories (content, category) VALUES (?, ?)", (content, category))

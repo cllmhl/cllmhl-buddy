@@ -1,45 +1,37 @@
-#!/usr/bin/env python3
-import argparse
-import sys
-from database_buddy import DatabaseBuddy
-from brain import Brain
+import os
+import logging
+from dotenv import load_dotenv
+from brain import BuddyBrain
+from database_buddy import BuddyDatabase
 
+# Setup logging professionale ma semplice
+logging.basicConfig(filename='buddy_system.log', level=logging.INFO)
 
-def run_interactive(db_path: str = "buddy.db") -> None:
-    db = DatabaseBuddy(db_path)
-    brain = Brain(db)
-    try:
-        print("Buddy interactive — type 'exit' or Ctrl-C to quit.")
-        while True:
-            try:
-                prompt = input("You: ")
-            except (EOFError, KeyboardInterrupt):
-                print()
-                break
-            if prompt.strip().lower() in ("exit", "quit"):
-                break
-            resp = brain.process_and_respond(prompt)
-            print("Buddy:", resp)
-    finally:
-        db.close()
+def main():
+    load_dotenv()
+    db = BuddyDatabase()
+    buddy = BuddyBrain(os.getenv("GOOGLE_API_KEY"))
 
+    print("--- Buddy OS Online (Raspberry Pi 5) ---")
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(description="Run Buddy CLI")
-    parser.add_argument("-m", "--message", help="Send a single message and exit")
-    parser.add_argument("--db", default="buddy.db", help="Path to SQLite DB file")
-    args = parser.parse_args(argv)
+    while True:
+        try:
+            user_input = input("Tu: ")
+            if user_input.lower() in ["esci", "quit"]: break
 
-    db = DatabaseBuddy(args.db)
-    brain = Brain(db)
-    try:
-        if args.message:
-            print(brain.process_and_respond(args.message))
-        else:
-            run_interactive(args.db)
-    finally:
-        db.close()
+            # 1. Salva input nel DB (Ruolo: user)
+            db.add_history("user", user_input)
 
+            # 2. Genera risposta con la personalità ironica
+            risposta = buddy.respond(user_input)
+            
+            # 3. Salva risposta nel DB (Ruolo: model)
+            db.add_history("model", risposta)
+
+            print(f"Buddy: {risposta}")
+
+        except KeyboardInterrupt:
+            break
 
 if __name__ == "__main__":
     main()
