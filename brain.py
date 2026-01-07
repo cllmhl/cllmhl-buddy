@@ -26,4 +26,4 @@ class BuddyBrain:
             return response.text
         except Exception as e:
             logging.error(f"Errore API Gemini: {e}")
-            return "Scusa, il mio cervello ha avuto un glitch. Ripeti?"
+            return f"Errore API Gemini: {e}"
