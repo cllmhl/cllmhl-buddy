@@ -1,7 +1,9 @@
 .env
 __pycache__/
 *.db
+*.db-shm
+*.db-wal
+*.log
 venv/
-buddy_system.log
-buddy_memory.db-wal
-buddy_memory.db-shm
+buddy_memory/
+

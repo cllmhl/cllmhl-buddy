@@ -13,6 +13,7 @@ class BuddyArchivist:
         self.model_id = self.config["model_id"]
 
     def distill_and_save(self, db):
+        # Recupera i log non processati
         logs = db.get_unprocessed_history()
         if not logs:
             return
@@ -45,13 +46,14 @@ class BuddyArchivist:
             nuovi_ricordi = json.loads(response.text)
             
             if nuovi_ricordi:
+                logging.info(f"Archivista: Estratti {len(nuovi_ricordi)} nuovi ricordi")
                 for r in nuovi_ricordi:
-                    # Usiamo i nomi delle chiavi definiti nel JSON (o quelli standard come fallback)
+                    # Uso del nuovo metodo per ChromaDB
                     db.add_permanent_memory(
-                        r.get('fatto', ''), 
-                        r.get('categoria', 'generale'), 
-                        "", # Note opzionali
-                        r.get('importanza', 1)
+                        fact=r.get('fatto', ''),
+                        category=r.get('categoria', 'generale'),
+                        notes="", # Note opzionali
+                        importance=r.get('importanza', 1)
                     )
             
             # Segna come processati
