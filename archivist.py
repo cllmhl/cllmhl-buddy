@@ -7,7 +7,7 @@ class BuddyArchivist:
     def __init__(self, api_key: str):
         # Inizializziamo il client con la nuova libreria
         self.client = genai.Client(api_key=api_key)
-        self.model_id = 'models/gemini-2.5-flash' # Usiamo il Pro? non funziona e non capisco i limiti..
+        self.model_id = 'gemini-2.5-flash-lite' # Usiamo il Pro? non funziona e non capisco i limiti..
 
     def distill_and_save(self, db):
         """Prende i log dal database, li analizza e salva i ricordi."""
