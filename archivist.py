@@ -5,60 +5,59 @@ import logging
 
 class BuddyArchivist:
     def __init__(self, api_key: str):
-        # Inizializziamo il client con la nuova libreria
+        # Carica la configurazione una volta all'avvio
+        with open("buddy_config.json", "r") as f:
+            self.config = json.load(f)["archivist"]
+            
         self.client = genai.Client(api_key=api_key)
-        self.model_id = 'gemini-2.5-flash-lite' # Usiamo il Pro? non funziona e non capisco i limiti..
+        self.model_id = self.config["model_id"]
 
     def distill_and_save(self, db):
-        """Prende i log dal database, li analizza e salva i ricordi."""
         logs = db.get_unprocessed_history()
         if not logs:
             return
 
-        # Prepariamo la conversazione per il prompt
         formatted_logs = "\n".join([f"{role}: {text}" for _, role, text in logs])
         
+        # Costruiamo il prompt dinamicamente dalle regole nel JSON
+        rules_str = "\n".join([f"- {rule}" for rule in self.config['output_rules']])
+        
         prompt = f"""
-        Sei l'Archivista di Buddy. Il tuo compito è distillare la conversazione seguente in fatti memorabili.
-        CONVERSAZIONE:
-        {formatted_logs}
+        {self.config['prompt_header']}
 
-        REGOLE DI OUTPUT:
-        1. Estrai solo informazioni personali, preferenze, progetti o scadenze dell'utente.
-        2. Rispondi ESCLUSIVAMENTE con un array JSON.
-        3. Ogni oggetto deve avere: "fatto", "categoria", "importanza" (1-5).
-        4. Se non c'è nulla di utile, rispondi con [].
+        REGOLE DA SEGUIRE:
+        {rules_str}
+
+        CONVERSAZIONE DA ANALIZZARE:
+        {formatted_logs}
         """
 
         try:
-            # Chiamata alla nuova API
             response = self.client.models.generate_content(
                 model=self.model_id,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    response_mime_type="application/json" # Forza l'output in JSON
+                    response_mime_type="application/json",
+                    temperature=self.config.get("temperature", 0.1)
                 )
             )
 
-            # Parsing del risultato
             nuovi_ricordi = json.loads(response.text)
-
-            # Salvataggio nel database
+            
             if nuovi_ricordi:
                 for r in nuovi_ricordi:
+                    # Usiamo i nomi delle chiavi definiti nel JSON (o quelli standard come fallback)
                     db.add_permanent_memory(
-                        r.get('fatto'), 
-                        r.get('categoria'), 
-                        "", 
+                        r.get('fatto', ''), 
+                        r.get('categoria', 'generale'), 
+                        "", # Note opzionali
                         r.get('importanza', 1)
                     )
             
-            # Segniamo i log come processati per non rileggerli
+            # Segna come processati
             ids = [log[0] for log in logs]
             db.mark_as_processed(ids)
-            
-            logging.info(f"Archivista: Processati {len(ids)} messaggi, estratti {len(nuovi_ricordi)} ricordi.")
+            logging.info(f"Archivista: {len(nuovi_ricordi)} ricordi estratti con successo.")
 
         except Exception as e:
-            logging.error(f"Errore durante l'archiviazione: {e}")
-            print(f"\n[Errore Archivista] {e}")
+            logging.error(f"Errore Archivista durante la distillazione: {e}")
