@@ -1,5 +1,4 @@
 import sqlite3
-import logging
 
 class BuddyDatabase:
     def __init__(self, db_path="buddy_memory.db"):
@@ -8,17 +7,32 @@ class BuddyDatabase:
 
     def _setup(self):
         with sqlite3.connect(self.db_path) as conn:
-            # Tabella per la cronologia recente (RUOLO fondamentale)
+            conn.execute("PRAGMA journal_mode=WAL;") # Permette letture/scritture contemporanee
+            # Aggiungiamo 'processed' per segnare cosa ha letto l'Archivista
             conn.execute('''CREATE TABLE IF NOT EXISTS history 
-                            (id INTEGER PRIMARY KEY, role TEXT, text TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-            # Tabella per i ricordi a lungo termine (METADATA)
+                            (id INTEGER PRIMARY KEY, role TEXT, text TEXT, 
+                             processed INTEGER DEFAULT 0, ts DATETIME DEFAULT CURRENT_TIMESTAMP)''')
             conn.execute('''CREATE TABLE IF NOT EXISTS memories 
-                            (id INTEGER PRIMARY KEY, content TEXT, category TEXT, importance INTEGER)''')
+                            (id INTEGER PRIMARY KEY, content TEXT, category TEXT, metadata TEXT, importance INTEGER)''')
 
-    def add_history(self, role: str, text: str):
+    def add_history(self, role, text):
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("INSERT INTO history (role, text) VALUES (?, ?)", (role, text))
 
-    def add_permanent_memory(self, content: str, category="generale"):
+    def get_unprocessed_history(self):
+        """Recupera tutti i log non ancora analizzati dall'Archivista."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("INSERT INTO memories (content, category) VALUES (?, ?)", (content, category))
+            cursor = conn.execute("SELECT id, role, text FROM history WHERE processed = 0")
+            return cursor.fetchall()
+
+    def mark_as_processed(self, ids):
+        """Segna i log come analizzati usando una lista di ID."""
+        if not ids: return
+        with sqlite3.connect(self.db_path) as conn:
+            placeholders = ','.join(['?'] * len(ids))
+            conn.execute(f"UPDATE history SET processed = 1 WHERE id IN ({placeholders})", ids)
+
+    def add_permanent_memory(self, content, category, metadata, importance):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT INTO memories (content, category, metadata, importance) VALUES (?, ?, ?, ?)", 
+                         (content, category, metadata, importance))

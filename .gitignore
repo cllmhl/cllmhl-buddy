@@ -3,3 +3,5 @@ __pycache__/
 *.db
 venv/
 buddy_system.log
+buddy_memory.db-wal
+buddy_memory.db-shm
