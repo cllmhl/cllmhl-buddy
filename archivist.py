@@ -3,6 +3,8 @@ from google.genai import types
 import json
 import logging
 
+logger = logging.getLogger(__name__)
+
 class BuddyArchivist:
     def __init__(self, api_key: str):
         # Carica la configurazione una volta all'avvio
@@ -36,9 +38,9 @@ class BuddyArchivist:
             nuovi_ricordi = json.loads(response.text)
             
             if nuovi_ricordi:
-                logging.info(f"Estratti {len(nuovi_ricordi)} nuovi ricordi")
+                logger.info(f"Estratti {len(nuovi_ricordi)} nuovi ricordi")
                 for r in nuovi_ricordi:
-                    logging.debug(r)
+                    logger.debug(r)
                     # Uso del nuovo metodo per ChromaDB
                     db.add_permanent_memory(
                         fact=r.get('fatto', ''),
@@ -50,7 +52,7 @@ class BuddyArchivist:
             # Segna come processati
             ids = [log[0] for log in logs]
             db.mark_as_processed(ids)
-            logging.info(f"{len(nuovi_ricordi)} ricordi salvati con successo.")
+            logger.info(f"{len(nuovi_ricordi)} ricordi salvati con successo.")
 
         except Exception as e:
-            logging.error(f"Errore durante la distillazione: {e}")
+            logger.error(f"Errore durante la distillazione: {e}")

@@ -4,6 +4,8 @@ import logging
 import json
 import os
 
+logger = logging.getLogger(__name__)
+
 class BuddyBrain:
     def __init__(self, api_key: str):
         # Carica configurazione
@@ -33,11 +35,11 @@ class BuddyBrain:
             if response.candidates[0].grounding_metadata:
                 metadata = response.candidates[0].grounding_metadata
                 if metadata.search_entry_point:
-                    logging.debug(f"Ricerca Google effettuata per: {user_text}")
+                    logger.debug(f"Ricerca Google effettuata per: {user_text}")
                     # Puoi anche accedere ai link usati:
                     # sources = metadata.grounding_chunks
                     
             return response.text
         except Exception as e:
-            logging.error(f"Errore Brain: {e}")
+            logger.error(f"Errore Brain: {e}")
             return f"Errore neurale: {e}"

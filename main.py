@@ -11,7 +11,7 @@ from archivist import BuddyArchivist
 
 # Setup logging
 handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupCount=1)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s:%(funcName)s - %(message)s')
 handler.setFormatter(formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -72,9 +72,9 @@ def main():
                 unprocessed = db.get_unprocessed_history()
                 if len(unprocessed) > 0:
                     # Usiamo \r per "pulire" la riga del prompt durante l'analisi
-                    logging.debug(f"L'Archivista sta analizzando {len(unprocessed)} messaggi...")
+                    logger.debug(f"L'Archivista sta analizzando {len(unprocessed)} messaggi...")
                     archivist.distill_and_save(db)
-                    logging.debug("Completato.")
+                    logger.debug("Completato.")
                 
                 last_archive_time = current_time
 
