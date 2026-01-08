@@ -1,3 +1,4 @@
+from logging.handlers import RotatingFileHandler
 import os
 import logging
 from dotenv import load_dotenv
@@ -9,7 +10,12 @@ from brain import BuddyBrain
 from archivist import BuddyArchivist
 
 # Setup logging
-logging.basicConfig(filename='buddy_system.log', level=logging.INFO)
+handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupCount=1)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logger.addHandler(handler)
 
 input_queue = queue.Queue()
 
@@ -66,10 +72,9 @@ def main():
                 unprocessed = db.get_unprocessed_history()
                 if len(unprocessed) > 0:
                     # Usiamo \r per "pulire" la riga del prompt durante l'analisi
-                    print(f"\r[Sistema] L'Archivista sta analizzando {len(unprocessed)} messaggi...", end="")
+                    logging.debug(f"L'Archivista sta analizzando {len(unprocessed)} messaggi...")
                     archivist.distill_and_save(db)
-                    print(" Completato.")
-                    print("Tu > ", end="", flush=True)
+                    logging.debug("Completato.")
                 
                 last_archive_time = current_time
 

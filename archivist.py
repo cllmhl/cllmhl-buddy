@@ -18,26 +18,16 @@ class BuddyArchivist:
         if not logs:
             return
 
+        # Formatta la conversazione come unico blocco di testo
         formatted_logs = "\n".join([f"{role}: {text}" for _, role, text in logs])
         
-        # Costruiamo il prompt dinamicamente dalle regole nel JSON
-        rules_str = "\n".join([f"- {rule}" for rule in self.config['output_rules']])
-        
-        prompt = f"""
-        {self.config['prompt_header']}
-
-        REGOLE DA SEGUIRE:
-        {rules_str}
-
-        CONVERSAZIONE DA ANALIZZARE:
-        {formatted_logs}
-        """
-
         try:
+            # Chiamata pulita: istruzioni nel sistema, dati nel contenuto
             response = self.client.models.generate_content(
                 model=self.model_id,
-                contents=prompt,
+                contents=f"Analizza questa conversazione:\n{formatted_logs}",
                 config=types.GenerateContentConfig(
+                    system_instruction=self.config["system_instruction"],
                     response_mime_type="application/json",
                     temperature=self.config.get("temperature", 0.1)
                 )
@@ -46,8 +36,9 @@ class BuddyArchivist:
             nuovi_ricordi = json.loads(response.text)
             
             if nuovi_ricordi:
-                logging.info(f"Archivista: Estratti {len(nuovi_ricordi)} nuovi ricordi")
+                logging.info(f"Estratti {len(nuovi_ricordi)} nuovi ricordi")
                 for r in nuovi_ricordi:
+                    logging.debug(r)
                     # Uso del nuovo metodo per ChromaDB
                     db.add_permanent_memory(
                         fact=r.get('fatto', ''),
@@ -59,7 +50,7 @@ class BuddyArchivist:
             # Segna come processati
             ids = [log[0] for log in logs]
             db.mark_as_processed(ids)
-            logging.info(f"Archivista: {len(nuovi_ricordi)} ricordi estratti con successo.")
+            logging.info(f"{len(nuovi_ricordi)} ricordi salvati con successo.")
 
         except Exception as e:
-            logging.error(f"Errore Archivista durante la distillazione: {e}")
+            logging.error(f"Errore durante la distillazione: {e}")
