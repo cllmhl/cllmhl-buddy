@@ -29,7 +29,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-# --- SILENZIAMENTO ERRORI ALSA ---
+# --- SILENZIAMENTO LOG ESTERNI (ALSA/JACK) ---
 def py_error_handler(filename, line, function, err, fmt):
     pass
 
@@ -43,6 +43,17 @@ def silence_alsa():
         asound.snd_lib_error_set_handler(c_error_handler)
     except Exception:
         pass
+
+class SuppressStream:
+    """Zittisce forzatamente stderr a basso livello per bloccare JACK/ALSA in console."""
+    def __enter__(self):
+        self.err_null = os.open(os.devnull, os.O_WRONLY)
+        self.old_err = os.dup(2)
+        os.dup2(self.err_null, 2)
+    def __exit__(self, *_):
+        os.dup2(self.old_err, 2)
+        os.close(self.err_null)
+        os.close(self.old_err)
 
 # --- DEFINIZIONE EVENTI ---
 @dataclass
@@ -105,22 +116,24 @@ def jabra_thread():
             continue
 
         try:
-            with sr.Microphone() as source:
-                # Timeout breve per non bloccare il thread per sempre se c'è silenzio
-                try:
-                    # logger.debug("Jabra in ascolto...") # Troppo verboso anche per il log?
-                    audio = r.listen(source, timeout=1, phrase_time_limit=5)
-                    text = r.recognize_google(audio, language="it-IT")
-                    
-                    if text:
-                        logger.info(f"Jabra Input Rilevato: {text}")
-                        event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
-                        event_queue.put(event)
+            # Wrap per silenziare i log JACK/ALSA durante l'apertura del microfono
+            with SuppressStream():
+                with sr.Microphone() as source:
+                    # Timeout breve per non bloccare il thread per sempre se c'è silenzio
+                    try:
+                        # logger.debug("Jabra in ascolto...") # Troppo verboso anche per il log?
+                        audio = r.listen(source, timeout=1, phrase_time_limit=5)
+                        text = r.recognize_google(audio, language="it-IT")
                         
-                except sr.WaitTimeoutError:
-                    pass 
-                except sr.UnknownValueError:
-                    pass 
+                        if text:
+                            logger.info(f"Jabra Input Rilevato: {text}")
+                            event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
+                            event_queue.put(event)
+                            
+                    except sr.WaitTimeoutError:
+                        pass 
+                    except sr.UnknownValueError:
+                        pass 
                     
         except Exception as e:
             logger.error(f"Errore critico Jabra: {e}")
@@ -131,7 +144,7 @@ def jabra_thread():
 def main():
     # Silenzia ALSA prima di ogni altra operazione audio
     silence_alsa()
-    
+
     # Carica prima la configurazione pubblica (che può essere sovrascritta da quella privata)
     load_dotenv("config.env")
     # Carica la chiave API dal file privato
@@ -155,8 +168,10 @@ def main():
     # --- CONTROLLO HARDWARE AUDIO ---
     audio_enabled = False
     try:
-        # Verifica se ci sono microfoni collegati
-        mics = sr.Microphone.list_microphone_names()
+        # Verifica se ci sono microfoni collegati (Silenziato con SuppressStream)
+        with SuppressStream():
+            mics = sr.Microphone.list_microphone_names()
+        
         if mics:
             logger.info(f"Microfoni trovati: {mics}")
             t_jabra = threading.Thread(target=jabra_thread, daemon=True, name="JabraThread")
