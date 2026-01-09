@@ -7,6 +7,7 @@ import queue
 import time
 import subprocess
 from dataclasses import dataclass
+from ctypes import CFUNCTYPE, c_char_p, c_int, cdll # Aggiunto per silence_alsa
 import speech_recognition as sr
 from gtts import gTTS
 
@@ -27,6 +28,21 @@ logging.getLogger("posthog").setLevel(logging.ERROR)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
+
+# --- SILENZIAMENTO ERRORI ALSA ---
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+def silence_alsa():
+    """Impedisce alle librerie audio di scrivere errori non critici nel terminale."""
+    try:
+        asound = cdll.LoadLibrary('libasound.so.2')
+        asound.snd_lib_error_set_handler(c_error_handler)
+    except Exception:
+        pass
 
 # --- DEFINIZIONE EVENTI ---
 @dataclass
@@ -113,6 +129,9 @@ def jabra_thread():
 # --- MAIN LOOP ---
 
 def main():
+    # Silenzia ALSA prima di ogni altra operazione audio
+    silence_alsa()
+    
     # Carica prima la configurazione pubblica (che può essere sovrascritta da quella privata)
     load_dotenv("config.env")
     # Carica la chiave API dal file privato
