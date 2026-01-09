@@ -125,14 +125,27 @@ def main():
 
     # Avvio Threads
     t_key = threading.Thread(target=keyboard_thread, daemon=True, name="KbdThread")
-    t_jabra = threading.Thread(target=jabra_thread, daemon=True, name="JabraThread")
-    
     t_key.start()
-    t_jabra.start()
 
-    # UNICO Output visibile all'avvio
-    print("\n--- Buddy OS Online (Audio + Testo) ---")
-    print("Scrivi o parla. I log sono in buddy_system.log")
+    # --- CONTROLLO HARDWARE AUDIO ---
+    audio_enabled = False
+    try:
+        # Verifica se ci sono microfoni collegati
+        mics = sr.Microphone.list_microphone_names()
+        if mics:
+            logger.info(f"Microfoni trovati: {mics}")
+            t_jabra = threading.Thread(target=jabra_thread, daemon=True, name="JabraThread")
+            t_jabra.start()
+            audio_enabled = True
+        else:
+            logger.warning("Nessun microfono rilevato. JabraThread non avviato.")
+    except Exception as e:
+        logger.error(f"Impossibile verificare l'hardware audio: {e}")
+
+    # Output visibile all'avvio
+    msg_audio = "Attivo" if audio_enabled else "Non disponibile"
+    print("\n--- Buddy OS Online ---")
+    print(f"Audio: {msg_audio} | Log: buddy_system.log")
     print("\nTu > ", end="", flush=True)
 
     last_archive_time = time.time()
@@ -147,7 +160,7 @@ def main():
                 if event.content.lower() in ["esci", "quit", "spegniti"]:
                     logger.info("Ricevuto comando di spegnimento")
                     print("\nBuddy: Shutdown...")
-                    if event.source == "jabra":
+                    if event.source == "jabra" and audio_enabled:
                         speak_text("Mi sto spegnendo.")
                     break
 
@@ -171,7 +184,8 @@ def main():
                 # Ripristina il prompt per il prossimo input
                 print("\nTu > ", end="", flush=True)
 
-                if event.source == "jabra":
+                # Parla solo se l'audio è abilitato e l'input era vocale
+                if event.source == "jabra" and audio_enabled:
                     speak_text(risposta)
                 
                 event_queue.task_done()
