@@ -80,7 +80,8 @@ def speak_text(text):
         tts.save(filename)
         
         logger.debug("Riproduzione audio avviata")
-        subprocess.run(["mpg123", "-q", filename])
+        # Aggiunto stderr=subprocess.DEVNULL per evitare log JACK/ALSA durante la riproduzione
+        subprocess.run(["mpg123", "-q", filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         if os.path.exists(filename):
             os.remove(filename)
