@@ -113,7 +113,10 @@ def jabra_thread():
 # --- MAIN LOOP ---
 
 def main():
-    load_dotenv()
+    # Carica prima la configurazione pubblica (che può essere sovrascritta da quella privata)
+    load_dotenv("config.env")
+    # Carica la chiave API dal file privato
+    load_dotenv(".env")
     
     # Inizializzazione
     try:
