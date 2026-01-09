@@ -76,15 +76,26 @@ def speak_text(text):
         buddy_is_speaking.set()
         
         tts = gTTS(text=text, lang='it')
-        filename = "temp_response.mp3"
+        filename = "debug_audio.mp3"  # Nome fisso per trovarlo facilmente
         tts.save(filename)
         
-        logger.debug("Riproduzione audio avviata")
-        # Aggiunto stderr=subprocess.DEVNULL per evitare log JACK/ALSA durante la riproduzione
-        subprocess.run(["mpg123", "-q", filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logger.debug(f"File {filename} creato. Avvio riproduzione...")
         
-        if os.path.exists(filename):
-            os.remove(filename)
+        # Usiamo stderr=subprocess.PIPE per leggere l'errore se mpg123 fallisce
+        # Proviamo a non forzare il device, lasciando che il sistema usi il default
+        result = subprocess.run(
+            ["mpg123", "-q", filename], 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Errore mpg123 (Exit Code {result.returncode}): {result.stderr}")
+        
+        # COMMENTA temporaneamente la riga sotto per verificare se il file viene creato
+        # if os.path.exists(filename): os.remove(filename) 
+        
         logger.debug("Riproduzione audio completata")
             
     except Exception as e:
