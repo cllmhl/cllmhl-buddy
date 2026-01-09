@@ -21,6 +21,9 @@ handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupC
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
 handler.setFormatter(formatter)
 
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("chromadb").setLevel(logging.INFO)
+logging.getLogger("posthog").setLevel(logging.ERROR)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
