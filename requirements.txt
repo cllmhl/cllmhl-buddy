@@ -4,3 +4,5 @@ chromadb
 SpeechRecognition
 gTTS
 pyaudio
+gpiozero
+lgpio
