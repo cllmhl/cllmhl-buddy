@@ -10,11 +10,18 @@ from dataclasses import dataclass
 from ctypes import CFUNCTYPE, c_char_p, c_int, cdll # Aggiunto per silence_alsa
 import speech_recognition as sr
 from gtts import gTTS
+# --- AGGIUNTA LIBRERIA GPIO ---
+from gpiozero import LED
 
 # Le tue classi esistenti
 from database_buddy import BuddyDatabase
 from brain import BuddyBrain
 from archivist import BuddyArchivist
+
+# --- CONFIGURAZIONE HARDWARE LED ---
+# Inizializzazione LED sui pin scelti (26 Blu, 21 Verde)
+led_ascolto = LED(26) 
+led_stato = LED(21)
 
 # --- CONFIGURAZIONE LOGGING ---
 # I log vanno SOLO su file, niente output su console
@@ -73,6 +80,7 @@ def speak_text(text):
     """Genera audio TTS."""
     try:
         logger.debug(f"Inizio sintesi vocale: {text[:20]}...")
+        led_stato.on() # Accensione LED verde (parlato)
         buddy_is_speaking.set()
         
         tts = gTTS(text=text, lang='it')
@@ -102,6 +110,7 @@ def speak_text(text):
         logger.error(f"Errore TTS: {e}")
     finally:
         buddy_is_speaking.clear()
+        led_stato.off() # Spegnimento LED verde
 
 # --- SENSORI (INPUT THREADS) ---
 
@@ -134,7 +143,10 @@ def jabra_thread():
                     # Timeout breve per non bloccare il thread per sempre se c'è silenzio
                     try:
                         # logger.debug("Jabra in ascolto...") # Troppo verboso anche per il log?
+                        led_ascolto.on() # Accensione LED blu (ascolto)
                         audio = r.listen(source, timeout=1, phrase_time_limit=5)
+                        led_ascolto.off() # Spegnimento LED blu dopo cattura audio
+                        
                         text = r.recognize_google(audio, language="it-IT")
                         
                         if text:
@@ -143,11 +155,14 @@ def jabra_thread():
                             event_queue.put(event)
                             
                     except sr.WaitTimeoutError:
+                        led_ascolto.off() # Spegnimento LED se timeout
                         pass 
                     except sr.UnknownValueError:
+                        led_ascolto.off() # Spegnimento LED se non compreso
                         pass 
                     
         except Exception as e:
+            led_ascolto.off()
             logger.error(f"Errore critico Jabra: {e}")
             time.sleep(1)
 
@@ -162,6 +177,10 @@ def main():
     # Carica la chiave API dal file privato
     load_dotenv(".env")
     
+    # Reset LED all'avvio
+    led_ascolto.off()
+    led_stato.off()
+
     # Inizializzazione
     try:
         db = BuddyDatabase()
@@ -226,6 +245,7 @@ def main():
                 logger.info(f"Input processato ({event.source}): {event.content}")
 
                 # Processo Cognitivo
+                led_stato.on() # Accensione LED verde (elaborazione brain)
                 db.add_history("user", event.content)
                 risposta = buddy.respond(event.content)
                 db.add_history("model", risposta)
@@ -240,6 +260,7 @@ def main():
                 if event.source == "jabra" and audio_enabled:
                     speak_text(risposta)
                 
+                led_stato.off() # Fine elaborazione/parlato
                 event_queue.task_done()
 
             # 2. GESTIONE ARCHIVISTA (Silenziosa)
@@ -258,6 +279,10 @@ def main():
     except KeyboardInterrupt:
         print("\nBuddy: Arresto forzato.")
         logger.warning("Arresto forzato da tastiera")
+    finally:
+        # Cleanup finale LED
+        led_ascolto.off()
+        led_stato.off()
 
 if __name__ == "__main__":
     main()
