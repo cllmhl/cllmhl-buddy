@@ -130,13 +130,17 @@ def jabra_thread():
     """Ascolta il microfono Jabra."""
     r = sr.Recognizer()
     
-    # --- MODIFICA STRETTAMENTE NECESSARIA ---
-    # Riducendo pause_threshold, termina l'ascolto appena smetti di parlare (Problema 2)
-    r.pause_threshold = 0.8  
+    # 1.5 o 2.0 secondi sono ideali per un parlato naturale con pause.
+    r.pause_threshold = 1.5  
+    
+    # Questo parametro definisce quanto deve essere lunga una pausa "minima" 
+    # all'interno di una frase per non essere considerata fine della frase.
+    r.non_speaking_duration = 0.5
+    
     # Dynamic energy aiuta a regolare la sensibilità automaticamente (Problema 3)
     r.dynamic_energy_threshold = True 
     
-    logger.info("Thread Jabra avviato con calibrazione dinamica")
+    logger.info("Thread Jabra avviato")
     
     while True:
         if buddy_is_speaking.is_set():
@@ -147,12 +151,10 @@ def jabra_thread():
             # Wrap per silenziare i log JACK/ALSA durante l'apertura del microfono
             with SuppressStream():
                 with sr.Microphone() as source:
-                    # --- MODIFICA STRETTAMENTE NECESSARIA ---
                     # Calibra il rumore ambientale per non dover urlare (Problema 3)
                     # Ascolta il rumore di fondo per 0.5 secondi prima di ogni ascolto
-                    r.adjust_for_ambient_noise(source, duration=0.5)
+                    r.adjust_for_ambient_noise(source, duration=0.1)
                     
-                    # Timeout breve per non bloccare il thread per sempre se c'è silenzio
                     try:
                         # logger.debug("Jabra in ascolto...") # Troppo verboso anche per il log?
                         led_ascolto.on() # Accensione LED blu (ascolto)
@@ -180,7 +182,7 @@ def jabra_thread():
         except Exception as e:
             led_ascolto.off()
             logger.error(f"Errore critico Jabra: {e}")
-            time.sleep(1)
+            time.sleep(0.1)
 
 # --- MAIN LOOP ---
 
