@@ -129,7 +129,14 @@ def keyboard_thread():
 def jabra_thread():
     """Ascolta il microfono Jabra."""
     r = sr.Recognizer()
-    logger.info("Thread Jabra avviato")
+    
+    # --- MODIFICA STRETTAMENTE NECESSARIA ---
+    # Riducendo pause_threshold, termina l'ascolto appena smetti di parlare (Problema 2)
+    r.pause_threshold = 0.8  
+    # Dynamic energy aiuta a regolare la sensibilità automaticamente (Problema 3)
+    r.dynamic_energy_threshold = True 
+    
+    logger.info("Thread Jabra avviato con calibrazione dinamica")
     
     while True:
         if buddy_is_speaking.is_set():
@@ -140,11 +147,20 @@ def jabra_thread():
             # Wrap per silenziare i log JACK/ALSA durante l'apertura del microfono
             with SuppressStream():
                 with sr.Microphone() as source:
+                    # --- MODIFICA STRETTAMENTE NECESSARIA ---
+                    # Calibra il rumore ambientale per non dover urlare (Problema 3)
+                    # Ascolta il rumore di fondo per 0.5 secondi prima di ogni ascolto
+                    r.adjust_for_ambient_noise(source, duration=0.5)
+                    
                     # Timeout breve per non bloccare il thread per sempre se c'è silenzio
                     try:
                         # logger.debug("Jabra in ascolto...") # Troppo verboso anche per il log?
                         led_ascolto.on() # Accensione LED blu (ascolto)
-                        audio = r.listen(source, timeout=1, phrase_time_limit=5)
+                        
+                        # timeout=5: aspetta 5 secondi che tu inizi a parlare
+                        # phrase_time_limit=None: non interrompe finché non finisci la frase
+                        audio = r.listen(source, timeout=5, phrase_time_limit=None)
+                        
                         led_ascolto.off() # Spegnimento LED blu dopo cattura audio
                         
                         text = r.recognize_google(audio, language="it-IT")
