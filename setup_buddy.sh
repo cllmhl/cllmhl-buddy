@@ -17,6 +17,8 @@ sudo apt-get install -y \
     mpg123 \
     flac \
     libasound2-dev \
+    liblgpio-dev \
+    swig \
     python3-pip \
     python3-venv \
     python3-dev \
