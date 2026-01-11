@@ -187,6 +187,7 @@ class BuddyVoice:
 # --- CLASSE PER L'INPUT UDITIVO (EARS) ---
 class BuddyEars:
     def __init__(self, event_queue, speaking_event):
+        # Configurazione: default 'cloud' (Google), opzionale 'local' (es. Whisper)
         self.mode = os.getenv("STT_MODE", "cloud").lower()
         self.event_queue = event_queue
         self.buddy_is_speaking = speaking_event
@@ -195,52 +196,34 @@ class BuddyEars:
         logger.info(f"BuddyEars inizializzato in modalità: {self.mode}")
 
     def listen_loop(self):
-        """Loop principale di ascolto bilanciato."""
+        """Loop principale di ascolto."""
         if not self._check_hardware():
             return
 
         r = sr.Recognizer()
-        
-        # --- TUNING BILANCIATO ---
-        # 0.6 era troppo aggressivo (ti tagliava il respiro).
-        # 1.5 era troppo lento.
-        # 1.0 è il compromesso ideale per il parlato italiano (che ha molte pause).
-        r.pause_threshold = 1.0  
-        
-        # Quanto "non-parlato" serve per considerare un segmento audio valido.
-        r.non_speaking_duration = 0.5 
-        
-        # Manteniamo la soglia dinamica per adattarci ai rumori di casa
-        r.dynamic_energy_threshold = True 
-        r.energy_threshold = 300 
+        r.pause_threshold = 1.5
+        r.non_speaking_duration = 0.5
+        r.dynamic_energy_threshold = True
 
-        logger.info("Thread Jabra (Ears) avviato - Apertura Stream Audio...")
+        logger.info("Thread Jabra (Ears) avviato")
 
-        try:
-            # Manteniamo il microfono sempre aperto (riduce latenza hardware)
-            with SuppressStream():
-                with sr.Microphone() as source:
-                    logger.info("Calibrazione iniziale (1s)...")
-                    r.adjust_for_ambient_noise(source, duration=1.0)
-                    logger.info("Calibrazione completata. Buddy ti ascolta.")
-                    
-                    # Segnale visivo: Pronto
-                    self.led_ascolto.on(); time.sleep(0.2); self.led_ascolto.off()
+        while self.running:
+            # Se Buddy sta parlando, le orecchie riposano per evitare eco
+            if self.buddy_is_speaking.is_set():
+                time.sleep(0.1)
+                continue
 
-                    while self.running:
-                        if self.buddy_is_speaking.is_set():
-                            time.sleep(0.1)
-                            continue
-
+            try:
+                with SuppressStream():
+                    with sr.Microphone() as source:
+                        r.adjust_for_ambient_noise(source, duration=0.1)
+                        
                         try:
                             self.led_ascolto.on()
-                            
-                            # Timeout=None: aspetta in eterno che tu inizi
-                            # phrase_time_limit=None: NON tagliare l'audio dopo tot secondi.
-                            # Lasciamo che sia il pause_threshold a decidere quando hai finito.
-                            audio = r.listen(source, timeout=None, phrase_time_limit=None)
-                            
+                            # Timeout 5s per iniziare a parlare
+                            audio = r.listen(source, timeout=5, phrase_time_limit=None)
                             self.led_ascolto.off()
+                            
                             self._process_audio(r, audio)
 
                         except sr.WaitTimeoutError:
@@ -248,20 +231,18 @@ class BuddyEars:
                             pass
                         except sr.UnknownValueError:
                             self.led_ascolto.off()
-                            pass 
-                        except Exception as inner_e:
-                            self.led_ascolto.off()
-                            logger.error(f"Errore ciclo ascolto: {inner_e}")
-        
-        except Exception as e:
-            logger.error(f"Errore critico Hardware/Microfono: {e}")
-            self.led_ascolto.off()
+                            pass
+            except Exception as e:
+                self.led_ascolto.off()
+                logger.error(f"Errore critico Ears: {e}")
+                time.sleep(0.1)
 
     def _check_hardware(self):
         try:
             with SuppressStream():
                 mics = sr.Microphone.list_microphone_names()
             if mics:
+                logger.info(f"Microfoni trovati: {mics}")
                 return True
             else:
                 logger.warning("Nessun microfono rilevato.")
@@ -271,25 +252,25 @@ class BuddyEars:
             return False
 
     def _process_audio(self, recognizer, audio):
-        """Invia l'audio al motore STT."""
+        """Decide quale motore STT usare."""
         text = ""
         try:
             if self.mode == "local":
-                 # Placeholder per futuro Whisper
-                logger.warning("STT Locale non attivo, uso Google.")
+                # TODO: Implementare STT locale (es. Whisper o Vosk)
+                # Per ora usiamo Google come placeholder finché non installiamo le lib locali
+                logger.warning("STT Locale non ancora attivo, uso Google temporaneamente.")
                 text = recognizer.recognize_google(audio, language="it-IT")
             else:
+                # Default: Google Cloud Speech API (tramite speech_recognition)
                 text = recognizer.recognize_google(audio, language="it-IT")
 
             if text:
-                logger.info(f"Udito: {text}")
+                logger.info(f"Jabra Input Rilevato: {text}")
                 event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
                 self.event_queue.put(event)
 
-        except sr.UnknownValueError:
-            pass 
         except Exception as e:
-            logger.error(f"Errore STT: {e}")
+            logger.error(f"Errore riconoscimento ({self.mode}): {e}")
 
     def start(self):
         t = threading.Thread(target=self.listen_loop, daemon=True, name="EarsThread")
