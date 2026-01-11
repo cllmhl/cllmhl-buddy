@@ -1,4 +1,3 @@
-import subprocess
 import os
 import time
 import logging
@@ -21,7 +20,6 @@ class BuddyEvent:
     timestamp: float = 0.0
 
 # --- GESTIONE BASSO LIVELLO AUDIO (ALSA/JACK SILENCE) ---
-# Manteniamo questa logica qui per non inquinare il main
 def py_error_handler(filename, line, function, err, fmt):
     pass
 
@@ -52,22 +50,40 @@ class BuddyVoice:
     def __init__(self):
         # Configurazione: default 'cloud' (gTTS), opzionale 'local' (Piper)
         self.mode = os.getenv("TTS_MODE", "cloud").lower()
+        # Voce scelta: default 'paola' (o 'riccardo')
+        self.voice_name = os.getenv("TTS_VOICE", "paola").lower()
+        
         self.led_stato = LED(21) # Pin 21: Verde (Stato/Parlato)
         self.is_speaking_event = threading.Event()
         
-        # --- PERCORSI ESTERNI ---
+        # --- PERCORSI E CONFIGURAZIONE PIPER ---
         home = os.path.expanduser("~")
         self.piper_base_path = os.path.join(home, "buddy_tools/piper")
         self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
-        self.piper_model = os.path.join(self.piper_base_path, "it_IT-riccardo-x_low.onnx")
         
-        logger.info(f"BuddyVoice (Riccardo) inizializzato. Mode: {self.mode}")
-        logger.debug(f"Percorso Piper: {self.piper_binary}")
+        # Mappa delle voci disponibili (File e Velocità ottimale)
+        # Paola: 1.0 (Naturale) | Riccardo: 1.1 (Rallentato per chiarezza)
+        self.voice_map = {
+            "paola":    {"file": "it_IT-paola-medium.onnx", "speed": "1.0"},
+            "riccardo": {"file": "it_IT-riccardo-x_low.onnx", "speed": "1.1"}
+        }
         
+        # Selezione configurazione
+        if self.voice_name not in self.voice_map:
+            logger.warning(f"Voce '{self.voice_name}' non trovata. Fallback su Paola.")
+            self.voice_name = "paola"
+            
+        selected_config = self.voice_map[self.voice_name]
+        self.piper_model = os.path.join(self.piper_base_path, selected_config["file"])
+        self.piper_speed = selected_config["speed"]
+        
+        logger.info(f"BuddyVoice inizializzato. Mode: {self.mode} | Voice: {self.voice_name.upper()}")
+        logger.debug(f"Piper Model: {self.piper_model} | Speed: {self.piper_speed}")
+
     def speak(self, text):
         """Gestisce la sintesi vocale in base alla configurazione."""
         try:
-            # Rimuoviamo caratteri che potrebbero rompere la shell o confondere il TTS
+            # Pulizia testo per evitare problemi con la shell
             text = text.replace('"', '').replace("'", "")
             
             logger.debug(f"Inizio sintesi vocale ({self.mode}): {text[:20]}...")
@@ -89,55 +105,68 @@ class BuddyVoice:
             self.led_stato.off()
 
     def _speak_local_piper(self, text):
-        """Usa Piper TTS in locale tramite subprocess pipe."""
+        """Usa Piper TTS -> SoX -> Aplay (Catena per fix 48kHz)."""
         try:
-            # Comando 1: Piper (Text -> Raw Audio)
-            # --output_raw manda l'audio su stdout invece che su file
+            # 1. Piper: Genera WAV (Rate nativo del modello)
             piper_cmd = [
                 self.piper_binary,
                 "--model", self.piper_model,
-                "--output_raw"
-            ]
-            
-            # Comando 2: Aplay (Raw Audio -> Speakers)
-            # Parametri per Paola Medium: 22050Hz, 16bit Little Endian, Mono
-            aplay_cmd = [
-                "aplay",
-                "-r", "22050",
-                "-f", "S16_LE",
-                "-t", "raw",
-                "-"
+                "--length_scale", self.piper_speed, 
+                "--output_file", "-" 
             ]
 
-            # Creiamo i processi incatenati (Pipe)
-            # Piper riceve testo da stdin e butta audio su stdout
-            process_piper = subprocess.Popen(
+            # 2. SoX: Resampling a 48000Hz (Fondamentale per Jabra)
+            sox_cmd = [
+                "sox",
+                "-t", "wav", "-",   # Input Pipe
+                "-r", "48000",      # Output Rate
+                "-t", "wav", "-"    # Output Pipe
+            ]
+
+            # 3. Aplay: Hardware Output (Jabra)
+            aplay_cmd = [
+                "aplay",
+                "-D", "plughw:0,0"
+            ]
+
+            # Creazione Catena Processi
+            # Piper -> SoX
+            p_piper = subprocess.Popen(
                 piper_cmd, 
                 stdin=subprocess.PIPE, 
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE # Per catturare eventuali errori di Piper
+                stderr=subprocess.PIPE
             )
             
-            # Aplay riceve audio da Piper
-            process_aplay = subprocess.Popen(
-                aplay_cmd, 
-                stdin=process_piper.stdout,
-                stdout=subprocess.DEVNULL, # Zittiamo l'output di aplay console
+            # SoX -> Aplay
+            p_sox = subprocess.Popen(
+                sox_cmd,
+                stdin=p_piper.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            
+            # Aplay -> Speaker
+            p_aplay = subprocess.Popen(
+                aplay_cmd,
+                stdin=p_sox.stdout,
+                stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
             
-            # Inviamo il testo a Piper e chiudiamo lo stream input
-            # communicate() aspetta la fine del processo
-            stdout_data, stderr_data = process_piper.communicate(input=text.encode('utf-8'))
+            # Chiudiamo gli stdout intermedi nel thread principale per evitare deadlock
+            p_piper.stdout.close()
+            p_sox.stdout.close()
             
-            # Aspettiamo che aplay finisca di riprodurre
-            process_aplay.wait()
+            # Inviamo il testo e attendiamo
+            _, stderr_piper = p_piper.communicate(input=text.encode('utf-8'))
+            p_aplay.wait()
 
-            if process_piper.returncode != 0:
-                logger.error(f"Errore Piper: {stderr_data.decode()}")
+            if p_piper.returncode != 0:
+                logger.error(f"Errore Piper: {stderr_piper.decode()}")
 
         except FileNotFoundError:
-            logger.error("Eseguibile Piper o Aplay non trovato. Verifica i percorsi.")
+            logger.error("Componenti audio mancanti (Piper/SoX/Aplay).")
         except Exception as e:
             logger.error(f"Eccezione in _speak_local_piper: {e}")
 
@@ -146,7 +175,6 @@ class BuddyVoice:
         filename = "debug_audio.mp3"
         tts.save(filename)
         
-        # Riproduzione con mpg123
         result = subprocess.run(
             ["mpg123", "-q", filename], 
             stdout=subprocess.DEVNULL, 
@@ -191,11 +219,15 @@ class BuddyEars:
                         r.adjust_for_ambient_noise(source, duration=0.1)
                         
                         try:
+                            # Accensione LED solo se veramente in ascolto attivo
+                            # Qui siamo pronti ad ascoltare
+                            logger.debug("In ascolto...") 
                             self.led_ascolto.on()
+                            
                             # Timeout 5s per iniziare a parlare
                             audio = r.listen(source, timeout=5, phrase_time_limit=None)
-                            self.led_ascolto.off()
                             
+                            self.led_ascolto.off()
                             self._process_audio(r, audio)
 
                         except sr.WaitTimeoutError:
