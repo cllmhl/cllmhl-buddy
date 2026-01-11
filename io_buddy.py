@@ -1,3 +1,4 @@
+import subprocess
 import os
 import time
 import logging
@@ -49,25 +50,30 @@ class SuppressStream:
 # --- CLASSE PER L'OUTPUT VOCALE (VOICE) ---
 class BuddyVoice:
     def __init__(self):
-        # Configurazione: default 'cloud' (gTTS), opzionale 'local' (es. pyttsx3/piper)
+        # Configurazione: default 'cloud' (gTTS), opzionale 'local' (Piper)
         self.mode = os.getenv("TTS_MODE", "cloud").lower()
         self.led_stato = LED(21) # Pin 21: Verde (Stato/Parlato)
         self.is_speaking_event = threading.Event()
+        
+        # Percorsi per Piper (Assumiamo cartella 'piper_tts' nella root del progetto)
+        # Nota: ./piper_tts/piper/piper è il percorso se hai estratto il tar.gz come da istruzioni
+        self.piper_binary = "./piper_tts/piper/piper" 
+        self.piper_model = "./piper_tts/it_IT-paola-medium.onnx"
+        
         logger.info(f"BuddyVoice inizializzato in modalità: {self.mode}")
 
     def speak(self, text):
         """Gestisce la sintesi vocale in base alla configurazione."""
         try:
+            # Rimuoviamo caratteri che potrebbero rompere la shell o confondere il TTS
+            text = text.replace('"', '').replace("'", "")
+            
             logger.debug(f"Inizio sintesi vocale ({self.mode}): {text[:20]}...")
             self.led_stato.on()
             self.is_speaking_event.set()
 
             if self.mode == "local":
-                # TODO: Implementare TTS locale (es. Piper o pyttsx3)
-                logger.warning("Modalità TTS locale non ancora implementata, fallback su print.")
-                print(f"[TTS LOCALE]: {text}")
-                # Simuliamo il tempo di parlato
-                time.sleep(len(text) * 0.05) 
+                self._speak_local_piper(text)
             else:
                 # Default: Cloud (gTTS)
                 self._speak_gtts(text)
@@ -79,6 +85,59 @@ class BuddyVoice:
         finally:
             self.is_speaking_event.clear()
             self.led_stato.off()
+
+    def _speak_local_piper(self, text):
+        """Usa Piper TTS in locale tramite subprocess pipe."""
+        try:
+            # Comando 1: Piper (Text -> Raw Audio)
+            # --output_raw manda l'audio su stdout invece che su file
+            piper_cmd = [
+                self.piper_binary,
+                "--model", self.piper_model,
+                "--output_raw"
+            ]
+            
+            # Comando 2: Aplay (Raw Audio -> Speakers)
+            # Parametri per Paola Medium: 22050Hz, 16bit Little Endian, Mono
+            aplay_cmd = [
+                "aplay",
+                "-r", "22050",
+                "-f", "S16_LE",
+                "-t", "raw",
+                "-"
+            ]
+
+            # Creiamo i processi incatenati (Pipe)
+            # Piper riceve testo da stdin e butta audio su stdout
+            process_piper = subprocess.Popen(
+                piper_cmd, 
+                stdin=subprocess.PIPE, 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE # Per catturare eventuali errori di Piper
+            )
+            
+            # Aplay riceve audio da Piper
+            process_aplay = subprocess.Popen(
+                aplay_cmd, 
+                stdin=process_piper.stdout,
+                stdout=subprocess.DEVNULL, # Zittiamo l'output di aplay console
+                stderr=subprocess.DEVNULL
+            )
+            
+            # Inviamo il testo a Piper e chiudiamo lo stream input
+            # communicate() aspetta la fine del processo
+            stdout_data, stderr_data = process_piper.communicate(input=text.encode('utf-8'))
+            
+            # Aspettiamo che aplay finisca di riprodurre
+            process_aplay.wait()
+
+            if process_piper.returncode != 0:
+                logger.error(f"Errore Piper: {stderr_data.decode()}")
+
+        except FileNotFoundError:
+            logger.error("Eseguibile Piper o Aplay non trovato. Verifica i percorsi.")
+        except Exception as e:
+            logger.error(f"Eccezione in _speak_local_piper: {e}")
 
     def _speak_gtts(self, text):
         tts = gTTS(text=text, lang='it')

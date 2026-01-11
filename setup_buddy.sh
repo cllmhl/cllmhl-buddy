@@ -8,14 +8,12 @@ sudo apt-get update
 sudo apt-get upgrade -y
 
 echo "--- 2. Installazione dipendenze di sistema (Audio e Sviluppo) ---"
-# portaudio19-dev e python3-pyaudio: necessari per registrare dal Jabra
-# mpg123: il player leggero che usiamo nel main.py per l'output
-# flac: necessario per alcune funzioni di SpeechRecognition
 sudo apt-get install -y \
     git \
     portaudio19-dev \
     mpg123 \
     flac \
+    alsa-utils \
     libasound2-dev \
     liblgpio-dev \
     swig \
@@ -23,7 +21,8 @@ sudo apt-get install -y \
     python3-venv \
     python3-dev \
     python3-pyaudio \
-    build-essential
+    build-essential \
+    wget
 
 echo "--- 3. Gestione Ambiente Virtuale Python ---"
 if [ ! -d "venv" ]; then
@@ -41,13 +40,43 @@ echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
 pip install --upgrade pip setuptools wheel
 
 # Installazione dei requisiti
-pip install -r requirements.txt
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+else
+    echo "Attenzione: requirements.txt non trovato, salto installazione pip."
+fi
 
 echo "--- 5. Verifica Dispositivi Audio (Jabra) ---"
 echo "Ecco la lista dei dispositivi di registrazione rilevati:"
-arecord -l
+arecord -l || echo "Nessun dispositivo di registrazione trovato."
+
+echo "--- 6. Installazione Piper TTS (Fuori dal progetto) ---"
+# Definiamo la cartella esterna
+PIPER_DEST="$HOME/buddy_tools/piper"
+mkdir -p "$PIPER_DEST"
+cd "$PIPER_DEST"
+
+# Scarica Piper se non esiste già
+if [ ! -f "piper/piper" ]; then
+    echo "Scaricamento binari Piper..."
+    # Versione per Raspberry Pi (aarch64). Cambiare in amd64 se su PC.
+    wget https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz
+    tar -xvf piper_linux_aarch64.tar.gz
+    rm piper_linux_aarch64.tar.gz
+else
+    echo "Binari Piper già presenti."
+fi
+
+# Scarica il modello Riccardo se non esiste già
+if [ ! -f "it_IT-riccardo-medium.onnx" ]; then
+    echo "Scaricamento modello vocale Riccardo..."
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx.json
+else
+    echo "Modello Riccardo già presente."
+fi
 
 echo ""
 echo "--- SETUP COMPLETATO ---"
-echo "Per avviare Buddy, ricorda di attivare il venv con: source venv/bin/activate"
-echo "Poi lancia: python main.py"
+echo "Piper installato in: $PIPER_DEST"
+echo "Per avviare Buddy: source venv/bin/activate && python main.py"
