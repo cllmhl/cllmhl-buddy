@@ -201,27 +201,33 @@ class BuddyEars:
             return
 
         r = sr.Recognizer()
-        r.pause_threshold = 1.5
+        # --- MODIFICA NECESSARIA PER REATTIVITÀ ---
+        # 1.5 era troppo lento, 1.0 è il compromesso per non tagliare e non aspettare troppo.
+        r.pause_threshold = 1.0 
         r.non_speaking_duration = 0.5
         r.dynamic_energy_threshold = True
 
         logger.info("Thread Jabra (Ears) avviato")
 
-        while self.running:
-            # Se Buddy sta parlando, le orecchie riposano per evitare eco
-            if self.buddy_is_speaking.is_set():
-                time.sleep(0.1)
-                continue
+        try:
+            # --- MODIFICA STRUTTURALE MINIMA ---
+            # Spostiamo l'apertura del microfono e la calibrazione FUORI dal while.
+            # Se lo lasciamo dentro, ricalibra ogni volta e ti taglia le parole se parli subito.
+            with SuppressStream():
+                with sr.Microphone() as source:
+                    logger.info("Calibrazione iniziale rumore (1s)...")
+                    r.adjust_for_ambient_noise(source, duration=1.0)
+                    
+                    while self.running:
+                        # Se Buddy sta parlando, le orecchie riposano per evitare eco
+                        if self.buddy_is_speaking.is_set():
+                            time.sleep(0.1)
+                            continue
 
-            try:
-                with SuppressStream():
-                    with sr.Microphone() as source:
-                        r.adjust_for_ambient_noise(source, duration=0.1)
-                        
                         try:
                             self.led_ascolto.on()
-                            # Timeout 5s per iniziare a parlare
-                            audio = r.listen(source, timeout=5, phrase_time_limit=None)
+                            # Timeout None: aspetta finché non parli
+                            audio = r.listen(source, timeout=None, phrase_time_limit=None)
                             self.led_ascolto.off()
                             
                             self._process_audio(r, audio)
@@ -232,10 +238,14 @@ class BuddyEars:
                         except sr.UnknownValueError:
                             self.led_ascolto.off()
                             pass
-            except Exception as e:
-                self.led_ascolto.off()
-                logger.error(f"Errore critico Ears: {e}")
-                time.sleep(0.1)
+                        except Exception as inner_e:
+                            self.led_ascolto.off()
+                            logger.error(f"Errore ciclo ascolto interno: {inner_e}")
+                            
+        except Exception as e:
+            self.led_ascolto.off()
+            logger.error(f"Errore critico Ears: {e}")
+            time.sleep(0.1)
 
     def _check_hardware(self):
         try:
