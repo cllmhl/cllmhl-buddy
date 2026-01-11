@@ -22,7 +22,9 @@ sudo apt-get install -y \
     python3-dev \
     python3-pyaudio \
     build-essential \
-    wget
+    wget \
+    sox \
+    libsox-fmt-all
 
 echo "--- 3. Gestione Ambiente Virtuale Python ---"
 if [ ! -d "venv" ]; then
@@ -75,6 +77,15 @@ if [ ! -f "it_IT-riccardo-x_low.onnx" ]; then
     wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx.json || exit 1
 else
     echo "Modello Riccardo già presente."
+fi
+
+# Scarica il modello PAOLA (MEDIUM) - Scelta finale per qualità e compatibilità
+if [ ! -f "it_IT-paola-medium.onnx" ]; then
+    echo "Scaricamento modello vocale Paola (Medium)..."
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/paola/medium/it_IT-paola-medium.onnx || exit 1
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/paola/medium/it_IT-paola-medium.onnx.json || exit 1
+else
+    echo "Modello Paola già presente."
 fi
 
 echo ""
