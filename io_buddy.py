@@ -195,66 +195,59 @@ class BuddyEars:
         logger.info(f"BuddyEars inizializzato in modalità: {self.mode}")
 
     def listen_loop(self):
-        """Loop principale di ascolto ottimizzato per bassa latenza."""
+        """Loop principale di ascolto bilanciato."""
         if not self._check_hardware():
             return
 
         r = sr.Recognizer()
         
-        # --- TUNING PER REATTIVITÀ ---
-        # 1.5 era troppo lento. 0.6 è un buon compromesso tra velocità e non tagliarti se prendi fiato.
-        r.pause_threshold = 0.6  
+        # --- TUNING BILANCIATO ---
+        # 0.6 era troppo aggressivo (ti tagliava il respiro).
+        # 1.5 era troppo lento.
+        # 1.0 è il compromesso ideale per il parlato italiano (che ha molte pause).
+        r.pause_threshold = 1.0  
         
-        # Aiuta a catturare frasi brevi ("Sì", "No", "Ciao")
-        r.non_speaking_duration = 0.3 
+        # Quanto "non-parlato" serve per considerare un segmento audio valido.
+        r.non_speaking_duration = 0.5 
         
-        # Se True, si adatta continuamente. Se False, fissa un valore. 
-        # Teniamolo True ma partiamo da un valore basso per sentire i sussurri.
+        # Manteniamo la soglia dinamica per adattarci ai rumori di casa
         r.dynamic_energy_threshold = True 
-        r.energy_threshold = 300 # Valore base sensibile (default è spesso 3000)
+        r.energy_threshold = 300 
 
         logger.info("Thread Jabra (Ears) avviato - Apertura Stream Audio...")
 
         try:
-            # APERTURA MICROFONO PERSISTENTE
-            # Manteniamo il microfono aperto per tutto il tempo, invece di aprirlo/chiuderlo a ogni frase.
+            # Manteniamo il microfono sempre aperto (riduce latenza hardware)
             with SuppressStream():
                 with sr.Microphone() as source:
-                    logger.info("Calibrazione rumore ambientale in corso (1s)... stai zitto per favore.")
+                    logger.info("Calibrazione iniziale (1s)...")
                     r.adjust_for_ambient_noise(source, duration=1.0)
                     logger.info("Calibrazione completata. Buddy ti ascolta.")
                     
-                    # Lampeggio veloce per dire "Sono pronto"
+                    # Segnale visivo: Pronto
                     self.led_ascolto.on(); time.sleep(0.2); self.led_ascolto.off()
 
                     while self.running:
-                        # Se Buddy sta parlando, mettiamo in pausa il loop ma NON chiudiamo il microfono
                         if self.buddy_is_speaking.is_set():
                             time.sleep(0.1)
                             continue
 
                         try:
-                            # Non ricalibriamo più qui. Usiamo la calibrazione iniziale.
-                            
-                            # Accensione LED (Ascolto attivo)
                             self.led_ascolto.on()
                             
-                            # timeout=None: Aspetta all'infinito che inizi a parlare
-                            # phrase_time_limit=10: Taglia se parli per più di 10 secondi (evita blocchi su rumori)
-                            audio = r.listen(source, timeout=None, phrase_time_limit=15)
+                            # Timeout=None: aspetta in eterno che tu inizi
+                            # phrase_time_limit=None: NON tagliare l'audio dopo tot secondi.
+                            # Lasciamo che sia il pause_threshold a decidere quando hai finito.
+                            audio = r.listen(source, timeout=None, phrase_time_limit=None)
                             
                             self.led_ascolto.off()
-                            
-                            # Lanciamo il riconoscimento in un thread separato per non bloccare il loop? 
-                            # Per ora no, per semplicità, ma elaboriamo subito.
                             self._process_audio(r, audio)
 
                         except sr.WaitTimeoutError:
                             self.led_ascolto.off()
-                            pass # Nessun parlato rilevato
+                            pass
                         except sr.UnknownValueError:
                             self.led_ascolto.off()
-                            # Rumore non capito, ignoriamo silenziosamente
                             pass 
                         except Exception as inner_e:
                             self.led_ascolto.off()
@@ -269,7 +262,6 @@ class BuddyEars:
             with SuppressStream():
                 mics = sr.Microphone.list_microphone_names()
             if mics:
-                # logger.info(f"Microfoni trovati: {mics}") # Commentato per pulizia log
                 return True
             else:
                 logger.warning("Nessun microfono rilevato.")
@@ -280,21 +272,21 @@ class BuddyEars:
 
     def _process_audio(self, recognizer, audio):
         """Invia l'audio al motore STT."""
-        # Nota: Qui c'è ancora un piccolo ritardo dovuto alla chiamata Google Cloud.
-        # Quando passeremo a Whisper Locale su GPU/NPU sarà più veloce.
         text = ""
         try:
-            # Usiamo sempre Google per ora (anche se mode=local) finché non mettiamo Whisper
-            # show_all=False restituisce solo la stringa migliore
-            text = recognizer.recognize_google(audio, language="it-IT")
+            if self.mode == "local":
+                 # Placeholder per futuro Whisper
+                logger.warning("STT Locale non attivo, uso Google.")
+                text = recognizer.recognize_google(audio, language="it-IT")
+            else:
+                text = recognizer.recognize_google(audio, language="it-IT")
 
             if text:
-                logger.info(f"Udito: {text}") # Log più compatto
+                logger.info(f"Udito: {text}")
                 event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
                 self.event_queue.put(event)
 
         except sr.UnknownValueError:
-            # Questo scatta spesso con rumori brevi, lo ignoriamo per non intasare i log
             pass 
         except Exception as e:
             logger.error(f"Errore STT: {e}")
