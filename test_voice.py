@@ -15,7 +15,7 @@ SELECTED_VOICE = os.getenv("TTS_VOICE", "paola").lower()
 VOICE_MAP = {
     "paola": {
         "file": "it_IT-paola-medium.onnx",
-        "speed": "1.0", # Paola è naturale, non serve rallentarla
+        "speed": "1.1", # Paola è naturale, non serve rallentarla
         "desc": "Paola (Medium Quality - 22kHz)"
     },
     "riccardo": {
