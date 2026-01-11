@@ -67,12 +67,12 @@ else
     echo "Binari Piper già presenti."
 fi
 
-# Scarica il modello Riccardo se non esiste già
-if [ ! -f "it_IT-riccardo-medium.onnx" ]; then
-    echo "Scaricamento modello vocale Riccardo..."
-    # URL corretti: cambiato 'v1.0.0' in 'main' e aggiunto exit in caso di errore
-    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx || exit 1
-    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx.json || exit 1
+# Scarica il modello Riccardo (VERSIONE X_LOW)
+# Nota: La versione Medium non esiste per Riccardo, usiamo x_low che è presente nel repo.
+if [ ! -f "it_IT-riccardo-x_low.onnx" ]; then
+    echo "Scaricamento modello vocale Riccardo (x_low)..."
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx || exit 1
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx.json || exit 1
 else
     echo "Modello Riccardo già presente."
 fi

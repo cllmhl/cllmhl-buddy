@@ -59,7 +59,7 @@ class BuddyVoice:
         home = os.path.expanduser("~")
         self.piper_base_path = os.path.join(home, "buddy_tools/piper")
         self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
-        self.piper_model = os.path.join(self.piper_base_path, "it_IT-riccardo-medium.onnx")
+        self.piper_model = os.path.join(self.piper_base_path, "it_IT-riccardo-x_low.onnx")
         
         logger.info(f"BuddyVoice (Riccardo) inizializzato. Mode: {self.mode}")
         logger.debug(f"Percorso Piper: {self.piper_binary}")
