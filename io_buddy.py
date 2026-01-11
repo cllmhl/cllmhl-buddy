@@ -201,23 +201,32 @@ class BuddyEars:
             return
 
         r = sr.Recognizer()
-        # --- MODIFICA NECESSARIA PER REATTIVITÀ ---
-        # 1.5 era troppo lento, 1.0 è il compromesso per non tagliare e non aspettare troppo.
         r.pause_threshold = 1.0 
         r.non_speaking_duration = 0.5
-        r.dynamic_energy_threshold = True
+        
+        # --- MODIFICA CRUCIALE ---
+        # Disattiviamo la soglia dinamica. Era lei che "alzava l'asticella" tagliando le vocali finali.
+        r.dynamic_energy_threshold = False 
+        
+        # Fissiamo una soglia fissa. 
+        # 300-400 è tipico per una stanza silenziosa. 
+        # Se Buddy "ascolta" anche il rumore del frigo, alzalo a 500-600.
+        r.energy_threshold = 400
 
         logger.info("Thread Jabra (Ears) avviato")
 
         try:
-            # --- MODIFICA STRUTTURALE MINIMA ---
-            # Spostiamo l'apertura del microfono e la calibrazione FUORI dal while.
-            # Se lo lasciamo dentro, ricalibra ogni volta e ti taglia le parole se parli subito.
             with SuppressStream():
                 with sr.Microphone() as source:
+                    # Facciamo comunque una calibrazione iniziale per sicurezza, 
+                    # ma poi usiamo il valore fisso impostato sopra.
                     logger.info("Calibrazione iniziale rumore (1s)...")
                     r.adjust_for_ambient_noise(source, duration=1.0)
                     
+                    # Sovrascriviamo DOPO la calibrazione per essere sicuri che non la alzi troppo
+                    r.energy_threshold = 400
+                    logger.info(f"Soglia energia fissata a: {r.energy_threshold}")
+
                     while self.running:
                         # Se Buddy sta parlando, le orecchie riposano per evitare eco
                         if self.buddy_is_speaking.is_set():
