@@ -60,7 +60,7 @@ cd "$PIPER_DEST"
 if [ ! -f "piper/piper" ]; then
     echo "Scaricamento binari Piper..."
     # Versione per Raspberry Pi (aarch64). Cambiare in amd64 se su PC.
-    wget https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz
+    wget https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz || exit 1
     tar -xvf piper_linux_aarch64.tar.gz
     rm piper_linux_aarch64.tar.gz
 else
@@ -70,8 +70,9 @@ fi
 # Scarica il modello Riccardo se non esiste già
 if [ ! -f "it_IT-riccardo-medium.onnx" ]; then
     echo "Scaricamento modello vocale Riccardo..."
-    wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx
-    wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx.json
+    # URL corretti: cambiato 'v1.0.0' in 'main' e aggiunto exit in caso di errore
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx || exit 1
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/riccardo/medium/it_IT-riccardo-medium.onnx.json || exit 1
 else
     echo "Modello Riccardo già presente."
 fi

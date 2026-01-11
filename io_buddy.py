@@ -55,13 +55,15 @@ class BuddyVoice:
         self.led_stato = LED(21) # Pin 21: Verde (Stato/Parlato)
         self.is_speaking_event = threading.Event()
         
-        # Percorsi per Piper (Assumiamo cartella 'piper_tts' nella root del progetto)
-        # Nota: ./piper_tts/piper/piper è il percorso se hai estratto il tar.gz come da istruzioni
-        self.piper_binary = "./piper_tts/piper/piper" 
-        self.piper_model = "./piper_tts/it_IT-paola-medium.onnx"
+        # --- PERCORSI ESTERNI ---
+        home = os.path.expanduser("~")
+        self.piper_base_path = os.path.join(home, "buddy_tools/piper")
+        self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
+        self.piper_model = os.path.join(self.piper_base_path, "it_IT-riccardo-medium.onnx")
         
-        logger.info(f"BuddyVoice inizializzato in modalità: {self.mode}")
-
+        logger.info(f"BuddyVoice (Riccardo) inizializzato. Mode: {self.mode}")
+        logger.debug(f"Percorso Piper: {self.piper_binary}")
+        
     def speak(self, text):
         """Gestisce la sintesi vocale in base alla configurazione."""
         try:
