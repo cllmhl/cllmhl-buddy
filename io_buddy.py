@@ -6,7 +6,7 @@ import queue
 import subprocess
 from dataclasses import dataclass
 from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
-from dotenv import load_dotenv  # Aggiunto per caricare config.env
+from dotenv import load_dotenv
 
 # --- LIBRERIE AUDIO STANDARD ---
 import speech_recognition as sr
@@ -17,7 +17,7 @@ from gpiozero import LED
 import pvporcupine
 from pvrecorder import PvRecorder
 
-# Carichiamo le variabili d'ambiente (chiavi e path)
+# Carichiamo le variabili d'ambiente
 load_dotenv()
 load_dotenv("config.env")
 
@@ -149,6 +149,7 @@ class BuddyVoice:
         filename = "debug_audio.mp3"
         tts.save(filename)
         subprocess.run(["mpg123", "-q", filename], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        if os.path.exists(filename): os.remove(filename)
 
 # --- CLASSE PER L'INPUT UDITIVO (EARS) ---
 class BuddyEars:
@@ -166,23 +167,23 @@ class BuddyEars:
         self.porcupine = None
         self.recorder = None
         
-        # 1. Verifica Configurazione Base (FAIL FAST)
+        # FAIL FAST: Verifica chiavi e path
         if not self.access_key or not self.keyword_path:
              raise ValueError("CRITICO: Manca PICOVOICE_ACCESS_KEY o WAKE_WORD_PATH nel config.env")
         
         if not os.path.exists(self.keyword_path):
              raise FileNotFoundError(f"CRITICO: File Wake Word non trovato: {self.keyword_path}")
         
-        # 2. Inizializzazione Engine (FAIL FAST)
+        # FAIL FAST: Init Engine
         try:
             self.porcupine = pvporcupine.create(
                 access_key=self.access_key,
                 keyword_paths=[self.keyword_path]
             )
         except Exception as e:
-             raise RuntimeError(f"CRITICO: Impossibile inizializzare Porcupine (Key errata?). {e}")
+             raise RuntimeError(f"CRITICO: Init Porcupine fallito. {e}")
             
-        # 3. Autodiscovery & Selezione Microfono (FAIL FAST se Jabra richiesto)
+        # FAIL FAST: Autodiscovery Jabra
         try:
             target_index = -1
             available_devices = PvRecorder.get_available_devices()
@@ -194,18 +195,13 @@ class BuddyEars:
                     logger.info(f"✅ Microfono Jabra trovato all'indice {i}: {device}")
                     break
             
-            # Se non trovo Jabra, avviso e provo default (0), oppure crasho se vuoi strict mode.
             if target_index == -1:
-                logger.warning("⚠️ Nessun Jabra trovato. Provo dispositivo di default (0).")
+                logger.warning("⚠️ Nessun Jabra trovato. Uso dispositivo di default (0).")
                 target_index = 0
             
-            # Inizializza Recorder con l'indice trovato
-            self.recorder = PvRecorder(
-                device_index=target_index, 
-                frame_length=self.porcupine.frame_length
-            )
+            self.recorder = PvRecorder(device_index=target_index, frame_length=self.porcupine.frame_length)
             
-            # Test rapido hardware (apro e chiudo per essere sicuro che funzioni)
+            # Test rapido Hardware
             self.recorder.start()
             self.recorder.stop()
             
@@ -216,64 +212,49 @@ class BuddyEars:
              raise RuntimeError(f"CRITICO: Errore Hardware Microfono (Index {target_index}). {e}")
 
         logger.info(f"BuddyEars inizializzato. STT Mode: {self.mode}")
-        
+
     def listen_loop(self):
-        """Loop ibrido: Wake Word Locale -> Google STT Cloud."""
+        """Loop ibrido: Wake Word Locale -> Sessione Continua -> Timeout."""
         
-        # Controllo paranoico (anche se __init__ dovrebbe aver già garantito questo)
         if not self.porcupine or not self.recorder:
             logger.error("Impossibile avviare loop ascolto: Componenti non pronti.")
             return
 
         recognizer = sr.Recognizer()
+        # Le tue impostazioni ottimizzate (REINSERITE TUTTE)
         recognizer.pause_threshold = 1.0 
-        recognizer.non_speaking_duration = 0.5
+        recognizer.non_speaking_duration = 0.5 # Reinserito come richiesto
         recognizer.dynamic_energy_threshold = False 
         recognizer.energy_threshold = 400
 
-        logger.info("Thread Ears avviato (Modalità Wake Word)")
+        logger.info("Thread Ears avviato (Attesa Wake Word)")
         
         try:
-            self.recorder.start() # Avvia ascolto locale leggero
+            self.recorder.start() # Avvia ascolto locale leggero (Porcupine)
             
             while self.running:
-                # 1. Se Buddy parla, pausa tutto per evitare feedback
+                # Se Buddy parla, pausa
                 if self.buddy_is_speaking.is_set():
                     time.sleep(0.1)
                     continue
                 
-                # 2. Ascolto Wake Word (Locale, veloce)
+                # 1. Ascolto Wake Word
                 pcm = self.recorder.read()
                 result = self.porcupine.process(pcm)
 
                 if result >= 0:
-                    logger.info("✨ WAKE WORD RILEVATA! ('Ehi Buddy')")
+                    logger.info("✨ WAKE WORD! Inizio Sessione Conversazione.")
                     self.led_ascolto.on()
-
-                    # 3. STOP Porcupine per liberare il microfono
-                    self.recorder.stop()
+                    self.recorder.stop() # Rilascio il mic
                     
-                    # 4. START Google Speech Recognition
-                    try:
-                        with sr.Microphone() as source:
-                            logger.info("🎤 In ascolto del comando (Google)...")
-                            # Timeout breve (5s) per aspettare che inizi a parlare
-                            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
-                            
-                            self.led_ascolto.off()
-                            # Processiamo l'audio
-                            self._process_audio(recognizer, audio)
-                            
-                    except sr.WaitTimeoutError:
-                        logger.info("⏳ Nessun comando dopo la wake word.")
-                        self.led_ascolto.off()
-                    except Exception as e:
-                        logger.error(f"Errore durante ascolto comando: {e}")
-                        self.led_ascolto.off()
+                    # 2. Avvio Sessione Continua
+                    # Passiamo il recognizer configurato con le tue impostazioni
+                    self._run_conversation_session(recognizer)
                     
-                    # 5. RESTART Porcupine
-                    logger.info("👂 Torno in attesa di 'Ehi Buddy'...")
-                    self.recorder.start()
+                    # Fine Sessione
+                    logger.info("💤 Fine Sessione. Torno in attesa di 'Ehi Buddy'...")
+                    self.led_ascolto.off()
+                    self.recorder.start() # Riprendo il mic
 
         except Exception as e:
             logger.error(f"Errore critico loop Ears: {e}")
@@ -282,9 +263,43 @@ class BuddyEars:
             if self.porcupine: self.porcupine.delete()
             self.led_ascolto.off()
 
+    def _run_conversation_session(self, recognizer):
+        """Mantiene l'ascolto attivo finché c'è dialogo, termina dopo timeout di silenzio."""
+        session_active = True
+        silence_timeout = 10 # Secondi di silenzio prima di chiudere
+        
+        # Usiamo SuppressStream per pulire l'init di ALSA (come nel tuo codice originale)
+        with SuppressStream():
+             mic_source = sr.Microphone()
+             
+        try:
+            with mic_source as source:
+                logger.info("🎤 Sessione Attiva. Parla pure...")
+                
+                while session_active and self.running:
+                    if self.buddy_is_speaking.is_set():
+                        time.sleep(0.1)
+                        continue
+
+                    try:
+                        # Ascolta usando i parametri del recognizer (incluso non_speaking_duration)
+                        # timeout -> tempo massimo di silenzio PRIMA di iniziare a parlare (qui lo usiamo per chiudere sessione)
+                        audio = recognizer.listen(source, timeout=silence_timeout, phrase_time_limit=15)
+                        
+                        # Elaborazione in thread separato per non bloccare troppo
+                        threading.Thread(target=self._process_audio, args=(recognizer, audio)).start()
+                        
+                    except sr.WaitTimeoutError:
+                        logger.info(f"⏳ Silenzio > {silence_timeout}s. Chiudo sessione.")
+                        session_active = False # Usciamo dal loop
+                    except Exception as e:
+                        logger.warning(f"Errore lieve in sessione: {e}")
+                        
+        except Exception as e:
+            logger.error(f"Errore apertura microfono sessione: {e}")
+
     def _process_audio(self, recognizer, audio):
-        """Decide quale motore STT usare (Codice tuo originale mantenuto)."""
-        text = ""
+        """Decide quale motore STT usare."""
         try:
             # Usiamo sempre Google come da tua configurazione stabile
             text = recognizer.recognize_google(audio, language="it-IT")
@@ -295,7 +310,7 @@ class BuddyEars:
                 self.event_queue.put(event)
 
         except sr.UnknownValueError:
-            logger.info("🤷 Google non ha capito le parole.")
+            pass # Ignoriamo suoni non parole
         except Exception as e:
             logger.error(f"Errore riconoscimento: {e}")
 
