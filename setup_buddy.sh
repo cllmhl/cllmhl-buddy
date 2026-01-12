@@ -60,11 +60,28 @@ cd "$PIPER_DEST"
 
 # Scarica Piper se non esiste già
 if [ ! -f "piper/piper" ]; then
+    echo "Rilevamento architettura sistema..."
+    ARCH=$(uname -m)
+    
+    if [ "$ARCH" = "x86_64" ]; then
+        echo "Architettura rilevata: AMD64 (PC/Codespace). Scaricamento versione x86_64..."
+        URL="https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz"
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+        echo "Architettura rilevata: ARM64 (Raspberry Pi). Scaricamento versione aarch64..."
+        URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz"
+    else
+        echo "Errore: Architettura $ARCH non supportata ufficialmente."
+        exit 1
+    fi
+
     echo "Scaricamento binari Piper..."
-    # Versione per Raspberry Pi (aarch64). Cambiare in amd64 se su PC.
-    wget https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz || exit 1
-    tar -xvf piper_linux_aarch64.tar.gz
-    rm piper_linux_aarch64.tar.gz
+    wget "$URL" -O piper_bundle.tar.gz || exit 1
+    tar -xvf piper_bundle.tar.gz
+    rm piper_bundle.tar.gz
+    
+    # Assicuriamoci che il binario sia eseguibile (evita errore 126)
+    chmod +x piper/piper
+    echo "Installazione Piper completata."
 else
     echo "Binari Piper già presenti."
 fi
