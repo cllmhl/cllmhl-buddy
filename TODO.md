@@ -2,20 +2,23 @@
 
 ## 🟡 FASE 2: Wake Word (Priorità Alta)
 - [ ] **Wake Word Integration:** Configurazione motore locale (Porcupine/Snowboy) per attivazione su "Ehi Buddy".
+- [ ] **Esecuzione in background:** Buddy parte in automatico e si sveglia con "Buddy" poi si mette a dormire stile alexa.
+- [ ] **Va mantenuta la possibilità dei comandi a terminale:** Se parto in background "perdo" la tastiera... Come faccio?
 
 ## 🟡 FASE 3: Sensi Fisici e Refactoring (Hardware Pronto)
-### Input
+### Sensore di presenza
 - [ ] **Radar di presenza mmWave (LD2410C):** Collegamento fisico tramite T-Cobbler e cavetti DuPont.
 - [ ] **Fotoresistenza (LDR):** Misura la luminosità della stanza. Può aiutare ad accendere le luci quando entri in casa: "alexa..."
-- [ ] **Sensore di Temperatura e Umidità (DHT11 o DHT22):** Fornisce dati ambientali reali. Può accendere le luci quando entri in casa: "alexa..."
+- [ ] **Sensore di Temperatura e Umidità (DHT11 o DHT22):** Fornisce dati ambientali reali.
+- [ ] **Monitoraggio Presenza:** Sviluppo script in background per lettura dati radar.
 ### Output
 - [ ] **4 Digit 7-Segment Display:** Per visualizzare stati o timer."
 - [ ] **RGB LED:** Indicatore di stato multicolore."
 - [ ] **Active Buzzer:** Allarmi o feedback acustico."
 - [ ] **Altri led..:** Ne abbiamo a volontà."
-- [ ] **Monitoraggio Presenza:** Sviluppo script in background per lettura dati radar.
 - [ ] **Logica Proattiva:** Implementazione trigger "Presenza + Silenzio > 2 ore".
 - [ ] **Resume Work:** Logica per riprendere il filo del discorso/lavoro al ritorno dell'utente.
+### Refactoring
 - [ ] **Refactoring Architetturale:** Separazione moduli `io_buddy.py` in `stt.py`, `tts.py`, `hardware.py`.
 
 ## 🟡 FASE 4: Google Cloud API: Le API di google sembrano imbattibili. Proviamole seriamente!
