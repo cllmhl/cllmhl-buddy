@@ -4,7 +4,15 @@
 - [ ] **Wake Word Integration:** Configurazione motore locale (Porcupine/Snowboy) per attivazione su "Ehi Buddy".
 
 ## 🟡 FASE 3: Sensi Fisici e Refactoring (Hardware Pronto)
-- [ ] **Radar mmWave (LD2410C):** Collegamento fisico tramite T-Cobbler e cavetti DuPont.
+### Input
+- [ ] **Radar di presenza mmWave (LD2410C):** Collegamento fisico tramite T-Cobbler e cavetti DuPont.
+- [ ] **Fotoresistenza (LDR):** Misura la luminosità della stanza. Può aiutare ad accendere le luci quando entri in casa: "alexa..."
+- [ ] **Sensore di Temperatura e Umidità (DHT11 o DHT22):** Fornisce dati ambientali reali. Può accendere le luci quando entri in casa: "alexa..."
+### Output
+- [ ] **4 Digit 7-Segment Display:** Per visualizzare stati o timer."
+- [ ] **RGB LED:** Indicatore di stato multicolore."
+- [ ] **Active Buzzer:** Allarmi o feedback acustico."
+- [ ] **Altri led..:** Ne abbiamo a volontà."
 - [ ] **Monitoraggio Presenza:** Sviluppo script in background per lettura dati radar.
 - [ ] **Logica Proattiva:** Implementazione trigger "Presenza + Silenzio > 2 ore".
 - [ ] **Resume Work:** Logica per riprendere il filo del discorso/lavoro al ritorno dell'utente.
