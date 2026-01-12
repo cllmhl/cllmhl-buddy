@@ -31,7 +31,6 @@ class BuddyEvent:
     timestamp: float = 0.0
 
 # --- GESTIONE BASSO LIVELLO AUDIO (ALSA/JACK SILENCE) ---
-# MANTENUTO ESATTAMENTE COME NEL TUO FILE
 def py_error_handler(filename, line, function, err, fmt):
     pass
 
@@ -58,7 +57,6 @@ class SuppressStream:
         os.close(self.old_err)
 
 # --- CLASSE PER L'OUTPUT VOCALE (VOICE) ---
-# MANTENUTA ESATTAMENTE COME NEL TUO FILE (Piper + SoX chain)
 class BuddyVoice:
     def __init__(self):
         # Configurazione: default 'cloud' (gTTS), opzionale 'local' (Piper)
@@ -168,52 +166,66 @@ class BuddyEars:
         self.porcupine = None
         self.recorder = None
         
-        # Verifica Wake Word
-        if not self.access_key or not self.keyword_path or not os.path.exists(self.keyword_path):
-            logger.error("❌ ERRORE WAKE WORD: Controlla configurazione.")
-        else:
-            try:
-                self.porcupine = pvporcupine.create(
-                    access_key=self.access_key,
-                    keyword_paths=[self.keyword_path]
-                )
-                
-                # --- AUTODISCOVERY MICROFONO JABRA ---
-                target_index = -1
-                available_devices = PvRecorder.get_available_devices()
-                logger.info(f"Dispositivi Audio Rilevati: {available_devices}")
-                
-                for i, device in enumerate(available_devices):
-                    if "Jabra" in device:
-                        target_index = i
-                        logger.info(f"✅ Microfono Jabra trovato all'indice {i}: {device}")
-                        break
-                
-                if target_index == -1:
-                    logger.warning("⚠️ Nessun Jabra trovato. Uso dispositivo di default.")
-                
-                # Inizializza Recorder con l'indice corretto
-                self.recorder = PvRecorder(
-                    device_index=target_index, 
-                    frame_length=self.porcupine.frame_length
-                )
-                logger.info("👂 Porcupine attivato: 'Ehi Buddy' pronto.")
-                
-            except Exception as e:
-                logger.error(f"Errore init Porcupine: {e}")
+        # 1. Verifica Configurazione Base (FAIL FAST)
+        if not self.access_key or not self.keyword_path:
+             raise ValueError("CRITICO: Manca PICOVOICE_ACCESS_KEY o WAKE_WORD_PATH nel config.env")
+        
+        if not os.path.exists(self.keyword_path):
+             raise FileNotFoundError(f"CRITICO: File Wake Word non trovato: {self.keyword_path}")
+        
+        # 2. Inizializzazione Engine (FAIL FAST)
+        try:
+            self.porcupine = pvporcupine.create(
+                access_key=self.access_key,
+                keyword_paths=[self.keyword_path]
+            )
+        except Exception as e:
+             raise RuntimeError(f"CRITICO: Impossibile inizializzare Porcupine (Key errata?). {e}")
+            
+        # 3. Autodiscovery & Selezione Microfono (FAIL FAST se Jabra richiesto)
+        try:
+            target_index = -1
+            available_devices = PvRecorder.get_available_devices()
+            logger.info(f"Dispositivi Audio Rilevati: {available_devices}")
+            
+            for i, device in enumerate(available_devices):
+                if "Jabra" in device:
+                    target_index = i
+                    logger.info(f"✅ Microfono Jabra trovato all'indice {i}: {device}")
+                    break
+            
+            # Se non trovo Jabra, avviso e provo default (0), oppure crasho se vuoi strict mode.
+            if target_index == -1:
+                logger.warning("⚠️ Nessun Jabra trovato. Provo dispositivo di default (0).")
+                target_index = 0
+            
+            # Inizializza Recorder con l'indice trovato
+            self.recorder = PvRecorder(
+                device_index=target_index, 
+                frame_length=self.porcupine.frame_length
+            )
+            
+            # Test rapido hardware (apro e chiudo per essere sicuro che funzioni)
+            self.recorder.start()
+            self.recorder.stop()
+            
+            logger.info("👂 Porcupine attivato: 'Ehi Buddy' pronto.")
+            
+        except Exception as e:
+             # Qui crashiamo perché se il microfono non va, Buddy è sordo.
+             raise RuntimeError(f"CRITICO: Errore Hardware Microfono (Index {target_index}). {e}")
 
         logger.info(f"BuddyEars inizializzato. STT Mode: {self.mode}")
         
     def listen_loop(self):
         """Loop ibrido: Wake Word Locale -> Google STT Cloud."""
         
-        # Se Porcupine non è configurato, usciamo (o si potrebbe fare fallback su loop continuo)
+        # Controllo paranoico (anche se __init__ dovrebbe aver già garantito questo)
         if not self.porcupine or not self.recorder:
-            logger.error("Impossibile avviare loop ascolto: Porcupine non inizializzato.")
+            logger.error("Impossibile avviare loop ascolto: Componenti non pronti.")
             return
 
         recognizer = sr.Recognizer()
-        # Le tue impostazioni ottimizzate
         recognizer.pause_threshold = 1.0 
         recognizer.non_speaking_duration = 0.5
         recognizer.dynamic_energy_threshold = False 
