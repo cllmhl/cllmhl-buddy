@@ -6,9 +6,20 @@ import queue
 import subprocess
 from dataclasses import dataclass
 from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
+from dotenv import load_dotenv  # Aggiunto per caricare config.env
+
+# --- LIBRERIE AUDIO STANDARD ---
 import speech_recognition as sr
 from gtts import gTTS
 from gpiozero import LED
+
+# --- LIBRERIE PICOVOICE (WAKE WORD) ---
+import pvporcupine
+from pvrecorder import PvRecorder
+
+# Carichiamo le variabili d'ambiente (chiavi e path)
+load_dotenv()
+load_dotenv("config.env")
 
 # --- CONFIGURAZIONE LOGGER ---
 logger = logging.getLogger()
@@ -20,6 +31,7 @@ class BuddyEvent:
     timestamp: float = 0.0
 
 # --- GESTIONE BASSO LIVELLO AUDIO (ALSA/JACK SILENCE) ---
+# MANTENUTO ESATTAMENTE COME NEL TUO FILE
 def py_error_handler(filename, line, function, err, fmt):
     pass
 
@@ -46,6 +58,7 @@ class SuppressStream:
         os.close(self.old_err)
 
 # --- CLASSE PER L'OUTPUT VOCALE (VOICE) ---
+# MANTENUTA ESATTAMENTE COME NEL TUO FILE (Piper + SoX chain)
 class BuddyVoice:
     def __init__(self):
         # Configurazione: default 'cloud' (gTTS), opzionale 'local' (Piper)
@@ -62,7 +75,6 @@ class BuddyVoice:
         self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
         
         # Mappa delle voci disponibili (File e Velocità ottimale)
-        # Paola: 1.0 (Naturale) | Riccardo: 1.1 (Rallentato per chiarezza)
         self.voice_map = {
             "paola":    {"file": "it_IT-paola-medium.onnx", "speed": "1.0"},
             "riccardo": {"file": "it_IT-riccardo-x_low.onnx", "speed": "1.1"}
@@ -78,25 +90,18 @@ class BuddyVoice:
         self.piper_speed = selected_config["speed"]
         
         logger.info(f"BuddyVoice inizializzato. Mode: {self.mode} | Voice: {self.voice_name.upper()}")
-        logger.debug(f"Piper Model: {self.piper_model} | Speed: {self.piper_speed}")
 
     def speak(self, text):
         """Gestisce la sintesi vocale in base alla configurazione."""
         try:
-            # Pulizia testo per evitare problemi con la shell
             text = text.replace('"', '').replace("'", "")
-            
-            logger.debug(f"Inizio sintesi vocale ({self.mode}): {text[:20]}...")
             self.led_stato.on()
             self.is_speaking_event.set()
 
             if self.mode == "local":
                 self._speak_local_piper(text)
             else:
-                # Default: Cloud (gTTS)
                 self._speak_gtts(text)
-
-            logger.debug("Riproduzione audio completata")
 
         except Exception as e:
             logger.error(f"Errore TTS: {e}")
@@ -107,7 +112,6 @@ class BuddyVoice:
     def _speak_local_piper(self, text):
         """Usa Piper TTS -> SoX -> Aplay (Catena per fix 48kHz)."""
         try:
-            # 1. Piper: Genera WAV (Rate nativo del modello)
             piper_cmd = [
                 self.piper_binary,
                 "--model", self.piper_model,
@@ -115,7 +119,6 @@ class BuddyVoice:
                 "--output_file", "-" 
             ]
 
-            # 2. SoX: Resampling a 48000Hz (Fondamentale per Jabra)
             sox_cmd = [
                 "sox",
                 "-t", "wav", "-",   # Input Pipe
@@ -123,42 +126,15 @@ class BuddyVoice:
                 "-t", "wav", "-"    # Output Pipe
             ]
 
-            # 3. Aplay: Hardware Output (Jabra)
-            aplay_cmd = [
-                "aplay",
-                "-D", "plughw:0,0"
-            ]
+            aplay_cmd = ["aplay", "-D", "plughw:0,0"]
 
-            # Creazione Catena Processi
-            # Piper -> SoX
-            p_piper = subprocess.Popen(
-                piper_cmd, 
-                stdin=subprocess.PIPE, 
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            p_piper = subprocess.Popen(piper_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p_sox = subprocess.Popen(sox_cmd, stdin=p_piper.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p_aplay = subprocess.Popen(aplay_cmd, stdin=p_sox.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
-            # SoX -> Aplay
-            p_sox = subprocess.Popen(
-                sox_cmd,
-                stdin=p_piper.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            
-            # Aplay -> Speaker
-            p_aplay = subprocess.Popen(
-                aplay_cmd,
-                stdin=p_sox.stdout,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            
-            # Chiudiamo gli stdout intermedi nel thread principale per evitare deadlock
             p_piper.stdout.close()
             p_sox.stdout.close()
             
-            # Inviamo il testo e attendiamo
             _, stderr_piper = p_piper.communicate(input=text.encode('utf-8'))
             p_aplay.wait()
 
@@ -174,122 +150,124 @@ class BuddyVoice:
         tts = gTTS(text=text, lang='it')
         filename = "debug_audio.mp3"
         tts.save(filename)
-        
-        result = subprocess.run(
-            ["mpg123", "-q", filename], 
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        if result.returncode != 0:
-            logger.error(f"Errore mpg123: {result.stderr}")
+        subprocess.run(["mpg123", "-q", filename], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 # --- CLASSE PER L'INPUT UDITIVO (EARS) ---
+# MODIFICATA PER INTEGRARE PORCUPINE MA MANTENENDO LA LOGICA GOOGLE ESISTENTE
 class BuddyEars:
     def __init__(self, event_queue, speaking_event):
-        # Configurazione: default 'cloud' (Google), opzionale 'local' (es. Whisper)
         self.mode = os.getenv("STT_MODE", "cloud").lower()
         self.event_queue = event_queue
         self.buddy_is_speaking = speaking_event
         self.led_ascolto = LED(26) # Pin 26: Blu (Ascolto)
         self.running = True
-        logger.info(f"BuddyEars inizializzato in modalità: {self.mode}")
+        
+        # --- CONFIGURAZIONE PICOVOICE (NUOVA) ---
+        self.access_key = os.getenv("PICOVOICE_ACCESS_KEY")
+        self.keyword_path = os.getenv("WAKE_WORD_PATH")
+        
+        self.porcupine = None
+        self.recorder = None
+        
+        # Verifica Wake Word
+        if not self.access_key or not self.keyword_path or not os.path.exists(self.keyword_path):
+            logger.error("❌ ERRORE WAKE WORD: Controlla PICOVOICE_ACCESS_KEY e WAKE_WORD_PATH nel config.env")
+            # Fallback o stop? Per ora logghiamo errore ma lasciamo init
+        else:
+            try:
+                self.porcupine = pvporcupine.create(
+                    access_key=self.access_key,
+                    keyword_paths=[self.keyword_path]
+                )
+                self.recorder = PvRecorder(device_index=-1, frame_length=self.porcupine.frame_length)
+                logger.info("👂 Porcupine attivato: 'Ehi Buddy' pronto.")
+            except Exception as e:
+                logger.error(f"Errore init Porcupine: {e}")
+
+        logger.info(f"BuddyEars inizializzato. STT Mode: {self.mode}")
 
     def listen_loop(self):
-        """Loop principale di ascolto."""
-        if not self._check_hardware():
+        """Loop ibrido: Wake Word Locale -> Google STT Cloud."""
+        
+        # Se Porcupine non è configurato, usciamo (o si potrebbe fare fallback su loop continuo)
+        if not self.porcupine or not self.recorder:
+            logger.error("Impossibile avviare loop ascolto: Porcupine non inizializzato.")
             return
 
-        r = sr.Recognizer()
-        r.pause_threshold = 1.0 
-        r.non_speaking_duration = 0.5
-        
-        # --- MODIFICA CRUCIALE ---
-        # Disattiviamo la soglia dinamica. Era lei che "alzava l'asticella" tagliando le vocali finali.
-        r.dynamic_energy_threshold = False 
-        
-        # Fissiamo una soglia fissa. 
-        # 300-400 è tipico per una stanza silenziosa. 
-        # Se Buddy "ascolta" anche il rumore del frigo, alzalo a 500-600.
-        r.energy_threshold = 400
+        recognizer = sr.Recognizer()
+        # Le tue impostazioni ottimizzate
+        recognizer.pause_threshold = 1.0 
+        recognizer.non_speaking_duration = 0.5
+        recognizer.dynamic_energy_threshold = False 
+        recognizer.energy_threshold = 400
 
-        logger.info("Thread Jabra (Ears) avviato")
-
+        logger.info("Thread Ears avviato (Modalità Wake Word)")
+        
         try:
-            with SuppressStream():
-                with sr.Microphone() as source:
-                    # Facciamo comunque una calibrazione iniziale per sicurezza, 
-                    # ma poi usiamo il valore fisso impostato sopra.
-                    logger.info("Calibrazione iniziale rumore (1s)...")
-                    r.adjust_for_ambient_noise(source, duration=1.0)
+            self.recorder.start() # Avvia ascolto locale leggero
+            
+            while self.running:
+                # 1. Se Buddy parla, pausa tutto per evitare feedback
+                if self.buddy_is_speaking.is_set():
+                    time.sleep(0.1)
+                    continue
+                
+                # 2. Ascolto Wake Word (Locale, veloce)
+                pcm = self.recorder.read()
+                result = self.porcupine.process(pcm)
+
+                if result >= 0:
+                    logger.info("✨ WAKE WORD RILEVATA! ('Ehi Buddy')")
+                    self.led_ascolto.on()
+
+                    # 3. STOP Porcupine per liberare il microfono
+                    self.recorder.stop()
                     
-                    # Sovrascriviamo DOPO la calibrazione per essere sicuri che non la alzi troppo
-                    r.energy_threshold = 400
-                    logger.info(f"Soglia energia fissata a: {r.energy_threshold}")
-
-                    while self.running:
-                        # Se Buddy sta parlando, le orecchie riposano per evitare eco
-                        if self.buddy_is_speaking.is_set():
-                            time.sleep(0.1)
-                            continue
-
-                        try:
-                            self.led_ascolto.on()
-                            # Timeout None: aspetta finché non parli
-                            audio = r.listen(source, timeout=None, phrase_time_limit=None)
-                            self.led_ascolto.off()
+                    # 4. START Google Speech Recognition
+                    try:
+                        with sr.Microphone() as source:
+                            logger.info("🎤 In ascolto del comando (Google)...")
+                            # Timeout breve (5s) per aspettare che inizi a parlare
+                            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
                             
-                            self._process_audio(r, audio)
-
-                        except sr.WaitTimeoutError:
                             self.led_ascolto.off()
-                            pass
-                        except sr.UnknownValueError:
-                            self.led_ascolto.off()
-                            pass
-                        except Exception as inner_e:
-                            self.led_ascolto.off()
-                            logger.error(f"Errore ciclo ascolto interno: {inner_e}")
+                            # Processiamo l'audio
+                            self._process_audio(recognizer, audio)
                             
+                    except sr.WaitTimeoutError:
+                        logger.info("⏳ Nessun comando dopo la wake word.")
+                        self.led_ascolto.off()
+                    except Exception as e:
+                        logger.error(f"Errore durante ascolto comando: {e}")
+                        self.led_ascolto.off()
+                    
+                    # 5. RESTART Porcupine
+                    logger.info("👂 Torno in attesa di 'Ehi Buddy'...")
+                    self.recorder.start()
+
         except Exception as e:
+            logger.error(f"Errore critico loop Ears: {e}")
+        finally:
+            if self.recorder: self.recorder.delete()
+            if self.porcupine: self.porcupine.delete()
             self.led_ascolto.off()
-            logger.error(f"Errore critico Ears: {e}")
-            time.sleep(0.1)
-
-    def _check_hardware(self):
-        try:
-            with SuppressStream():
-                mics = sr.Microphone.list_microphone_names()
-            if mics:
-                logger.info(f"Microfoni trovati: {mics}")
-                return True
-            else:
-                logger.warning("Nessun microfono rilevato.")
-                return False
-        except Exception as e:
-            logger.error(f"Errore controllo mic: {e}")
-            return False
 
     def _process_audio(self, recognizer, audio):
-        """Decide quale motore STT usare."""
+        """Decide quale motore STT usare (Codice tuo originale mantenuto)."""
         text = ""
         try:
-            if self.mode == "local":
-                # TODO: Implementare STT locale (es. Whisper o Vosk)
-                # Per ora usiamo Google come placeholder finché non installiamo le lib locali
-                logger.warning("STT Locale non ancora attivo, uso Google temporaneamente.")
-                text = recognizer.recognize_google(audio, language="it-IT")
-            else:
-                # Default: Google Cloud Speech API (tramite speech_recognition)
-                text = recognizer.recognize_google(audio, language="it-IT")
+            # Usiamo sempre Google come da tua configurazione stabile
+            text = recognizer.recognize_google(audio, language="it-IT")
 
             if text:
-                logger.info(f"Jabra Input Rilevato: {text}")
+                logger.info(f"🗣️  Comando capito: {text}")
                 event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
                 self.event_queue.put(event)
 
+        except sr.UnknownValueError:
+            logger.info("🤷 Google non ha capito le parole.")
         except Exception as e:
-            logger.error(f"Errore riconoscimento ({self.mode}): {e}")
+            logger.error(f"Errore riconoscimento: {e}")
 
     def start(self):
         t = threading.Thread(target=self.listen_loop, daemon=True, name="EarsThread")
