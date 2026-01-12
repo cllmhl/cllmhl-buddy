@@ -61,7 +61,6 @@ class BuddyVoice:
     def __init__(self):
         # Configurazione: default 'cloud' (gTTS), opzionale 'local' (Piper)
         self.mode = os.getenv("TTS_MODE", "cloud").lower()
-        # Voce scelta: default 'paola' (o 'riccardo')
         self.voice_name = os.getenv("TTS_VOICE", "paola").lower()
         
         self.led_stato = LED(21) # Pin 21: Verde (Stato/Parlato)
@@ -72,13 +71,12 @@ class BuddyVoice:
         self.piper_base_path = os.path.join(home, "buddy_tools/piper")
         self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
         
-        # Mappa delle voci disponibili (File e Velocità ottimale)
+        # Mappa delle voci disponibili
         self.voice_map = {
             "paola":    {"file": "it_IT-paola-medium.onnx", "speed": "1.0"},
             "riccardo": {"file": "it_IT-riccardo-x_low.onnx", "speed": "1.1"}
         }
         
-        # Selezione configurazione
         if self.voice_name not in self.voice_map:
             logger.warning(f"Voce '{self.voice_name}' non trovata. Fallback su Paola.")
             self.voice_name = "paola"
@@ -90,7 +88,6 @@ class BuddyVoice:
         logger.info(f"BuddyVoice inizializzato. Mode: {self.mode} | Voice: {self.voice_name.upper()}")
 
     def speak(self, text):
-        """Gestisce la sintesi vocale in base alla configurazione."""
         try:
             text = text.replace('"', '').replace("'", "")
             self.led_stato.on()
@@ -108,7 +105,6 @@ class BuddyVoice:
             self.led_stato.off()
 
     def _speak_local_piper(self, text):
-        """Usa Piper TTS -> SoX -> Aplay (Catena per fix 48kHz)."""
         try:
             piper_cmd = [
                 self.piper_binary, "--model", self.piper_model,
@@ -223,7 +219,7 @@ class BuddyEars:
                     time.sleep(0.1)
                     continue
                 
-                # 1. Ascolto Wake Word
+                # 1. Ascolto Wake Word (PvRecorder)
                 pcm = self.recorder.read()
                 result = self.porcupine.process(pcm)
 
@@ -248,11 +244,17 @@ class BuddyEars:
             self.led_ascolto.off()
 
     def _run_conversation_session(self, recognizer):
-        """Gestisce il dialogo continuo. Timeout resetta SOLO dopo che Buddy ha finito di parlare."""
+        """
+        Gestisce il dialogo continuo con timeout reale.
+        Il timeout di 15s si resetta SEMPRE se Buddy parla.
+        """
         session_alive = True
-        silence_timeout = 15 # Aumentato a 15s come richiesto
+        MAX_SILENCE_SECONDS = 15.0
         
-        # Inizializza il mic una sola volta con gestione errori ALSA
+        # Timestamp dell'ultima attività (parlato Buddy o input utente)
+        last_interaction_time = time.time()
+        
+        # Inizializza il mic una sola volta
         with SuppressStream():
              mic_source = sr.Microphone()
              
@@ -261,33 +263,44 @@ class BuddyEars:
                 logger.info("🎤 Sessione Attiva. Parla pure...")
                 
                 while session_alive and self.running:
-                    # 1. STOP se Buddy parla. Non iniziamo nemmeno ad ascoltare.
+                    # 1. CONTROLLO PRIORITARIO: Buddy sta parlando?
                     if self.buddy_is_speaking.is_set():
+                        # Se Buddy parla, il tempo è "congelato" o meglio resettato.
+                        # Aggiorniamo il timestamp a "adesso" continuamente.
+                        last_interaction_time = time.time()
                         time.sleep(0.1)
                         continue
 
+                    # 2. CONTROLLO TIMEOUT REALE
+                    # Quanto tempo è passato dall'ultima volta che Buddy ha finito o tu hai parlato?
+                    elapsed = time.time() - last_interaction_time
+                    if elapsed > MAX_SILENCE_SECONDS:
+                        logger.info(f"⏳ Silenzio Reale > {MAX_SILENCE_SECONDS}s. Chiudo sessione.")
+                        session_alive = False
+                        continue
+
                     try:
-                        # 2. ASCOLTO
-                        # Il cronometro dei 15s parte ORA, a canale libero.
-                        audio = recognizer.listen(source, timeout=silence_timeout, phrase_time_limit=15)
+                        # 3. ASCOLTO "A FETTE" (POLLING)
+                        # Invece di ascoltare per 15s (che blocca tutto), ascoltiamo per 1.0s.
+                        # Questo ci permette di tornare su al punto 1 e controllare se Buddy ha iniziato a parlare.
+                        # timeout=1.0: Aspetta massimo 1s che l'utente INIZI a parlare.
+                        audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=15)
                         
-                        # Se arriva qui, hai parlato.
+                        # Se siamo qui, l'utente ha parlato!
+                        # Resettiamo il timer
+                        last_interaction_time = time.time()
+                        
+                        # Processiamo
                         threading.Thread(target=self._process_audio, args=(recognizer, audio)).start()
                         
                     except sr.WaitTimeoutError:
-                        # 3. GESTIONE INTELLIGENTE DEL TIMEOUT
-                        # Se scatta il timeout, controlliamo: Buddy ha iniziato a parlare nel frattempo?
-                        # Se sì, il timeout è invalido (era tempo "bruciato" dalla risposta del sistema).
-                        if self.buddy_is_speaking.is_set():
-                            logger.info("⏳ Timeout ignorato (Buddy stava parlando). Reset timer.")
-                            continue 
-                        
-                        # Se Buddy è stato zitto per tutti i 15 secondi, allora è vero silenzio.
-                        logger.info(f"⏳ Silenzio reale > {silence_timeout}s. Chiudo sessione.")
-                        session_alive = False
+                        # Nessuno ha parlato nell'ultimo secondo.
+                        # Non facciamo nulla, torniamo su.
+                        # Il ciclo ricontrollerà se Buddy sta parlando e se il tempo totale è scaduto.
+                        pass
                         
                     except Exception as e:
-                        logger.warning(f"Errore lieve in sessione (riprovo): {e}")
+                        logger.warning(f"Errore lieve in sessione: {e}")
                         
         except Exception as e:
             logger.error(f"Errore apertura microfono sessione: {e}")
