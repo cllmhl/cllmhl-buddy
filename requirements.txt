@@ -6,3 +6,5 @@ gTTS
 pyaudio
 gpiozero
 lgpio
+pvporcupine
+pvrecorder
