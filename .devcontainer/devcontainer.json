@@ -1,0 +1,22 @@
+{
+    "name": "Brain Assistant Dev Environment",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylint",
+                "tamasfe.even-better-toml",
+                "njpwerner.autodocstring"
+            ]
+        }
+    },
+    "features": {
+        // Aggiunge il supporto a Docker all'interno del codespace se serve
+        "ghcr.io/devcontainers/features/docker-in-docker:1": {}
+    },
+    "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+    "remoteUser": "vscode"
+}
