@@ -174,11 +174,11 @@ class BuddyEars:
             for i, device in enumerate(available_devices):
                 if "Jabra" in device:
                     target_index = i
-                    logger.info(f"✅ Microfono Jabra trovato all'indice {i}: {device}")
+                    logger.info(f"Microfono Jabra trovato all'indice {i}: {device}")
                     break
             
             if target_index == -1:
-                logger.warning("⚠️ Nessun Jabra trovato. Uso dispositivo di default (0).")
+                logger.warning("Nessun Jabra trovato. Uso dispositivo di default (0).")
                 target_index = 0
             
             self.recorder = PvRecorder(device_index=target_index, frame_length=self.porcupine.frame_length)
@@ -187,7 +187,7 @@ class BuddyEars:
             self.recorder.start()
             self.recorder.stop()
             
-            logger.info("👂 Porcupine attivato: 'Ehi Buddy' pronto.")
+            logger.info("Porcupine attivato: 'Ehi Buddy' pronto.")
             
         except Exception as e:
              raise RuntimeError(f"CRITICO: Errore Hardware Microfono (Index {target_index}). {e}")
@@ -224,7 +224,7 @@ class BuddyEars:
                 result = self.porcupine.process(pcm)
 
                 if result >= 0:
-                    logger.info("✨ WAKE WORD! Inizio Sessione Conversazione.")
+                    logger.info("WAKE WORD! Inizio Sessione Conversazione.")
                     self.led_ascolto.on()
                     self.recorder.stop() # Rilascio il mic per Google
                     
@@ -232,7 +232,7 @@ class BuddyEars:
                     self._run_conversation_session(recognizer)
                     
                     # Fine Sessione
-                    logger.info("💤 Fine Sessione. Torno in attesa di 'Ehi Buddy'...")
+                    logger.info("Fine Sessione. Torno in attesa di 'Ehi Buddy'...")
                     self.led_ascolto.off()
                     self.recorder.start() # Riprendo il mic per Porcupine
 
@@ -245,80 +245,91 @@ class BuddyEars:
 
     def _run_conversation_session(self, recognizer):
         """
-        Gestisce il dialogo continuo con timeout reale.
-        Il timeout di 15s si resetta SEMPRE se Buddy parla.
+        Gestisce una sessione di conversazione continua dopo il wake word.
+        Ascolta l'utente, invia il testo alla coda eventi e gestisce il timeout.
         """
-        session_alive = True
-        MAX_SILENCE_SECONDS = 15.0
-        
-        # Timestamp dell'ultima attività (parlato Buddy o input utente)
-        last_interaction_time = time.time()
-        
-        # Inizializza il mic una sola volta
-        with SuppressStream():
-             mic_source = sr.Microphone()
-             
-        try:
-            with mic_source as source:
-                logger.info("🎤 Sessione Attiva. Parla pure...")
-                
-                while session_alive and self.running:
-                    # 1. CONTROLLO PRIORITARIO: Buddy sta parlando?
+        MAX_SILENCE_SECONDS = 15.0 # Tempo massimo di silenzio prima di terminare la sessione
+        session_active = threading.Event()
+        session_active.set() # La sessione è attiva all'inizio
+        audio_queue = queue.Queue() # Coda per l'audio rilevato da listen_in_background
+
+        def end_session_callback():
+            """Funzione chiamata dal timer per terminare la sessione."""
+            if session_active.is_set():
+                logger.info(f"Silenzio > {MAX_SILENCE_SECONDS}s. Chiudo sessione.")
+                session_active.clear()
+
+        def audio_received_callback(recognizer, audio):
+            """Funzione chiamata da listen_in_background quando rileva audio."""
+            audio_queue.put(audio)
+
+        # Usiamo un microfono temporaneo per la sessione di riconoscimento
+        # Rilasciamo il PvRecorder e usiamo speech_recognition.Microphone
+        with sr.Microphone(device_index=self.recorder.device_index) as source:
+            try:
+                logger.info("Sessione Attiva. Parla pure...")
+
+                # Avvia l'ascolto in un thread separato. Non blocca l'esecuzione.
+                stop_listening = recognizer.listen_in_background(source, audio_received_callback, phrase_time_limit=15)
+
+                # Avvia il timer di timeout iniziale
+                session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+                session_timer.start()
+
+                while session_active.is_set() and self.running:
+                    # Se Buddy inizia a parlare, mettiamo in pausa il timer di silenzio
                     if self.buddy_is_speaking.is_set():
-                        # Se Buddy parla, il tempo è "congelato" o meglio resettato.
-                        # Aggiorniamo il timestamp a "adesso" continuamente.
-                        last_interaction_time = time.time()
-                        time.sleep(0.1)
-                        continue
+                        session_timer.cancel() # Cancella il timer attuale
+                        # Aspetta che Buddy finisca di parlare
+                        while self.buddy_is_speaking.is_set():
+                            time.sleep(0.1)
+                        # Fa ripartire un nuovo timer
+                        session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+                        session_timer.start()
 
-                    # 2. CONTROLLO TIMEOUT REALE
-                    # Quanto tempo è passato dall'ultima volta che Buddy ha finito o tu hai parlato?
-                    elapsed = time.time() - last_interaction_time
-                    if elapsed > MAX_SILENCE_SECONDS:
-                        logger.info(f"⏳ Silenzio Reale > {MAX_SILENCE_SECONDS}s. Chiudo sessione.")
-                        session_alive = False
-                        continue
-
+                    # Controlla se è arrivato nuovo audio dall'utente
                     try:
-                        # 3. ASCOLTO "A FETTE" (POLLING)
-                        # Invece di ascoltare per 15s (che blocca tutto), ascoltiamo per 1.0s.
-                        # Questo ci permette di tornare su al punto 1 e controllare se Buddy ha iniziato a parlare.
-                        # timeout=1.0: Aspetta massimo 1s che l'utente INIZI a parlare.
-                        audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=15)
-                        
-                        # Se siamo qui, l'utente ha parlato!
-                        # Resettiamo il timer
-                        last_interaction_time = time.time()
-                        
-                        # Processiamo
+                        audio = audio_queue.get(block=False)
+                        # L'utente ha parlato: resetta il timer e processa l'audio
+                        session_timer.cancel()
                         threading.Thread(target=self._process_audio, args=(recognizer, audio)).start()
-                        
-                    except sr.WaitTimeoutError:
-                        # Nessuno ha parlato nell'ultimo secondo.
-                        # Non facciamo nulla, torniamo su.
-                        # Il ciclo ricontrollerà se Buddy sta parlando e se il tempo totale è scaduto.
-                        pass
-                        
-                    except Exception as e:
-                        logger.warning(f"Errore lieve in sessione: {e}")
-                        
-        except Exception as e:
-            logger.error(f"Errore apertura microfono sessione: {e}")
+                        session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+                        session_timer.start()
+                    except queue.Empty:
+                        # Nessun audio ricevuto, il loop continua per controllare lo stato
+                        time.sleep(0.1)
+
+                # Fine della sessione
+                session_timer.cancel()
+                stop_listening(wait_for_stop=False)
+
+            except Exception as e:
+                logger.error(f"Errore durante la sessione di conversazione: {e}")
 
     def _process_audio(self, recognizer, audio):
-        """Decide quale motore STT usare."""
+        """Processa un blocco di audio rilevato e lo invia alla coda eventi."""
         try:
-            text = recognizer.recognize_google(audio, language="it-IT")
+            text = ""
+            if self.mode == "cloud":
+                with SuppressStream(): # Sopprimi output di Google API
+                    text = recognizer.recognize_google(audio, language="it-IT")
+            elif self.mode == "local":
+                # Per ora, fallback a Google se non implementato
+                logger.warning("STT locale non implementato. Fallback a Google.")
+                with SuppressStream():
+                    text = recognizer.recognize_google(audio, language="it-IT")
 
             if text:
-                logger.info(f"🗣️  Comando capito: {text}")
+                logger.info(f"Comando capito: {text}")
                 event = BuddyEvent(source="jabra", content=text, timestamp=time.time())
                 self.event_queue.put(event)
 
         except sr.UnknownValueError:
-            pass # Ignoriamo suoni non parole
+            logger.debug("Non ho capito cosa hai detto.")
+        except sr.RequestError as e:
+            logger.error(f"Errore di richiesta STT; {e}")
         except Exception as e:
-            logger.error(f"Errore riconoscimento: {e}")
+            logger.error(f"Errore durante l'elaborazione audio: {e}")
 
     def start(self):
         t = threading.Thread(target=self.listen_loop, daemon=True, name="EarsThread")

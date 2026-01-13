@@ -99,7 +99,7 @@ def main():
 
                 # UI Feedback
                 if event.source == "jabra":
-                    print(f"\rTu (🗣️) > {event.content}")
+                    print(f"\rTu (voce) > {event.content}")
                 logger.info(f"Input processato ({event.source}): {event.content}")
 
                 # Processo Cognitivo
