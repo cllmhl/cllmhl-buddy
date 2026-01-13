@@ -303,7 +303,7 @@ class BuddyEars:
 
                 # Fine della sessione
                 session_timer.cancel()
-                stop_listening(wait_for_stop=False)
+                stop_listening(wait_for_stop=True)
 
             except Exception as e:
                 logger.error(f"Errore durante la sessione di conversazione: {e}")
