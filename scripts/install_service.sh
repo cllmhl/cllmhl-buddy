@@ -3,18 +3,21 @@
 
 set -e  # Exit on error
 
+# Ottieni la directory del progetto (parent della cartella scripts)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo "🤖 Installazione Buddy Service..."
 
 # Verifica che lo script sia eseguito da root
 if [ "$EUID" -ne 0 ]; then 
     echo "❌ Esegui questo script con sudo:"
-    echo "   sudo bash install_service.sh"
+    echo "   sudo bash scripts/install_service.sh"
     exit 1
 fi
 
 # Copia il file service nella directory systemd
 echo "📦 Copiando buddy.service in /etc/systemd/system/..."
-cp buddy.service /etc/systemd/system/buddy.service
+cp "$PROJECT_DIR/config/buddy.service" /etc/systemd/system/buddy.service
 
 # Ricarica i daemon di systemd
 echo "🔄 Ricaricando systemd daemon..."

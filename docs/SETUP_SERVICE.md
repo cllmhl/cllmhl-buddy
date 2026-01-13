@@ -136,10 +136,10 @@ sudo usermod -aG audio,gpio,dialout cllmhl
 
 ### Modifiche al servizio
 
-Dopo aver modificato `buddy.service`:
+Dopo aver modificato `config/buddy.service`:
 
 ```bash
-sudo cp buddy.service /etc/systemd/system/
+sudo cp config/buddy.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart buddy
 ```

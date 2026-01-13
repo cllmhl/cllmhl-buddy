@@ -14,10 +14,10 @@ Buddy ora utilizza una **Named Pipe** (FIFO) per ricevere comandi testuali, perm
 
 ```bash
 # Invia un singolo comando
-./buddy_cmd.sh "che ore sono?"
+./scripts/buddy_cmd.sh "che ore sono?"
 
 # Modalità interattiva (multipli comandi)
-./buddy_cmd.sh
+./scripts/buddy_cmd.sh
 ```
 
 ### 2. Echo diretto
@@ -86,7 +86,7 @@ done
 Aggiungi al tuo `~/.bashrc`:
 
 ```bash
-alias buddy='bash /home/cllmhl/cllmhl-buddy/buddy_cmd.sh'
+alias buddy='bash /home/cllmhl/cllmhl-buddy/scripts/buddy_cmd.sh'
 ```
 
 Poi:

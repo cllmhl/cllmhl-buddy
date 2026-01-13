@@ -145,7 +145,7 @@ def main():
     
     if has_terminal:
         print(f"Input: TASTIERA + Pipe ({PIPE_PATH})")
-        print("Scrivi direttamente o usa: ./buddy_cmd.sh 'messaggio'\n")
+        print("Scrivi direttamente o usa: ./scripts/buddy_cmd.sh 'messaggio'\n")
     else:
         print(f"Input: Pipe ({PIPE_PATH})")
         print("Comandi: echo 'messaggio' > /tmp/buddy_pipe\n")
