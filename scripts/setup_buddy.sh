@@ -34,10 +34,10 @@ sudo apt-get install -y \
     libsox-fmt-all
 
 echo "--- 3. Gestione Ambiente Virtuale Python ---"
-# La variabile REMOTE_CONTAINERS è impostata da VS Code.
-if [ -n "$REMOTE_CONTAINERS" ]; then
-    echo "Ambiente container rilevato. Salto la gestione di venv e requirements.txt."
-    echo "(Sono gestiti da devcontainer.json)"
+# Controlla sia Dev Containers (REMOTE_CONTAINERS) che Codespaces (CODESPACES)
+if [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
+    echo "Ambiente containerizzato rilevato. Salto la gestione di venv e requirements.txt."
+    echo "(Sono gestiti da devcontainer.json o Codespaces)"
 else
     # Esegui solo in ambiente fisico (es. Raspberry Pi)
     if [ ! -d "$PROJECT_DIR/venv" ]; then

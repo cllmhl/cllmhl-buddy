@@ -1,37 +1,42 @@
 #!/bin/bash
 
-# Naviga nella cartella del progetto (utile se lanciato da fuori)
-cd "$(dirname "$0")"
+# Ottieni la directory del progetto (parent della cartella scripts)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
 echo "--- Buddy OS Startup ---"
+echo "📂 Directory Progetto: $PROJECT_DIR"
+echo ""
 
 # 1. Gestione Ambiente Virtuale (solo se non siamo in un container)
-# La variabile REMOTE_CONTAINERS è impostata da VS Code.
-if [ -z "$REMOTE_CONTAINERS" ]; then
+# Controlla sia Dev Containers (REMOTE_CONTAINERS) che Codespaces (CODESPACES)
+if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ]; then
     echo "Ambiente fisico rilevato. Attivazione venv..."
-    if [ ! -f "venv/bin/activate" ]; then
-        echo "Errore: Ambiente virtuale non trovato. Esegui prima ./setup_buddy.sh"
+    if [ ! -f "$PROJECT_DIR/venv/bin/activate" ]; then
+        echo "❌ Errore: Ambiente virtuale non trovato. Esegui prima scripts/setup_buddy.sh"
         exit 1
     fi
-    source venv/bin/activate
+    source "$PROJECT_DIR/venv/bin/activate"
+else
+    echo "Ambiente containerizzato rilevato. Uso Python di sistema."
 fi
 
 # 2. Pulizia file temporanei (vecchi mp3 della gTTS rimasti orfani)
-rm -f *.mp3
+rm -f "$PROJECT_DIR"/*.mp3
 
 # 4. Verifica variabili d'ambiente
-if [ ! -f .env ]; then
-    echo "Errore: File .env mancante. È essenziale per le chiavi API."
+if [ ! -f "$PROJECT_DIR/.env" ]; then
+    echo "❌ Errore: File .env mancante. È essenziale per le chiavi API."
     echo "Crea il file .env partendo da .env.example e inserisci le tue chiavi."
     exit 1
 fi
 
 # 5. Esecuzione di Buddy
 # Usiamo 'python3 -u' per forzare l'output non bufferizzato (log più immediati)
-python3 -u main.py
+python3 -u "$PROJECT_DIR/main.py"
 
 # 6. Disattivazione al termine (solo se abbiamo attivato il venv)
-if [ -z "$REMOTE_CONTAINERS" ]; then
+if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ]; then
     deactivate
 fi
 echo "--- Buddy OS Offline ---"
