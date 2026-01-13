@@ -1,11 +1,19 @@
 #!/bin/bash
 
 # Ottieni la directory del progetto (parent della cartella scripts)
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
 
 echo "--- Buddy OS Startup ---"
-echo "📂 Directory Progetto: $PROJECT_DIR"
+echo "📂 Script Dir: $SCRIPT_DIR"
+echo "📂 Project Dir: $PROJECT_DIR"
+echo "🔍 Cerco venv in: $PROJECT_DIR/venv/bin/activate"
+if [ -f "$PROJECT_DIR/venv/bin/activate" ]; then
+    echo "✅ Trovato!"
+else
+    echo "❌ Non trovato!"
+fi
 echo ""
 
 # 1. Gestione Ambiente Virtuale (solo se non siamo in un container)
