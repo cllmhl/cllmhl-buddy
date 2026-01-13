@@ -3,6 +3,13 @@
 # Uscire immediatamente in caso di errore
 set -e
 
+# Ottieni la directory del progetto (parent della cartella scripts)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
+
+echo "🤖 Setup Buddy - Directory Progetto: $PROJECT_DIR"
+echo ""
+
 echo "--- 1. Aggiornamento Sistema Operativo ---"
 sudo apt-get update
 sudo apt-get upgrade -y
@@ -33,22 +40,22 @@ if [ -n "$REMOTE_CONTAINERS" ]; then
     echo "(Sono gestiti da devcontainer.json)"
 else
     # Esegui solo in ambiente fisico (es. Raspberry Pi)
-    if [ ! -d "venv" ]; then
+    if [ ! -d "$PROJECT_DIR/venv" ]; then
         echo "Creazione ambiente virtuale..."
-        python3 -m venv venv
+        python3 -m venv "$PROJECT_DIR/venv"
     else
         echo "Ambiente virtuale già esistente."
     fi
 
     # Attivazione venv
-    source venv/bin/activate
+    source "$PROJECT_DIR/venv/bin/activate"
 
     echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
     # Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
     pip install --upgrade pip setuptools wheel
 
     # Installazione dei requisiti
-    pip install -r requirements.txt
+    pip install -r "$PROJECT_DIR/requirements.txt"
 fi
 
 echo "--- 5. Verifica Dispositivi Audio (Jabra) ---"
