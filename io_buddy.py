@@ -150,6 +150,7 @@ class BuddyEars:
         
         self.porcupine = None
         self.recorder = None
+        self.device_index = -1  # Memorizza l'indice del dispositivo
         
         # FAIL FAST INIT
         if not self.access_key or not self.keyword_path:
@@ -181,6 +182,7 @@ class BuddyEars:
                 logger.warning("Nessun Jabra trovato. Uso dispositivo di default (0).")
                 target_index = 0
             
+            self.device_index = target_index  # Salva l'indice per uso successivo
             self.recorder = PvRecorder(device_index=target_index, frame_length=self.porcupine.frame_length)
             
             # Test rapido Hardware
@@ -265,7 +267,7 @@ class BuddyEars:
 
         # Usiamo un microfono temporaneo per la sessione di riconoscimento
         # Rilasciamo il PvRecorder e usiamo speech_recognition.Microphone
-        with sr.Microphone(device_index=self.recorder.device_index) as source:
+        with sr.Microphone(device_index=self.device_index) as source:
             try:
                 logger.info("Sessione Attiva. Parla pure...")
 
