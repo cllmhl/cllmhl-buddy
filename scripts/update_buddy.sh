@@ -14,12 +14,12 @@ git fetch --all
 git reset --hard origin/main  # Forza la sovrascrittura
 
 # 2. Esecuzione Setup
-if [ -f "setup_buddy.sh" ]; then
+if [ -f "scripts/setup_buddy.sh" ]; then
     echo "[2/2] Esecuzione setup_buddy.sh..."
-    chmod +x setup_buddy.sh
-    ./setup_buddy.sh
+    chmod +x scripts/setup_buddy.sh
+    bash scripts/setup_buddy.sh
 else
-    echo "⚠️ Avviso: setup_buddy.sh non trovato in $BUDDY_DIR"
+    echo "⚠️ Avviso: scripts/setup_buddy.sh non trovato in $BUDDY_DIR"
 fi
 
 echo "--- ✅ Operazione completata ---"
