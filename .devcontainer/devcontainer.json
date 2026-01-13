@@ -14,8 +14,7 @@
         }
     },
     "features": {
-        // Aggiunge il supporto a Docker all'interno del codespace se serve
-        "ghcr.io/devcontainers/features/docker-in-docker:1": {}
+        //we will see...
     },
     "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
     "remoteUser": "vscode"
