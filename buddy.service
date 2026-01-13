@@ -1,0 +1,33 @@
+[Unit]
+Description=Buddy - AI Voice Assistant
+After=network.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cllmhl
+Group=cllmhl
+WorkingDirectory=/home/cllmhl/cllmhl-buddy
+
+# Esegue main.py usando il venv Python
+ExecStart=/home/cllmhl/cllmhl-buddy/venv/bin/python3 /home/cllmhl/cllmhl-buddy/main.py
+
+# Restart automatico in caso di crash (dopo 10 secondi)
+Restart=always
+RestartSec=10
+
+# Variabili d'ambiente (opzionale, se non usi config.env)
+Environment="PYTHONUNBUFFERED=1"
+
+# Logging: stdout/stderr vanno in journalctl
+StandardOutput=journal
+StandardError=journal
+
+# Permessi per accesso a GPIO e Audio
+SupplementaryGroups=gpio audio dialout
+
+# Timeout per startup (utile se Buddy impiega tempo a inizializzare)
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target
