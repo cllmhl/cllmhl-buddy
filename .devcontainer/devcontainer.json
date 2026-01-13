@@ -13,9 +13,7 @@
             ]
         }
     },
-    "features": {
-        //we will see...
-    },
+    "features": {},
     "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
     "remoteUser": "vscode"
 }
