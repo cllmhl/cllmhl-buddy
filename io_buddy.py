@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
 from dotenv import load_dotenv
 
+# --- MOCK GPIO PER TESTING (solo se non su Raspberry Pi) ---
+if not os.path.exists('/proc/device-tree/model'):
+    # Non siamo su Raspberry Pi, usa mock pin factory
+    os.environ['GPIOZERO_PIN_FACTORY'] = 'mock'
+
 # --- LIBRERIE AUDIO STANDARD ---
 import speech_recognition as sr
 from gtts import gTTS
@@ -144,28 +149,39 @@ class BuddyEars:
         self.buddy_is_speaking = speaking_event
         self.led_ascolto = LED(26) 
         self.running = True
+        self.enabled = True  # Flag per sapere se Ears è funzionante
         
         self.access_key = os.getenv("PICOVOICE_ACCESS_KEY")
         self.keyword_path = os.getenv("WAKE_WORD_PATH")
         
         self.porcupine = None
         self.recorder = None
+        self.device_index = -1
         
-        # FAIL FAST INIT
+        # Verifica configurazione base
         if not self.access_key or not self.keyword_path:
-             raise ValueError("CRITICO: Manca PICOVOICE_ACCESS_KEY o WAKE_WORD_PATH nel config.env")
+            logger.warning("⚠️ PICOVOICE_ACCESS_KEY o WAKE_WORD_PATH mancanti. Wake Word DISABILITATO.")
+            self.enabled = False
+            return
         
         if not os.path.exists(self.keyword_path):
-             raise FileNotFoundError(f"CRITICO: File Wake Word non trovato: {self.keyword_path}")
+            logger.warning(f"⚠️ File Wake Word non trovato: {self.keyword_path}. Wake Word DISABILITATO.")
+            self.enabled = False
+            return
         
+        # Tenta inizializzazione Porcupine
         try:
             self.porcupine = pvporcupine.create(
                 access_key=self.access_key,
                 keyword_paths=[self.keyword_path]
             )
         except Exception as e:
-             raise RuntimeError(f"CRITICO: Init Porcupine fallito. {e}")
+            logger.warning(f"⚠️ Init Porcupine fallito: {e}. Wake Word DISABILITATO.")
+            logger.info("💡 Questo è normale se non sei su Raspberry Pi o non hai l'hardware audio.")
+            self.enabled = False
+            return
             
+        # Tenta inizializzazione Recorder
         try:
             target_index = -1
             available_devices = PvRecorder.get_available_devices()
@@ -181,6 +197,7 @@ class BuddyEars:
                 logger.warning("⚠️ Nessun Jabra trovato. Uso dispositivo di default (0).")
                 target_index = 0
             
+            self.device_index = target_index  # Salva per uso successivo
             self.recorder = PvRecorder(device_index=target_index, frame_length=self.porcupine.frame_length)
             
             # Test rapido Hardware
@@ -190,12 +207,22 @@ class BuddyEars:
             logger.info("👂 Porcupine attivato: 'Ehi Buddy' pronto.")
             
         except Exception as e:
-             raise RuntimeError(f"CRITICO: Errore Hardware Microfono (Index {target_index}). {e}")
+            logger.warning(f"⚠️ Errore Hardware Microfono: {e}. Wake Word DISABILITATO.")
+            logger.info("💡 Questo è normale se non sei su Raspberry Pi o non hai l'hardware audio.")
+            self.enabled = False
+            if self.porcupine:
+                self.porcupine.delete()
+                self.porcupine = None
+            return
 
         logger.info(f"BuddyEars inizializzato. STT Mode: {self.mode}")
 
     def listen_loop(self):
         """Loop: Attesa Wake Word -> Sessione Continua -> Timeout."""
+        
+        if not self.enabled:
+            logger.info("👂 BuddyEars disabilitato (nessun hardware wake word). Thread termina.")
+            return
         
         if not self.porcupine or not self.recorder:
             logger.error("Impossibile avviare loop ascolto: Componenti non pronti.")

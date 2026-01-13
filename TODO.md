@@ -1,10 +1,10 @@
 # 🚀 Buddy Project - TODO List
 
-## 🟡 FASE 2: Wake Word & Background (In Chiusura)
+## � FASE 2: Wake Word & Background (COMPLETATA!)
 - [x] **Wake Word Integration:** Implementazione Picovoice Porcupine ("Ehi Buddy") con loop di ascolto ibrido.
 - [ ] **Testing Stabilità:** Verifica timeout sessione (15s) e gestione concorrenza audio (Jabra lock).
 - [x] **Esecuzione in background (Service):** Creazione file `buddy.service` per avvio automatico con `systemd`.
-- [ ] **Input da Terminale (Named Pipe):** Implementazione FIFO pipe per inviare comandi testuali anche se Buddy gira in background.
+- [x] **Input da Terminale (Named Pipe):** Implementazione FIFO pipe per inviare comandi testuali anche se Buddy gira in background.
 
 ## 🟡 FASE 3: Sensi Fisici e Nuova Architettura (The Body)
 ### Architettura Modulare (Event-Driven)

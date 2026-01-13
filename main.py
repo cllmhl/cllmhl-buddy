@@ -1,5 +1,7 @@
 from logging.handlers import RotatingFileHandler
 import os
+import sys
+import stat
 import logging
 from dotenv import load_dotenv
 import threading
@@ -27,18 +29,63 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
-# --- THREAD TASTIERA (Mantenuto nel main perché è input di sistema standard) ---
+# --- CONFIGURAZIONE NAMED PIPE (FIFO) ---
+PIPE_PATH = "/tmp/buddy_pipe"
+
+def create_pipe():
+    """Crea la Named Pipe se non esiste."""
+    if os.path.exists(PIPE_PATH):
+        # Rimuovi pipe esistente (potrebbe essere rimasta da una sessione precedente)
+        try:
+            os.unlink(PIPE_PATH)
+        except Exception as e:
+            logger.warning(f"Impossibile rimuovere pipe esistente: {e}")
+    
+    try:
+        os.mkfifo(PIPE_PATH)
+        # Permessi di lettura/scrittura per tutti (così puoi scrivere anche come altro user)
+        os.chmod(PIPE_PATH, 0o666)
+        logger.info(f"Named Pipe creata: {PIPE_PATH}")
+    except Exception as e:
+        logger.error(f"Errore creazione Named Pipe: {e}")
+        raise
+
 def keyboard_thread(event_queue):
-    """Ascolta il terminale."""
+    """Legge comandi dalla tastiera (stdin)."""
     logger.info("Thread tastiera avviato")
+    print("Tu > ", end="", flush=True)
+    
     while True:
         try:
-            text = input() 
+            text = input()
             if text:
                 event = BuddyEvent(source="terminal", content=text, timestamp=time.time())
                 event_queue.put(event)
+                print("Tu > ", end="", flush=True)
         except EOFError:
+            logger.info("EOF ricevuto, thread tastiera termina")
             break
+        except Exception as e:
+            logger.error(f"Errore lettura tastiera: {e}")
+            break
+
+def pipe_thread(event_queue):
+    """Legge comandi dalla Named Pipe."""
+    logger.info(f"Thread Pipe avviato. In ascolto su {PIPE_PATH}")
+    
+    while True:
+        try:
+            # Apre la pipe in modalità lettura (blocca fino a quando qualcuno scrive)
+            with open(PIPE_PATH, 'r') as pipe:
+                for line in pipe:
+                    text = line.strip()
+                    if text:
+                        logger.info(f"Comando ricevuto da pipe: {text}")
+                        event = BuddyEvent(source="pipe", content=text, timestamp=time.time())
+                        event_queue.put(event)
+        except Exception as e:
+            logger.error(f"Errore lettura pipe: {e}")
+            time.sleep(1)  # Attendi prima di riprovare
 
 # --- MAIN ---
 def main():
@@ -70,15 +117,38 @@ def main():
         print(f"Errore critico in avvio: {e}")
         return
 
+    # Crea Named Pipe per input comandi
+    create_pipe()
+    
     # Avvio Threads Input
-    t_key = threading.Thread(target=keyboard_thread, args=(event_queue,), daemon=True, name="KbdThread")
-    t_key.start()
+    # Rileva se c'è un terminale interattivo (stdin connesso)
+    has_terminal = sys.stdin.isatty()
+    
+    if has_terminal:
+        # Modalità interattiva: tastiera + pipe
+        t_kbd = threading.Thread(target=keyboard_thread, args=(event_queue,), daemon=True, name="KbdThread")
+        t_kbd.start()
+        logger.info("Modalità INTERATTIVA: Tastiera + Pipe attivi")
+    else:
+        # Modalità servizio: solo pipe
+        logger.info("Modalità SERVIZIO: Solo Pipe attiva")
+    
+    # Thread Pipe sempre attivo
+    t_pipe = threading.Thread(target=pipe_thread, args=(event_queue,), daemon=True, name="PipeThread")
+    t_pipe.start()
     
     ears.start() # Avvia il thread di ascolto (Jabra)
 
     print("\n--- Buddy OS Online (Refactored) ---")
     print(f"Audio Mode: STT={ears.mode.upper()} / TTS={voice.mode.upper()}")
-    print("\nTu > ", end="", flush=True)
+    print(f"Wake Word: {'ATTIVO ✅' if ears.enabled else 'DISABILITATO ⚠️'}")
+    
+    if has_terminal:
+        print(f"Input: TASTIERA + Pipe ({PIPE_PATH})")
+        print("Scrivi direttamente o usa: ./buddy_cmd.sh 'messaggio'\n")
+    else:
+        print(f"Input: Pipe ({PIPE_PATH})")
+        print("Comandi: echo 'messaggio' > /tmp/buddy_pipe\n")
 
     last_archive_time = time.time()
 
@@ -100,6 +170,10 @@ def main():
                 # UI Feedback
                 if event.source == "jabra":
                     print(f"\rTu (voce) > {event.content}")
+                elif event.source == "pipe":
+                    print(f"\rTu (pipe) > {event.content}")
+                # Se source == "terminal" il prompt è già gestito da keyboard_thread
+                
                 logger.info(f"Input processato ({event.source}): {event.content}")
 
                 # Processo Cognitivo
@@ -112,7 +186,6 @@ def main():
 
                 # Output
                 print(f"Buddy > {risposta}")
-                print("\nTu > ", end="", flush=True)
 
                 # Parla solo se l'input era vocale (o configurabile diversamente in futuro)
                 if event.source == "jabra":
