@@ -144,13 +144,13 @@ class BuddyEars:
         self.buddy_is_speaking = speaking_event
         self.led_ascolto = LED(26) 
         self.running = True
+        self.device_index = 0 # Valore di default sicuro
         
         self.access_key = os.getenv("PICOVOICE_ACCESS_KEY")
         self.keyword_path = os.getenv("WAKE_WORD_PATH")
         
         self.porcupine = None
         self.recorder = None
-        self.device_index = -1  # Memorizza l'indice del dispositivo
         
         # FAIL FAST INIT
         if not self.access_key or not self.keyword_path:
@@ -182,7 +182,9 @@ class BuddyEars:
                 logger.warning("Nessun Jabra trovato. Uso dispositivo di default (0).")
                 target_index = 0
             
-            self.device_index = target_index  # Salva l'indice per uso successivo
+            # Salviamo l'indice in self per uso futuro (FIX CRITICO)
+            self.device_index = target_index
+            
             self.recorder = PvRecorder(device_index=target_index, frame_length=self.porcupine.frame_length)
             
             # Test rapido Hardware
@@ -267,46 +269,57 @@ class BuddyEars:
 
         # Usiamo un microfono temporaneo per la sessione di riconoscimento
         # Rilasciamo il PvRecorder e usiamo speech_recognition.Microphone
-        with sr.Microphone(device_index=self.device_index) as source:
-            try:
-                logger.info("Sessione Attiva. Parla pure...")
+        # IMPORTANTE: Non usiamo 'with' perché listen_in_background usa il microfono in un thread separato
+        microphone = sr.Microphone(device_index=self.device_index)
+        stop_listening = None
+        session_timer = None
+        
+        try:
+            # Apri manualmente il microfono
+            microphone.__enter__()
+            logger.info("Sessione Attiva. Parla pure...")
 
-                # Avvia l'ascolto in un thread separato. Non blocca l'esecuzione.
-                stop_listening = recognizer.listen_in_background(source, audio_received_callback, phrase_time_limit=15)
+            # Avvia l'ascolto in un thread separato. Non blocca l'esecuzione.
+            stop_listening = recognizer.listen_in_background(microphone, audio_received_callback, phrase_time_limit=15)
 
-                # Avvia il timer di timeout iniziale
-                session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
-                session_timer.start()
+            # Avvia il timer di timeout iniziale
+            session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+            session_timer.start()
 
-                while session_active.is_set() and self.running:
-                    # Se Buddy inizia a parlare, mettiamo in pausa il timer di silenzio
-                    if self.buddy_is_speaking.is_set():
-                        session_timer.cancel() # Cancella il timer attuale
-                        # Aspetta che Buddy finisca di parlare
-                        while self.buddy_is_speaking.is_set():
-                            time.sleep(0.1)
-                        # Fa ripartire un nuovo timer
-                        session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
-                        session_timer.start()
-
-                    # Controlla se è arrivato nuovo audio dall'utente
-                    try:
-                        audio = audio_queue.get(block=False)
-                        # L'utente ha parlato: resetta il timer e processa l'audio
-                        session_timer.cancel()
-                        threading.Thread(target=self._process_audio, args=(recognizer, audio)).start()
-                        session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
-                        session_timer.start()
-                    except queue.Empty:
-                        # Nessun audio ricevuto, il loop continua per controllare lo stato
+            while session_active.is_set() and self.running:
+                # Se Buddy inizia a parlare, mettiamo in pausa il timer di silenzio
+                if self.buddy_is_speaking.is_set():
+                    session_timer.cancel() # Cancella il timer attuale
+                    # Aspetta che Buddy finisca di parlare
+                    while self.buddy_is_speaking.is_set():
                         time.sleep(0.1)
+                    # Fa ripartire un nuovo timer
+                    session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+                    session_timer.start()
 
-                # Fine della sessione
+                # Controlla se è arrivato nuovo audio dall'utente
+                try:
+                    audio = audio_queue.get(block=False)
+                    # L'utente ha parlato: resetta il timer e processa l'audio
+                    session_timer.cancel()
+                    threading.Thread(target=self._process_audio, args=(recognizer, audio)).start()
+                    session_timer = threading.Timer(MAX_SILENCE_SECONDS, end_session_callback)
+                    session_timer.start()
+                except queue.Empty:
+                    # Nessun audio ricevuto, il loop continua per controllare lo stato
+                    time.sleep(0.1)
+
+        except Exception as e:
+            logger.error(f"Errore durante la sessione di conversazione: {e}")
+        
+        finally:
+            # Pulizia: ferma il listener in background e chiudi il microfono
+            if session_timer:
                 session_timer.cancel()
+            if stop_listening:
                 stop_listening(wait_for_stop=False)
-
-            except Exception as e:
-                logger.error(f"Errore durante la sessione di conversazione: {e}")
+            if microphone:
+                microphone.__exit__(None, None, None)
 
     def _process_audio(self, recognizer, audio):
         """Processa un blocco di audio rilevato e lo invia alla coda eventi."""
