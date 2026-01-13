@@ -27,25 +27,28 @@ sudo apt-get install -y \
     libsox-fmt-all
 
 echo "--- 3. Gestione Ambiente Virtuale Python ---"
-if [ ! -d "venv" ]; then
-    echo "Creazione ambiente virtuale..."
-    python3 -m venv venv
+# La variabile REMOTE_CONTAINERS è impostata da VS Code.
+if [ -n "$REMOTE_CONTAINERS" ]; then
+    echo "Ambiente container rilevato. Salto la gestione di venv e requirements.txt."
+    echo "(Sono gestiti da devcontainer.json)"
 else
-    echo "Ambiente virtuale già esistente."
-fi
+    # Esegui solo in ambiente fisico (es. Raspberry Pi)
+    if [ ! -d "venv" ]; then
+        echo "Creazione ambiente virtuale..."
+        python3 -m venv venv
+    else
+        echo "Ambiente virtuale già esistente."
+    fi
 
-# Attivazione venv
-source venv/bin/activate
+    # Attivazione venv
+    source venv/bin/activate
 
-echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
-# Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
-pip install --upgrade pip setuptools wheel
+    echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
+    # Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
+    pip install --upgrade pip setuptools wheel
 
-# Installazione dei requisiti
-if [ -f "requirements.txt" ]; then
+    # Installazione dei requisiti
     pip install -r requirements.txt
-else
-    echo "Attenzione: requirements.txt non trovato, salto installazione pip."
 fi
 
 echo "--- 5. Verifica Dispositivi Audio (Jabra) ---"
