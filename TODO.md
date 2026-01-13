@@ -1,36 +1,35 @@
 # 🚀 Buddy Project - TODO List
 
-## 🟡 FASE 2: Wake Word (Priorità Alta)
-- [ ] **Wake Word Integration:** Configurazione motore locale (Porcupine/Snowboy) per attivazione su "Ehi Buddy".
-- [ ] **Esecuzione in background:** Buddy parte in automatico e si sveglia con "Buddy" poi si mette a dormire stile alexa.
-- [ ] **Va mantenuta la possibilità dei comandi a terminale:** Se parto in background "perdo" la tastiera... Come faccio?
+## 🟡 FASE 2: Wake Word & Background (In Chiusura)
+- [x] **Wake Word Integration:** Implementazione Picovoice Porcupine ("Ehi Buddy") con loop di ascolto ibrido.
+- [ ] **Testing Stabilità:** Verifica timeout sessione (15s) e gestione concorrenza audio (Jabra lock).
+- [ ] **Esecuzione in background (Service):** Creazione file `buddy.service` per avvio automatico con `systemd`.
+- [ ] **Input da Terminale (Named Pipe):** Implementazione FIFO pipe per inviare comandi testuali anche se Buddy gira in background.
 
-## 🟡 FASE 3: Sensi Fisici e Refactoring (Hardware Pronto)
-### Sensore di presenza
-- [ ] **Radar di presenza mmWave (LD2410C):** Collegamento fisico tramite T-Cobbler e cavetti DuPont.
-- [ ] **Fotoresistenza (LDR):** Misura la luminosità della stanza. Può aiutare ad accendere le luci quando entri in casa: "alexa..."
-- [ ] **Sensore di Temperatura e Umidità (DHT11 o DHT22):** Fornisce dati ambientali reali.
-- [ ] **Monitoraggio Presenza:** Sviluppo script in background per lettura dati radar.
-### Output
-- [ ] **4 Digit 7-Segment Display:** Per visualizzare stati o timer."
-- [ ] **RGB LED:** Indicatore di stato multicolore."
-- [ ] **Active Buzzer:** Allarmi o feedback acustico."
-- [ ] **Altri led..:** Ne abbiamo a volontà."
-- [ ] **Logica Proattiva:** Implementazione trigger "Presenza + Silenzio > 2 ore".
-- [ ] **Resume Work:** Logica per riprendere il filo del discorso/lavoro al ritorno dell'utente.
-### Refactoring
-- [ ] **Refactoring Architetturale:** Separazione moduli `io_buddy.py` in `stt.py`, `tts.py`, `hardware.py`.
+## 🟡 FASE 3: Sensi Fisici e Nuova Architettura (The Body)
+### Architettura Modulare (Event-Driven)
+- [ ] **Creazione `senses.py` (INPUT):** Modulo isolato per la lettura dei sensori. Scrive solo nella `event_queue`.
+- [ ] **Creazione `feedback.py` (OUTPUT):** Modulo per feedback non verbali (LED, Suoni, Display).
+- [ ] **Refactoring `io_buddy.py` -> `audio_core.py`:** Pulizia del modulo audio (rimozione gestione LED/Sensori), focus solo su Mic/Speaker.
+- [ ] **Orchestrazione `main.py`:** Aggiornamento del loop principale per smistare eventi da `senses` a `brain` a `feedback`/`audio`.
 
-## 🟡 FASE 4: Google Cloud API: Le API di google sembrano imbattibili. Proviamole seriamente!
-- [ ] **Valutazione Google Cloud TTS API:** Implementazione Google Cloud TTS API (Voci Neural2/WaveNet) per sostituire gTTS e Piper con qualità umana.
-- [ ] **Valutazione Google Cloud STT API:** Implementazione Google Cloud STT API per confrontarla con speech_recognition attuale.
+### Integrazione Hardware (`senses.py` & `feedback.py`)
+- [ ] **Radar mmWave (LD2410C):** Lettura via UART (Serial) in `senses.py`. Rilevamento presenza statica/movimento.
+- [ ] **Sensori Ambientali:** Integrazione DHT11 (Temp/Umidità) e LDR (Luce) su GPIO.
+- [ ] **Display 7-Segment (TM1637):** Visualizzazione codici stato (es. "Err", "On") o orologio in `feedback.py`.
+- [ ] **Active Buzzer:** Feedback acustici (Beep conferma, Alarm error) in `feedback.py`.
+- [ ] **Logica Proattiva:** Implementazione trigger "Presenza + Silenzio > 2 ore" (Buddy saluta se entri dopo tanto tempo).
 
-## 🔴 FASE 5: Memoria Totale e Decay
-- [ ] **Database SQLite:** Setup su SSD per log conversazioni e metadati.
-- [ ] **RAG (Il Diario):** Ricerca semantica nel DB per recupero ricordi pre-risposta.
-- [ ] **Dimenticatoio Selettivo (Decay):** Implementazione degradazione ricordi (Istr. 08/01).
+## 🟡 FASE 4: Super Voice (Google Cloud API)
+- [ ] **Google Cloud TTS (Professionale):** Sostituzione gTTS con API Neural2/WaveNet (richiede account Billing Google Cloud).
+- [ ] **Google Cloud STT (Streaming):** Valutazione passaggio a STT in streaming reale per latenza zero (vs speech_recognition attuale).
+
+## 🔴 FASE 5: Memoria Totale e Decay (Il Cervello)
+- [ ] **Database SQLite:** Setup su SSD per log conversazioni e metadati persistenti.
+- [ ] **RAG (Il Diario):** Ricerca semantica nel DB per recupero contesto storico prima di rispondere.
+- [ ] **Dimenticatoio Selettivo (Decay):** Implementazione algoritmo di pulizia ricordi vecchi/inutili.
 - [ ] **Sentiment Analysis:** Tracciamento umore dell'utente nel DB.
 
-## 🔵 FASE 6: Integrazioni Finali
+## 🔵 FASE 6: Integrazioni Finali (Estensioni)
 - [ ] **Domotica Tapo:** Integrazione luci e prese smart tramite API.
 - [ ] **Inside Jokes:** Evoluzione personalità basata sullo storico a lungo termine.
