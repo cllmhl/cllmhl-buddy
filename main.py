@@ -24,7 +24,7 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("chromadb").setLevel(logging.INFO)
 logging.getLogger("posthog").setLevel(logging.ERROR)
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 # --- THREAD TASTIERA (Mantenuto nel main perché è input di sistema standard) ---
