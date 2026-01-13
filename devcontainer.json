@@ -8,6 +8,9 @@
 	// 2. Aggiorna pip e installa le dipendenze da requirements.txt.
 	"postCreateCommand": "if [ ! -f .env ]; then cp .env.example .env; fi && pip install --upgrade pip && pip install -r requirements.txt",
 
+	// Features - explicitly exclude Docker
+	"features": {},
+
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
