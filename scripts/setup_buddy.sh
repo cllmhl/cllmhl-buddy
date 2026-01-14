@@ -31,7 +31,8 @@ sudo apt-get install -y \
     build-essential \
     wget \
     sox \
-    libsox-fmt-all
+    libsox-fmt-all \
+    libgpiod2
 
 echo "--- 3. Gestione Ambiente Virtuale Python ---"
 # Controlla sia Dev Containers (REMOTE_CONTAINERS) che Codespaces (CODESPACES)
