@@ -151,6 +151,12 @@ sudo raspi-config
 ls -l /dev/ttyAMA0
 ```
 
+**Connessioni Hardware:**
+- **VCC** → Striscia Rossa (5V)
+- **GND** → Striscia Blu (GND)
+- **TX** → Pin 10 del T-Cobbler (GPIO 15 / RXD)
+- **RX** → Pin 8 del T-Cobbler (GPIO 14 / TXD)
+
 #### DHT11
 ```python
 # Connessioni:

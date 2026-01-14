@@ -2,6 +2,7 @@
 Test script per verificare il funzionamento dei sensori.
 """
 
+import os
 import sys
 import time
 import queue
@@ -27,7 +28,7 @@ def test_basic():
     
     config = {
         'radar_enabled': True,
-        'radar_port': '/dev/ttyAMA0',
+        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA10'),
         'dht11_enabled': True,
         'dht11_pin': 4,
     }
