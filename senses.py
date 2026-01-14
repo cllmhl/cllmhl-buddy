@@ -455,14 +455,15 @@ if __name__ == "__main__":
     # Crea una coda di test
     test_queue = queue.Queue()
     
-    # Configurazione sensori
+    # Configurazione sensori da variabili d'ambiente
     config = {
-        'radar_enabled': True,
-        'radar_port': '/dev/ttyAMA0',
-        'dht11_enabled': True,
-        'dht11_pin': 4,
-        'radar_interval': 0.5,
-        'dht11_interval': 5.0  # Più frequente per testing
+        'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
+        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA10'),
+        'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
+        'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
+        'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
+        'dht11_pin': int(os.getenv('DHT11_PIN', '4')),
+        'dht11_interval': float(os.getenv('DHT11_INTERVAL', '5.0'))  # Più frequente per testing
     }
     
     # Inizializza e avvia

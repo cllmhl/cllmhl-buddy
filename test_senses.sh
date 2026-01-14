@@ -25,5 +25,12 @@ echo "🚀 Avvio test sensori..."
 echo "   - Premi Ctrl+C per terminare"
 echo ""
 
-# Esegui il modulo senses in modalità test
-python3 senses.py
+# Carica variabili d'ambiente se config.env esiste
+if [ -f "config.env" ]; then
+    set -a
+    source config.env
+    set +a
+fi
+
+# Esegui il test script
+python3 test_senses.py
