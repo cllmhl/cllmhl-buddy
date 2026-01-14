@@ -182,6 +182,7 @@ class DHT11Sensor:
             pin_map = {
                 4: board.D4,
                 17: board.D17,
+                18: board.D18,
                 27: board.D27,
                 22: board.D22,
                 23: board.D23,
