@@ -86,35 +86,42 @@ class RadarLD2410C:
             return None
             
         try:
-            # Cerca header frame: FD FC FB FA
+            # Cerca header frame: F4 F3 F2 F1 (modalità base LD2410C)
             if self.serial_conn.in_waiting > 0:
                 data = self.serial_conn.read(self.serial_conn.in_waiting)
                 
                 # Cerca il pattern header nel buffer
-                header = b'\xFD\xFC\xFB\xFA'
+                header = b'\xF4\xF3\xF2\xF1'
                 idx = data.find(header)
                 
                 if idx != -1:
-                    # Frame trovato, parsing base
-                    # Struttura tipica per report target engineering mode:
-                    # Bytes 5-6: Target state (00=no target, 01=moving, 02=static, 03=both)
-                    # Bytes 7-8: Movement distance (cm)
-                    # Bytes 9: Movement energy
-                    # Bytes 10-11: Static distance (cm)
-                    # Bytes 12: Static energy
+                    # Frame trovato, parsing modalità base
+                    # Struttura report target:
+                    # Bytes 0-3: Header (F4 F3 F2 F1)
+                    # Bytes 4-5: Length
+                    # Byte 8: Target state (0=no target, 1=moving, 2=static, 3=both)
+                    # Bytes 9-10: Movement distance (cm) little endian
+                    # Byte 11: Movement energy
+                    # Bytes 12-13: Static distance (cm) little endian
+                    # Byte 14: Static energy
+                    # Bytes 15-16: Detection distance (cm) little endian
                     
                     if len(data) >= idx + 23:  # Frame completo minimo
-                        target_state = data[idx + 5] if len(data) > idx + 5 else 0
+                        target_state = data[idx + 8]
                         
                         presence = target_state > 0
                         movement = target_state in [1, 3]
                         static = target_state in [2, 3]
                         
-                        # Distanza dal target in movimento (se presente)
-                        if len(data) >= idx + 8:
-                            distance = data[idx + 7] + (data[idx + 8] << 8) if movement else 0
-                        else:
-                            distance = 0
+                        # Distanze in little endian
+                        mov_distance = data[idx + 9] + (data[idx + 10] << 8)
+                        mov_energy = data[idx + 11]
+                        static_distance = data[idx + 12] + (data[idx + 13] << 8)
+                        static_energy = data[idx + 14]
+                        detection_distance = data[idx + 15] + (data[idx + 16] << 8)
+                        
+                        # Usa la distanza di rilevamento come distanza principale
+                        distance = detection_distance if presence else 0
                         
                         # Aggiorna stato interno
                         self.presence_detected = presence
@@ -126,7 +133,11 @@ class RadarLD2410C:
                             'presence': presence,
                             'movement': movement,
                             'static': static,
-                            'distance': distance
+                            'distance': distance,
+                            'mov_distance': mov_distance,
+                            'mov_energy': mov_energy,
+                            'static_distance': static_distance,
+                            'static_energy': static_energy
                         }
                         
         except Exception as e:
