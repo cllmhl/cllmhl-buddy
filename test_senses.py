@@ -28,12 +28,12 @@ def test_basic():
     
     config = {
         'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
-        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA10'),
+        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA0'),
         'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
         'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
         'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
         'dht11_pin': int(os.getenv('DHT11_PIN', '18')),
-        'dht11_interval': float(os.getenv('DHT11_INTERVAL', '30.0')),
+        'dht11_interval': float(os.getenv('DHT11_INTERVAL', '1')),
     }
     
     senses = BuddySenses(test_queue, config)
@@ -55,7 +55,7 @@ def test_sensor_data():
     
     config = {
         'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
-        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA10'),
+        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA0'),
         'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
         'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
         'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
@@ -103,7 +103,7 @@ def test_continuous():
     
     config = {
         'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
-        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA10'),
+        'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA0'),
         'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
         'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
         'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
