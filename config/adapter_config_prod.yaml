@@ -26,17 +26,20 @@ adapters:
       config:
         pipe_path: "/tmp/buddy_pipe"
     
-    # Sensori fisici
-    sensors:
-      implementation: "physical"
+    # Radar fisico
+    radar:
+      implementation: "radar"
       config:
-        radar_enabled: true
-        radar_port: "/dev/ttyAMA0"
-        radar_baudrate: 256000
-        radar_interval: 0.5
-        dht11_enabled: true
-        dht11_pin: 4
-        dht11_interval: 30.0
+        port: "/dev/ttyAMA0"
+        baudrate: 256000
+        interval: 0.5
+    
+    # Sensore temperatura/umidità fisico
+    temperature:
+      implementation: "temperature"
+      config:
+        pin: 4
+        interval: 30.0
   
   output:
     # Voice output con Jabra

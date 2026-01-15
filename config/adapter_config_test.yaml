@@ -19,15 +19,23 @@ adapters:
       config:
         pipe_path: "/tmp/buddy_pipe"
     
-    # Voice input DISABILITATO in test mode
+    # Voice input MOCK in test mode
     voice:
-      implementation: "disabled"
-      config: {}
+      implementation: "mock_voice"
+      config:
+        input_file: "/tmp/buddy_voice_input.txt"
     
-    # Sensori DISABILITATI in test mode
-    sensors:
-      implementation: "disabled"
-      config: {}
+    # Radar MOCK in test mode
+    radar:
+      implementation: "mock_radar"
+      config:
+        interval: 5.0
+    
+    # Temperature/Humidity MOCK in test mode
+    temperature:
+      implementation: "mock_temperature"
+      config:
+        interval: 10.0
   
   output:
     # Voice output -> LOG invece di audio

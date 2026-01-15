@@ -19,6 +19,7 @@ if not os.path.exists('/proc/device-tree/model'):
 from gpiozero import LED
 
 from adapters.ports import OutputPort
+from adapters.audio_device_manager import get_jabra_manager
 from core.events import Event, EventType
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class JabraVoiceOutput(OutputPort):
     """
     Voice Output con Jabra - Implementazione REALE.
     Gestisce TTS (gTTS o Piper) e LED di stato.
+    Usa AudioDeviceManager per coordinamento con input.
     """
     
     def __init__(self, name: str, config: dict):
@@ -46,8 +48,8 @@ class JabraVoiceOutput(OutputPort):
             logger.warning(f"⚠️ LED init failed: {e}")
             self.led_stato = None
         
-        # Event per coordinamento con input (evitare feedback)
-        self.is_speaking = threading.Event()
+        # Device Manager per coordinamento Jabra
+        self.device_manager = get_jabra_manager()
         
         # Setup Piper (se local mode)
         if self.tts_mode == 'local':
@@ -129,10 +131,14 @@ class JabraVoiceOutput(OutputPort):
         logger.info(f"🗣️  Speaking: {text[:50]}...")
         
         try:
-            # LED on + flag speaking
+            # Richiedi accesso al device (blocca input)
+            if not self.device_manager.request_output():
+                logger.warning("⚠️ Could not acquire audio device for output")
+                return
+            
+            # LED on
             if self.led_stato:
                 self.led_stato.on()
-            self.is_speaking.set()
             
             # TTS
             if self.tts_mode == "local":
@@ -144,10 +150,12 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            # LED off + clear flag
+            # LED off
             if self.led_stato:
                 self.led_stato.off()
-            self.is_speaking.clear()
+            
+            # Rilascia device (sblocca input)
+            self.device_manager.release()
     
     def _speak_gtts(self, text: str) -> None:
         """TTS usando Google gTTS (cloud)"""

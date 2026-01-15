@@ -1,6 +1,6 @@
 # 🎉 Refactoring Hexagonal Architecture - COMPLETATO
 
-## 📊 Status: FASE 5 PARTE 1 COMPLETATA
+## 📊 Status: FASE 5 COMPLETATA ✅
 
 ### ✅ Implementato
 
@@ -8,19 +8,21 @@
 - Core events system con PriorityQueue
 - EventRouter intelligente
 - BuddyBrain puro (zero dipendenze)
-- Port interfaces (InputPort, OutputPort)
+- Port interfaces (InputPort, OutputPort, AudioDevicePort)
 - AdapterFactory con registry dinamico
 - ConfigLoader YAML
-- Main orchestrator
+- Main orchestrator con --dry-run
 - **28 test passing**
 
-#### **FASE 5: Adapter Migration** ✅ (Parte 1)
+#### **FASE 5: Adapter Migration** ✅ (COMPLETA)
 
 **Input Adapters:**
 - ✅ KeyboardInput (stdin)
 - ✅ PipeInput (named pipe)
-- ⏸️ VoiceInput (Jabra + Wake Word) - *opzionale*
-- ⏸️ SensorInput (Radar + DHT11) - *opzionale*
+- ✅ **JabraVoiceInput** (Porcupine Wake Word + SpeechRecognition)
+- ✅ **MockVoiceInput** (file-based, per testing)
+- ✅ **PhysicalSensorInput** (Radar LD2410C + DHT11)
+- ✅ **MockSensorInput** (fake data, per testing)
 
 **Output Adapters:**
 - ✅ VoiceOutput (Jabra + gTTS/Piper + Mock)
@@ -28,12 +30,26 @@
 - ✅ DatabaseOutput (SQLite + ChromaDB)
 - ✅ LogOutput (Python logging)
 
+**Device Coordination:**
+- ✅ **AudioDeviceManager** (singleton, state machine)
+  - Coordina Jabra input/output condiviso
+  - Stati: IDLE / LISTENING / SPEAKING
+  - Thread-safe con locks e events
+
+**Testing:**
+- ✅ **35 test passing** (28 + 7 integration tests)
+- ✅ Test di integrazione end-to-end
+- ✅ Test AudioDeviceManager coordination
+- ✅ Test priority queue ordering
+- ✅ Test router multi-destination
+- ✅ Test factory registration
+
 ### 🚀 Come Usare
 
 #### Test Mode (Locale, no hardware)
 
 ```bash
-# Terminal 1: Avvia Buddy
+# Terminal 1: Avvia Buddy (test mode)
 cd /workspaces/cllmhl-buddy
 export GOOGLE_API_KEY="your_api_key"
 export BUDDY_CONFIG="config/adapter_config_test.yaml"
@@ -44,44 +60,71 @@ echo "Ciao Buddy, come stai?" > /tmp/buddy_pipe
 
 # Oppure usa keyboard (Terminal 1)
 # Tu > Ciao!
+
+# Oppure simula voice input (test mode)
+echo "Test voice input" > /tmp/buddy_voice_input.txt
+```
+
+#### Production Mode (Raspberry Pi)
+
+```bash
+# Con hardware reale
+export GOOGLE_API_KEY="your_api_key"
+export BUDDY_CONFIG="config/adapter_config_prod.yaml"
+python main_new.py
+
+# Dì "Ei Buddy" per attivare wake word
+# Poi parla normalmente
+# Il sistema risponde via speaker Jabra
+# LED e sensori attivi
 ```
 
 #### Verificare Output
 
 ```bash
-# Voice output (mock)
+# Voice output (mock in test mode)
 tail -f /tmp/buddy_voice_output.log
 
 # System logs
 tail -f buddy_system.log
 
-# LED events (mock)
-# Visibili nei log console
+# LED events (mock in test mode, visibili nei log)
+# Sensor data (mock in test mode, visibili nei log)
 ```
 
-### 🧪 Test Rapido
+### 🧪 Test e Validazione
 
 ```bash
-# Test factory
+# Esegui tutti i test (35 test)
+python -m pytest tests/ -v
+
+# Test specifici
+python -m pytest tests/test_integration.py -v
+
+# Dry-run (validazione config)
+python main_new.py --config config/adapter_config_test.yaml --dry-run
+
+# Verifica adapter registrati
 python -c "
 import adapters
 from adapters.factory import AdapterFactory
-print(AdapterFactory.get_registered_implementations())
+print('Input:', list(AdapterFactory._input_implementations.keys()))
+print('Output:', list(AdapterFactory._output_implementations.keys()))
 "
 
 # Output:
-# {'input': ['stdin', 'pipe'], 
-#  'output': ['jabra', 'log', 'gpio', 'mock', 'real', 'file']}
+# Input: ['stdin', 'pipe', 'jabra', 'mock_voice', 'physical', 'mock_sensors']
+# Output: ['jabra', 'log', 'gpio', 'mock', 'real', 'file']
 ```
 
 ### 📝 Adapter Implementations
 
 | Adapter | Real | Mock/Test | Status |
 |---------|------|-----------|--------|
-| Voice Input | Jabra | Pipe/File | ⏸️ Optional |
+| Voice Input | Jabra (Porcupine) | File-based | ✅ Done |
 | Keyboard Input | stdin | - | ✅ Done |
 | Pipe Input | FIFO | - | ✅ Done |
-| Sensor Input | GPIO/Serial | Fake data | ⏸️ Optional |
+| Sensor Input | Radar + DHT11 | Fake data | ✅ Done |
 | Voice Output | Jabra+TTS | Log file | ✅ Done |
 | LED Output | GPIO | Console | ✅ Done |
 | Database Output | SQLite+Chroma | - | ✅ Done |
