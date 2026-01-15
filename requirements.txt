@@ -10,3 +10,5 @@ pvporcupine
 pvrecorder
 pyserial
 adafruit-circuitpython-dht
+pytest
+pyyaml

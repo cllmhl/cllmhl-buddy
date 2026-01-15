@@ -1,0 +1,76 @@
+# Buddy Adapter Configuration - PRODUCTION MODE
+# Configurazione per Raspberry Pi con hardware reale
+
+brain:
+  model_id: "gemini-2.0-flash-exp"
+  temperature: 0.7
+  system_instruction: "Sei Buddy, un assistente AI amichevole e conciso."
+
+adapters:
+  input:
+    # Voice input con Jabra e Wake Word
+    voice:
+      implementation: "jabra"
+      config:
+        wake_word_path: "Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+        stt_mode: "cloud"  # "cloud" o "local"
+    
+    # Input da tastiera (opzionale in prod)
+    keyboard:
+      implementation: "disabled"
+      config: {}
+    
+    # Input da named pipe (per comandi esterni)
+    pipe:
+      implementation: "pipe"
+      config:
+        pipe_path: "/tmp/buddy_pipe"
+    
+    # Sensori fisici
+    sensors:
+      implementation: "physical"
+      config:
+        radar_enabled: true
+        radar_port: "/dev/ttyAMA0"
+        radar_baudrate: 256000
+        radar_interval: 0.5
+        dht11_enabled: true
+        dht11_pin: 4
+        dht11_interval: 30.0
+  
+  output:
+    # Voice output con Jabra
+    voice:
+      implementation: "jabra"
+      config:
+        tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
+        voice_name: "paola"  # "paola" o "riccardo"
+    
+    # LED con GPIO
+    led:
+      implementation: "gpio"
+      config:
+        led_ascolto_pin: 26  # LED Blu
+        led_stato_pin: 21    # LED Verde
+    
+    # Database
+    database:
+      implementation: "real"
+      config:
+        sqlite_path: "buddy_system.db"
+        chroma_path: "./buddy_memory"
+    
+    # Logging
+    log:
+      implementation: "file"
+      config:
+        log_file: "buddy_system.log"
+        max_bytes: 10485760  # 10MB
+        backup_count: 3
+
+queues:
+  input_maxsize: 100
+  voice_maxsize: 50
+  led_maxsize: 100
+  database_maxsize: 500
+  log_maxsize: 1000

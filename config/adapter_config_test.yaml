@@ -1,0 +1,64 @@
+# Buddy Adapter Configuration - TEST MODE
+# Configurazione per testing locale senza hardware
+
+brain:
+  model_id: "gemini-2.0-flash-exp"
+  temperature: 0.7
+  system_instruction: "Sei Buddy, un assistente AI amichevole e conciso."
+
+adapters:
+  input:
+    # Input da tastiera (stdin)
+    keyboard:
+      implementation: "stdin"
+      config: {}
+    
+    # Input da named pipe
+    pipe:
+      implementation: "pipe"
+      config:
+        pipe_path: "/tmp/buddy_pipe"
+    
+    # Voice input DISABILITATO in test mode
+    voice:
+      implementation: "disabled"
+      config: {}
+    
+    # Sensori DISABILITATI in test mode
+    sensors:
+      implementation: "disabled"
+      config: {}
+  
+  output:
+    # Voice output -> LOG invece di audio
+    voice:
+      implementation: "log"
+      config:
+        log_file: "/tmp/buddy_voice_output.log"
+    
+    # LED -> MOCK (console output)
+    led:
+      implementation: "mock"
+      config: {}
+    
+    # Database -> REALE (SQLite/ChromaDB)
+    database:
+      implementation: "real"
+      config:
+        sqlite_path: "buddy_system.db"
+        chroma_path: "./buddy_memory"
+    
+    # Log -> File e Console
+    log:
+      implementation: "file"
+      config:
+        log_file: "buddy_system.log"
+        max_bytes: 10485760  # 10MB
+        backup_count: 3
+
+queues:
+  input_maxsize: 100
+  voice_maxsize: 50
+  led_maxsize: 100
+  database_maxsize: 500
+  log_maxsize: 1000
