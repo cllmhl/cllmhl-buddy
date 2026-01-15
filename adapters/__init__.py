@@ -5,6 +5,10 @@ Adapters - Primary e Secondary Adapters per l'architettura esagonale
 from .ports import InputPort, OutputPort, AudioDevicePort
 from .factory import AdapterFactory
 
+# Import modules to trigger auto-registration
+from . import input
+from . import output
+
 __all__ = [
     'InputPort',
     'OutputPort',
