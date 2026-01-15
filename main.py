@@ -17,6 +17,9 @@ from archivist import BuddyArchivist
 # Nuova gestione IO separata
 from io_buddy import BuddyEars, BuddyVoice, silence_alsa, BuddyEvent
 
+# Modulo sensori fisici
+from senses import BuddySenses, SensorEvent
+
 # --- CONFIGURAZIONE LOGGING ---
 handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupCount=1)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
@@ -97,6 +100,10 @@ def main():
     load_dotenv(".env")
     
     api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        logger.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente")
+        print("Errore: GOOGLE_API_KEY non configurata. Controlla config.env o .env")
+        return
     
     # Coda centrale eventi
     event_queue = queue.Queue()
@@ -111,6 +118,18 @@ def main():
         voice = BuddyVoice() # Gestisce TTS e LED Verde
         # Ears ha bisogno della coda per inviare eventi e del flag 'speaking' della voce per non ascoltarsi
         ears = BuddyEars(event_queue, voice.is_speaking_event) # Gestisce Mic e LED Blu
+        
+        # Sensor Systems
+        sensor_config = {
+            'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
+            'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA0'),
+            'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
+            'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
+            'dht11_pin': int(os.getenv('DHT11_PIN', '4')),
+            'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
+            'dht11_interval': float(os.getenv('DHT11_INTERVAL', '30.0'))
+        }
+        senses = BuddySenses(event_queue, sensor_config)
         
         logger.info("Sottosistemi inizializzati correttamente")
     except Exception as e:
@@ -138,10 +157,12 @@ def main():
     t_pipe.start()
     
     ears.start() # Avvia il thread di ascolto (Jabra)
+    senses.start() # Avvia il thread di lettura sensori
 
     print("\n--- Buddy OS Online (Refactored) ---")
     print(f"Audio Mode: STT={ears.mode.upper()} / TTS={voice.mode.upper()}")
     print(f"Wake Word: {'ATTIVO ✅' if ears.enabled else 'DISABILITATO ⚠️'}")
+    print(f"Sensori: Radar={'✅' if senses.radar.enabled else '⚠️'} | DHT11={'✅' if senses.dht11.enabled else '⚠️'}")
     
     if has_terminal:
         print(f"Input: TASTIERA + Pipe ({PIPE_PATH})")
@@ -157,6 +178,30 @@ def main():
             # 1. GESTIONE EVENTI
             if not event_queue.empty():
                 event = event_queue.get()
+                
+                # Distingui tra eventi BuddyEvent (audio/pipe) e SensorEvent
+                if isinstance(event, SensorEvent):
+                    # Gestione eventi sensori
+                    logger.info(f"Evento sensore: {event.sensor_type} = {event.value}")
+                    
+                    # Logica proattiva basata sui sensori
+                    if event.sensor_type == "radar_presence":
+                        if event.value:  # Presenza rilevata
+                            logger.info("👋 Presenza rilevata dal radar!")
+                            # Qui potremmo implementare la logica proattiva
+                            # Es: "Presenza + Silenzio > 2 ore" -> Buddy saluta
+                        else:
+                            logger.info("👻 Nessuna presenza rilevata")
+                    
+                    elif event.sensor_type == "temperature":
+                        logger.info(f"🌡️  Temperatura aggiornata: {event.value:.1f}°C")
+                        # Buddy potrebbe commentare se la temperatura è anomala
+                    
+                    elif event.sensor_type == "humidity":
+                        logger.info(f"💧 Umidità aggiornata: {event.value:.1f}%")
+                    
+                    event_queue.task_done()
+                    continue
                 
                 # Gestione uscita
                 if event.content.lower() in ["esci", "quit", "spegniti"]:
@@ -207,6 +252,9 @@ def main():
     except KeyboardInterrupt:
         print("\nBuddy: Arresto forzato.")
         logger.warning("Arresto forzato da tastiera")
+    finally:
+        # Cleanup sensori
+        senses.stop()
 
 if __name__ == "__main__":
     main()
