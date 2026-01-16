@@ -20,7 +20,7 @@ class InputPort(ABC):
     - Li trasformano in Event standardizzati
     - Li pubblicano sulla input_queue
     
-    Esempi: VoiceInput, KeyboardInput, SensorInput, PipeInput
+    Esempi: VoiceInput, SensorInput
     """
     
     def __init__(self, name: str, config: dict):

@@ -13,7 +13,6 @@ class EventType(Enum):
     
     # ===== INPUT EVENTS =====
     USER_SPEECH = "user_speech"           # Input vocale utente
-    PIPE_COMMAND = "pipe_command"         # Comando da named pipe
     
     # Sensori
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza

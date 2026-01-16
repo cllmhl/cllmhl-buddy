@@ -17,8 +17,6 @@
 #### **FASE 5: Adapter Migration** ✅ (COMPLETA)
 
 **Input Adapters:**
-- ✅ KeyboardInput (stdin)
-- ✅ PipeInput (named pipe)
 - ✅ **JabraVoiceInput** (Porcupine Wake Word + SpeechRecognition)
 - ✅ **MockVoiceInput** (file-based, per testing)
 - ✅ **PhysicalSensorInput** (Radar LD2410C + DHT11)
@@ -135,7 +133,7 @@ print('Output:', list(AdapterFactory._output_implementations.keys()))
 #### Event Flow Completo
 
 ```
-Pipe Input → Event(PIPE_COMMAND) → Input Queue
+Voice Input → Event(USER_SPEECH) → Input Queue
                           ↓
                     Brain.process_event()
                           ↓

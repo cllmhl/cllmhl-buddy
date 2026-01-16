@@ -87,10 +87,7 @@ class BuddyBrain:
             ))
             
             # Gestione per tipo di evento
-            if input_event.type in [
-                EventType.USER_SPEECH,
-                EventType.PIPE_COMMAND
-            ]:
+            if input_event.type == EventType.USER_SPEECH:
                 output_events.extend(self._handle_user_input(input_event))
             
             elif input_event.type.name.startswith("SENSOR_"):

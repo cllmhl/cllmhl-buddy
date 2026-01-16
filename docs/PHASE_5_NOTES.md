@@ -191,13 +191,11 @@ tests/test_integration.py ........                                       [100%]
 ┌─────────────────────────────────────────────────────────────┐
 │                     INPUT ADAPTERS                          │
 ├─────────────────────────────────────────────────────────────┤
-│  KeyboardInput (stdin)                                      │
-│  PipeInput (named pipe)                                     │
-│  JabraVoiceInput (Porcupine + SpeechRecognition)           │ ◄── NEW
-│  MockVoiceInput (file-based)                                │ ◄── NEW
-│  RadarInput (LD2410C presence/movement)                     │ ◄── NEW (separated)
-│  MockRadarInput (fake radar data)                           │ ◄── NEW (separated)
-│  TemperatureInput (DHT11 temp/humidity)                     │ ◄── NEW (separated)
+│  JabraVoiceInput (Porcupine + SpeechRecognition)           │
+│  MockVoiceInput (file-based)                                │
+│  RadarInput (LD2410C presence/movement)                     │
+│  MockRadarInput (fake radar data)                           │
+│  TemperatureInput (DHT11 temp/humidity)                     │
 │  MockTemperatureInput (fake sensor data)                    │ ◄── NEW (separated)
 └─────────────────────────────────────────────────────────────┘
                             ▼

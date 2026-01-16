@@ -23,8 +23,8 @@ class TestIntegration:
         # Inserisci eventi in ordine casuale
         events = [
             create_input_event(EventType.USER_SPEECH, "low priority", "test", priority=EventPriority.LOW),
-            create_input_event(EventType.PIPE_COMMAND, "critical!", "test", priority=EventPriority.CRITICAL),
-            create_input_event(EventType.PIPE_COMMAND, "high priority", "test", priority=EventPriority.HIGH),
+            create_input_event(EventType.USER_SPEECH, "critical!", "test", priority=EventPriority.CRITICAL),
+            create_input_event(EventType.USER_SPEECH, "high priority", "test", priority=EventPriority.HIGH),
             create_input_event(EventType.USER_SPEECH, "normal", "test", priority=EventPriority.NORMAL),
         ]
         
@@ -111,12 +111,6 @@ class TestIntegration:
     
     def test_adapter_factory_creation(self):
         """Test che il Factory crei gli adapter corretti"""
-        
-        # Test input adapters
-        pipe_adapter = AdapterFactory.create_input_adapter(
-            'pipe', {'implementation': 'pipe', 'config': {'pipe_path': '/tmp/test'}}
-        )
-        assert pipe_adapter is not None
         
         # Test output adapters
         mock_voice = AdapterFactory.create_output_adapter(

@@ -161,7 +161,6 @@ User speaks → Jabra Mic → VoiceInputAdapter
 
 **Input Events:**
 - `USER_SPEECH` - Voice input
-- `PIPE_COMMAND` - Named pipe command
 - `SENSOR_*` - Sensor data
 
 **Output Events:**
@@ -203,8 +202,6 @@ Migrazione adapters esistenti:
 ### Input Adapters da Creare
 - [ ] `VoiceInputAdapter` (Jabra + Porcupine)
 - [ ] `MockVoiceInputAdapter` (da pipe/file)
-- [ ] `KeyboardInputAdapter` (stdin)
-- [ ] `PipeInputAdapter` (named pipe)
 - [ ] `SensorInputAdapter` (radar + DHT11)
 - [ ] `MockSensorInputAdapter` (fake data)
 

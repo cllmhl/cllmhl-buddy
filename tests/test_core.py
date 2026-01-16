@@ -62,15 +62,15 @@ class TestEvents:
     def test_create_input_event_helper(self):
         """Test helper per creare eventi di input"""
         event = create_input_event(
-            EventType.PIPE_COMMAND,
+            EventType.USER_SPEECH,
             "test message",
-            source="pipe",
+            source="voice",
             priority=EventPriority.HIGH
         )
         
-        assert event.type == EventType.PIPE_COMMAND
+        assert event.type == EventType.USER_SPEECH
         assert event.content == "test message"
-        assert event.source == "pipe"
+        assert event.source == "voice"
         assert event.priority == EventPriority.HIGH
     
     def test_create_output_event_helper(self):
