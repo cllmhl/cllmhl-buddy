@@ -23,7 +23,7 @@ adapters:
     voice:
       implementation: "mock_voice"
       config:
-        input_file: "/tmp/buddy_voice_input.txt"
+        interval: 10.0
     
     # Radar MOCK in test mode
     radar:

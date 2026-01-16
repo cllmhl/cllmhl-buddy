@@ -130,7 +130,7 @@ class TestIntegration:
         
         # Crea mock voice adapter
         mock_voice = AdapterFactory.create_input_adapter(
-            'voice', {'implementation': 'mock_voice', 'config': {'input_file': '/tmp/test.txt'}}
+            'voice', {'implementation': 'mock_voice', 'config': {'interval': 5.0}}
         )
         assert mock_voice is not None
     

@@ -342,17 +342,25 @@ class JabraVoiceInput(InputPort):
 class MockVoiceInput(InputPort):
     """
     Mock Voice Input per testing.
-    Simula input vocale leggendo da file.
+    Genera frasi simulate per testare il sistema.
     """
     
     def __init__(self, name: str, config: dict):
         super().__init__(name, config)
         
-        self.mock_file = config.get('mock_file', '/tmp/voice_input.txt')
-        self.poll_interval = config.get('poll_interval', 2.0)
+        self.interval = config.get('interval', 10.0)
         self.worker_thread = None
         
-        logger.info(f"🎤 MockVoiceInput initialized (file: {self.mock_file})")
+        # Frasi di test simulate
+        self.test_phrases = [
+            "Ciao, come stai?",
+            "Che ore sono?",
+            "Raccontami una barzelletta",
+            "Qual è la temperatura?",
+            "Test del sistema vocale"
+        ]
+        
+        logger.info(f"🎤 MockVoiceInput initialized")
     
     def start(self, input_queue: PriorityQueue) -> None:
         """Avvia worker"""
@@ -377,32 +385,28 @@ class MockVoiceInput(InputPort):
         logger.info(f"⏹️  {self.name} stopped")
     
     def _worker_loop(self) -> None:
-        """Loop che legge da file mock"""
-        logger.info(f"🎤 Mock voice input polling: {self.mock_file}")
+        """Loop che genera frasi simulate"""
+        counter = 0
         
         while self.running:
             try:
-                if os.path.exists(self.mock_file):
-                    with open(self.mock_file, 'r') as f:
-                        text = f.read().strip()
-                    
-                    if text:
-                        logger.info(f"🎤 [MOCK] Voice input: {text}")
-                        
-                        # Crea evento
-                        event = create_input_event(
-                            EventType.USER_SPEECH,
-                            text,
-                            source="voice_mock",
-                            priority=EventPriority.HIGH
-                        )
-                        
-                        self.input_queue.put(event)
-                        
-                        # Svuota file
-                        os.remove(self.mock_file)
+                # Cicla tra le frasi di test
+                phrase = self.test_phrases[counter % len(self.test_phrases)]
+                
+                logger.info(f"🎤 [MOCK] Voice input: {phrase}")
+                
+                # Crea evento
+                event = create_input_event(
+                    EventType.USER_SPEECH,
+                    phrase,
+                    source="voice_mock",
+                    priority=EventPriority.HIGH
+                )
+                
+                self.input_queue.put(event)
+                counter += 1
             
             except Exception as e:
                 logger.error(f"Mock voice input error: {e}")
             
-            time.sleep(self.poll_interval)
+            time.sleep(self.interval)
