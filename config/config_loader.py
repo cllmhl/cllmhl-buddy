@@ -13,53 +13,47 @@ logger = logging.getLogger(__name__)
 
 class ConfigLoader:
     """
-    Loader per configurazioni YAML con validazione e defaults.
+    Loader per configurazioni YAML con validazione.
     """
     
-    DEFAULT_CONFIG = {
-        'brain': {
-            'model_id': 'gemini-2.0-flash-exp',
-            'temperature': 0.7,
-            'system_instruction': 'Sei Buddy, un assistente AI amichevole.'
-        },
-        'adapters': {
-            'input': {},
-            'output': {}
-        },
-        'queues': {
-            'input_maxsize': 100,
-            'voice_maxsize': 50,
-            'led_maxsize': 100,
-            'database_maxsize': 500,
-            'log_maxsize': 1000
-        }
-    }
-    
     @classmethod
-    def load(cls, config_path: str) -> Dict[str, Any]:
+    def load(cls, config_path: str, validate_adapters: bool = True) -> Dict[str, Any]:
         """
         Carica configurazione da file YAML.
         
         Args:
             config_path: Path al file YAML
+            validate_adapters: Se True, valida che gli adapter configurati esistano
             
         Returns:
             Dict con configurazione completa
+            
+        Raises:
+            FileNotFoundError: Se il file non esiste
+            yaml.YAMLError: Se c'è un errore di parsing YAML
+            ValueError: Se la configurazione non è valida
         """
         config_file = Path(config_path)
         
-        # Se il file non esiste, usa defaults
+        # Se il file non esiste, solleva errore
         if not config_file.exists():
-            logger.warning(f"⚠️  Config file not found: {config_path}")
-            logger.info("Using default configuration")
-            return cls.DEFAULT_CONFIG.copy()
+            error_msg = f"Configuration file not found: {config_path}"
+            logger.error(f"❌ {error_msg}")
+            raise FileNotFoundError(error_msg)
         
         try:
             with open(config_file, 'r') as f:
-                loaded_config = yaml.safe_load(f)
+                config = yaml.safe_load(f)
             
-            # Merge con defaults
-            config = cls._merge_with_defaults(loaded_config)
+            if config is None:
+                raise ValueError("Configuration file is empty")
+            
+            # Valida struttura minima
+            cls._validate_config_structure(config)
+            
+            # Valida adapter se richiesto
+            if validate_adapters:
+                cls._validate_adapters(config)
             
             logger.info(f"✅ Configuration loaded from: {config_path}")
             cls._log_config_summary(config)
@@ -67,37 +61,75 @@ class ConfigLoader:
             return config
             
         except yaml.YAMLError as e:
-            logger.error(f"❌ YAML parsing error: {e}")
-            logger.info("Using default configuration")
-            return cls.DEFAULT_CONFIG.copy()
+            error_msg = f"YAML parsing error in {config_path}: {e}"
+            logger.error(f"❌ {error_msg}")
+            raise yaml.YAMLError(error_msg)
         
         except Exception as e:
-            logger.error(f"❌ Error loading config: {e}")
-            logger.info("Using default configuration")
-            return cls.DEFAULT_CONFIG.copy()
+            logger.error(f"❌ Error loading config from {config_path}: {e}")
+            raise
     
     @classmethod
-    def _merge_with_defaults(cls, loaded: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge configurazione caricata con defaults"""
-        import copy
-        config = copy.deepcopy(cls.DEFAULT_CONFIG)
+    def _validate_config_structure(cls, config: Dict[str, Any]) -> None:
+        """
+        Valida che la configurazione abbia la struttura minima richiesta.
         
-        # Merge brain config
-        if 'brain' in loaded:
-            config['brain'].update(loaded['brain'])
+        Raises:
+            ValueError: Se la configurazione non è valida
+        """
+        if 'brain' not in config:
+            raise ValueError("Missing required 'brain' section in configuration")
         
-        # Merge adapters
-        if 'adapters' in loaded:
-            if 'input' in loaded['adapters']:
-                config['adapters']['input'] = loaded['adapters']['input']
-            if 'output' in loaded['adapters']:
-                config['adapters']['output'] = loaded['adapters']['output']
+        if 'adapters' not in config:
+            raise ValueError("Missing required 'adapters' section in configuration")
         
-        # Merge queues
-        if 'queues' in loaded:
-            config['queues'].update(loaded['queues'])
+        if 'input' not in config['adapters'] or 'output' not in config['adapters']:
+            raise ValueError("Missing 'input' or 'output' in adapters configuration")
+    
+    @classmethod
+    def _validate_adapters(cls, config: Dict[str, Any]) -> None:
+        """
+        Valida che gli adapter configurati esistano nel registry del factory.
         
-        return config
+        Raises:
+            ValueError: Se un adapter configurato non esiste
+        """
+        # Import qui per evitare circular import
+        from adapters.factory import AdapterFactory
+        
+        registered = AdapterFactory.get_registered_implementations()
+        
+        # Valida input adapters
+        for adapter_name, adapter_config in config['adapters']['input'].items():
+            implementation = adapter_config.get('implementation', '').lower()
+            
+            # Skip disabled adapters
+            if implementation == 'disabled':
+                continue
+            
+            if implementation not in registered['input']:
+                available = ', '.join(registered['input'])
+                raise ValueError(
+                    f"Unknown input adapter implementation '{implementation}' "
+                    f"for adapter '{adapter_name}'. "
+                    f"Available: {available}"
+                )
+        
+        # Valida output adapters
+        for adapter_name, adapter_config in config['adapters']['output'].items():
+            implementation = adapter_config.get('implementation', '').lower()
+            
+            # Skip disabled adapters
+            if implementation == 'disabled':
+                continue
+            
+            if implementation not in registered['output']:
+                available = ', '.join(registered['output'])
+                raise ValueError(
+                    f"Unknown output adapter implementation '{implementation}' "
+                    f"for adapter '{adapter_name}'. "
+                    f"Available: {available}"
+                )
     
     @classmethod
     def _log_config_summary(cls, config: Dict[str, Any]) -> None:

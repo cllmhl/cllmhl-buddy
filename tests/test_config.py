@@ -14,12 +14,9 @@ class TestConfigLoader:
     """Test per il ConfigLoader"""
     
     def test_load_nonexistent_file(self):
-        """Test caricamento file inesistente usa defaults"""
-        config = ConfigLoader.load("nonexistent.yaml")
-        
-        assert 'brain' in config
-        assert 'adapters' in config
-        assert config['brain']['model_id'] == 'gemini-2.0-flash-exp'
+        """Test caricamento file inesistente solleva FileNotFoundError"""
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
+            ConfigLoader.load("nonexistent.yaml")
     
     def test_load_valid_yaml(self):
         """Test caricamento file YAML valido"""
@@ -52,33 +49,119 @@ class TestConfigLoader:
         finally:
             Path(temp_path).unlink()
     
-    def test_merge_with_defaults(self):
-        """Test merge con defaults"""
-        partial_config = {
-            'brain': {
-                'model_id': 'custom-model'
+    def test_validate_config_missing_brain(self):
+        """Test validazione configurazione senza brain"""
+        invalid_config = {
+            'adapters': {
+                'input': {},
+                'output': {}
             }
         }
         
-        merged = ConfigLoader._merge_with_defaults(partial_config)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(invalid_config, f)
+            temp_path = f.name
         
-        # Deve avere il valore custom
-        assert merged['brain']['model_id'] == 'custom-model'
-        # Ma anche i defaults
-        assert 'temperature' in merged['brain']
-        assert 'adapters' in merged
+        try:
+            with pytest.raises(ValueError, match="Missing required 'brain' section"):
+                ConfigLoader.load(temp_path)
+        finally:
+            Path(temp_path).unlink()
     
     def test_invalid_yaml(self):
-        """Test gestione YAML malformato"""
+        """Test gestione YAML malformato solleva YAMLError"""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write("invalid: yaml: content: [")
             temp_path = f.name
         
         try:
+            with pytest.raises(yaml.YAMLError, match="YAML parsing error"):
+                ConfigLoader.load(temp_path)
+        finally:
+            Path(temp_path).unlink()
+    
+    def test_validate_unknown_input_adapter(self):
+        """Test validazione adapter input sconosciuto"""
+        invalid_config = {
+            'brain': {
+                'model_id': 'test-model',
+                'temperature': 0.5
+            },
+            'adapters': {
+                'input': {
+                    'voice': {
+                        'implementation': 'unknown_adapter',
+                        'config': {}
+                    }
+                },
+                'output': {}
+            }
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(invalid_config, f)
+            temp_path = f.name
+        
+        try:
+            with pytest.raises(ValueError, match="Unknown input adapter implementation 'unknown_adapter'"):
+                ConfigLoader.load(temp_path)
+        finally:
+            Path(temp_path).unlink()
+    
+    def test_validate_unknown_output_adapter(self):
+        """Test validazione adapter output sconosciuto"""
+        invalid_config = {
+            'brain': {
+                'model_id': 'test-model',
+                'temperature': 0.5
+            },
+            'adapters': {
+                'input': {},
+                'output': {
+                    'voice': {
+                        'implementation': 'nonexistent',
+                        'config': {}
+                    }
+                }
+            }
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(invalid_config, f)
+            temp_path = f.name
+        
+        try:
+            with pytest.raises(ValueError, match="Unknown output adapter implementation 'nonexistent'"):
+                ConfigLoader.load(temp_path)
+        finally:
+            Path(temp_path).unlink()
+    
+    def test_validate_disabled_adapter_ok(self):
+        """Test che adapter 'disabled' non sollevi errore"""
+        valid_config = {
+            'brain': {
+                'model_id': 'test-model',
+                'temperature': 0.5
+            },
+            'adapters': {
+                'input': {
+                    'voice': {
+                        'implementation': 'disabled',
+                        'config': {}
+                    }
+                },
+                'output': {}
+            }
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(valid_config, f)
+            temp_path = f.name
+        
+        try:
+            # Non deve sollevare errore
             config = ConfigLoader.load(temp_path)
-            
-            # Deve fallback ai defaults
-            assert config == ConfigLoader.DEFAULT_CONFIG
+            assert config is not None
         finally:
             Path(temp_path).unlink()
 
