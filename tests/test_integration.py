@@ -9,6 +9,8 @@ import os
 from queue import PriorityQueue
 from unittest.mock import Mock, patch
 
+from adapters import InputAdapterType, OutputAdapterType
+
 from core import Event, EventType, EventPriority, create_input_event, create_output_event, EventRouter, BuddyBrain
 from adapters.factory import AdapterFactory
 
@@ -114,45 +116,45 @@ class TestIntegration:
         
         # Test output adapters
         mock_voice = AdapterFactory.create_output_adapter(
-            'voice', {'implementation': 'log', 'config': {}}
+            'voice', {'implementation': OutputAdapterType.MOCK_VOICE.value, 'config': {}}
         )
         assert mock_voice is not None
         
         mock_led = AdapterFactory.create_output_adapter(
-            'led', {'implementation': 'mock', 'config': {}}
+            'led', {'implementation': OutputAdapterType.MOCK_LED.value, 'config': {}}
         )
         assert mock_led is not None
     
     def test_voice_input_adapter_registered(self):
         """Test che Voice Input adapter sia registrato"""
-        assert 'jabra' in AdapterFactory._input_implementations
-        assert 'mock_voice' in AdapterFactory._input_implementations
+        assert InputAdapterType.EAR.value in AdapterFactory._input_implementations
+        assert InputAdapterType.MOCK_EAR.value in AdapterFactory._input_implementations
         
         # Crea mock voice adapter
         mock_voice = AdapterFactory.create_input_adapter(
-            'voice', {'implementation': 'mock_voice', 'config': {'interval': 5.0}}
+            'voice', {'implementation': InputAdapterType.MOCK_EAR.value, 'config': {'interval': 5.0}}
         )
         assert mock_voice is not None
     
     def test_radar_adapter_registered(self):
         """Test che Radar adapter sia registrato"""
-        assert 'radar' in AdapterFactory._input_implementations
-        assert 'mock_radar' in AdapterFactory._input_implementations
+        assert InputAdapterType.RADAR.value in AdapterFactory._input_implementations
+        assert InputAdapterType.MOCK_RADAR.value in AdapterFactory._input_implementations
         
         # Crea mock radar adapter
         mock_radar = AdapterFactory.create_input_adapter(
-            'radar', {'implementation': 'mock_radar', 'config': {'interval': 1.0}}
+            'radar', {'implementation': InputAdapterType.MOCK_RADAR.value, 'config': {'interval': 1.0}}
         )
         assert mock_radar is not None
     
     def test_temperature_adapter_registered(self):
         """Test che Temperature adapter sia registrato"""
-        assert 'temperature' in AdapterFactory._input_implementations
-        assert 'mock_temperature' in AdapterFactory._input_implementations
+        assert InputAdapterType.TEMPERATURE.value in AdapterFactory._input_implementations
+        assert InputAdapterType.MOCK_TEMPERATURE.value in AdapterFactory._input_implementations
         
         # Crea mock temperature adapter
         mock_temp = AdapterFactory.create_input_adapter(
-            'temperature', {'implementation': 'mock_temperature', 'config': {'interval': 1.0}}
+            'temperature', {'implementation': InputAdapterType.MOCK_TEMPERATURE.value, 'config': {'interval': 1.0}}
         )
         assert mock_temp is not None
     

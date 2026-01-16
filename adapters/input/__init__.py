@@ -9,12 +9,14 @@ from .temperature_input import TemperatureInput, MockTemperatureInput
 
 # Auto-register nel Factory
 from adapters.factory import AdapterFactory
-AdapterFactory.register_input("jabra", JabraVoiceInput)
-AdapterFactory.register_input("mock_voice", MockVoiceInput)
-AdapterFactory.register_input("radar", RadarInput)
-AdapterFactory.register_input("mock_radar", MockRadarInput)
-AdapterFactory.register_input("temperature", TemperatureInput)
-AdapterFactory.register_input("mock_temperature", MockTemperatureInput)
+from adapters.adapter_types import InputAdapterType
+
+AdapterFactory.register_input(InputAdapterType.EAR.value, JabraVoiceInput)
+AdapterFactory.register_input(InputAdapterType.MOCK_EAR.value, MockVoiceInput)
+AdapterFactory.register_input(InputAdapterType.RADAR.value, RadarInput)
+AdapterFactory.register_input(InputAdapterType.MOCK_RADAR.value, MockRadarInput)
+AdapterFactory.register_input(InputAdapterType.TEMPERATURE.value, TemperatureInput)
+AdapterFactory.register_input(InputAdapterType.MOCK_TEMPERATURE.value, MockTemperatureInput)
 
 __all__ = [
     'JabraVoiceInput',

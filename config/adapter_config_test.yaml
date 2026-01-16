@@ -8,20 +8,9 @@ brain:
 
 adapters:
   input:
-    # Input da tastiera (stdin)
-    keyboard:
-      implementation: "stdin"
-      config: {}
-    
-    # Input da named pipe
-    pipe:
-      implementation: "pipe"
-      config:
-        pipe_path: "/tmp/buddy_pipe"
-    
     # Voice input MOCK in test mode
     voice:
-      implementation: "mock_voice"
+      implementation: "mock_ear"
       config:
         interval: 10.0
     
@@ -40,32 +29,23 @@ adapters:
   output:
     # Voice output -> MOCK (log instead of audio)
     voice:
-      implementation: "log"
+      implementation: "mock_voice"
       config: {}
     
     # LED -> MOCK (console output)
     led:
-      implementation: "mock"
+      implementation: "mock_led"
       config: {}
     
-    # Database -> REALE (SQLite/ChromaDB)
+    # Database -> MOCK
     database:
-      implementation: "real"
+      implementation: "mock_db"
       config:
         sqlite_path: "buddy_system.db"
         chroma_path: "./buddy_memory"
-    
-    # Log -> File e Console
-    log:
-      implementation: "file"
-      config:
-        log_file: "buddy_system.log"
-        max_bytes: 10485760  # 10MB
-        backup_count: 3
 
 queues:
   input_maxsize: 100
   voice_maxsize: 50
   led_maxsize: 100
   database_maxsize: 500
-  log_maxsize: 1000
