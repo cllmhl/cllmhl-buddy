@@ -5,7 +5,7 @@ Adattatori che eseguono azioni nel mondo esterno in risposta agli eventi.
 
 from .voice_output import JabraVoiceOutput, MockVoiceOutput
 from .led_output import GPIOLEDOutput, MockLEDOutput
-from .database_output import DatabaseOutput
+from .database_output import DatabaseOutput, MockDatabaseOutput
 
 # Auto-register nel Factory
 from adapters.factory import AdapterFactory
@@ -15,11 +15,13 @@ AdapterFactory.register_output("log", MockVoiceOutput)
 AdapterFactory.register_output("gpio", GPIOLEDOutput)
 AdapterFactory.register_output("mock", MockLEDOutput)
 AdapterFactory.register_output("real", DatabaseOutput)
+AdapterFactory.register_output("mock_db", MockDatabaseOutput)
 
 __all__ = [
     'JabraVoiceOutput',
     'MockVoiceOutput',
     'GPIOLEDOutput',
     'MockLEDOutput',
-    'DatabaseOutput'
+    'DatabaseOutput',
+    'MockDatabaseOutput'
 ]

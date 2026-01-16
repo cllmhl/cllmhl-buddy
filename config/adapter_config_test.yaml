@@ -38,11 +38,10 @@ adapters:
         interval: 10.0
   
   output:
-    # Voice output -> LOG invece di audio
+    # Voice output -> MOCK (log instead of audio)
     voice:
       implementation: "log"
-      config:
-        log_file: "/tmp/buddy_voice_output.log"
+      config: {}
     
     # LED -> MOCK (console output)
     led:

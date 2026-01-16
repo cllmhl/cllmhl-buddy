@@ -227,21 +227,13 @@ class JabraVoiceOutput(OutputPort):
 class MockVoiceOutput(OutputPort):
     """
     Mock Voice Output per testing.
-    Scrive in log file invece di parlare.
+    Scrive nel log applicativo invece di parlare.
     """
     
     def __init__(self, name: str, config: dict):
         super().__init__(name, config)
-        
-        self.log_file = config.get('log_file', '/tmp/buddy_voice_output.log')
         self.worker_thread = None
-        
-        # Crea/pulisci log file
-        with open(self.log_file, 'w') as f:
-            f.write(f"=== Buddy Voice Output Log ===\n")
-            f.write(f"Started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        
-        logger.info(f"🔊 MockVoiceOutput initialized (log: {self.log_file})")
+        logger.info(f"🔊 MockVoiceOutput initialized")
     
     def start(self, output_queue: PriorityQueue) -> None:
         """Avvia worker"""
@@ -282,15 +274,6 @@ class MockVoiceOutput(OutputPort):
                 logger.error(f"Error in mock voice worker: {e}")
     
     def _handle_speak_event(self, event: Event) -> None:
-        """Gestisce SPEAK scrivendo su file"""
+        """Gestisce SPEAK scrivendo nel log"""
         text = str(event.content)
-        
-        timestamp = time.strftime('%H:%M:%S')
-        log_line = f"[{timestamp}] SPEAK: {text}\n"
-        
-        # Console
-        logger.info(f"🔊 [MOCK] {text}")
-        
-        # File
-        with open(self.log_file, 'a') as f:
-            f.write(log_line)
+        logger.info(f"🔊 [MOCK VOICE] SPEAK: {text}")

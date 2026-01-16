@@ -114,7 +114,7 @@ class TestIntegration:
         
         # Test output adapters
         mock_voice = AdapterFactory.create_output_adapter(
-            'voice', {'implementation': 'log', 'config': {'log_file': '/tmp/test.log'}}
+            'voice', {'implementation': 'log', 'config': {}}
         )
         assert mock_voice is not None
         
