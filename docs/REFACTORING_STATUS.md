@@ -26,7 +26,6 @@
 - ✅ VoiceOutput (Jabra + gTTS/Piper + Mock)
 - ✅ LEDOutput (GPIO + Mock)
 - ✅ DatabaseOutput (SQLite + ChromaDB)
-- ✅ LogOutput (Python logging)
 
 **Device Coordination:**
 - ✅ **AudioDeviceManager** (singleton, state machine)
@@ -137,17 +136,15 @@ Voice Input → Event(USER_SPEECH) → Input Queue
                           ↓
                     Brain.process_event()
                           ↓
-        [Event(SAVE_HISTORY), Event(LOG_INFO)]
+              Event(SAVE_HISTORY)
                           ↓
                     EventRouter
                           ↓
-            ┌─────────────┴─────────────┐
-            ▼                           ▼
-       Database Queue              Log Queue
-            ▼                           ▼
-    DatabaseOutput.worker         LogOutput.worker
-            ↓                           ↓
-    SQLite + ChromaDB           Python logger
+                   Database Queue
+                          ↓
+              DatabaseOutput.worker
+                          ↓
+                SQLite + ChromaDB
 ```
 
 #### Priority Queue in Azione

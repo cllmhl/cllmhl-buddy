@@ -32,12 +32,6 @@ class EventType(Enum):
     SAVE_HISTORY = "save_history"         # Salva in history DB
     SAVE_MEMORY = "save_memory"           # Salva in memoria permanente
     
-    # Logging
-    LOG_DEBUG = "log_debug"
-    LOG_INFO = "log_info"
-    LOG_WARNING = "log_warning"
-    LOG_ERROR = "log_error"
-    
     # Sistema
     SHUTDOWN = "shutdown"
     RESTART = "restart"

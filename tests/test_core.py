@@ -34,7 +34,7 @@ class TestEvents:
         """Test che eventi con priorità più alta vengano prima"""
         critical = Event(EventPriority.CRITICAL, EventType.SHUTDOWN, "stop")
         normal = Event(EventPriority.NORMAL, EventType.USER_SPEECH, "ciao")
-        low = Event(EventPriority.LOW, EventType.LOG_INFO, "log")
+        low = Event(EventPriority.LOW, EventType.SPEAK, "speak")
         
         # In una PriorityQueue, il minore viene prima
         assert critical < normal
@@ -46,7 +46,7 @@ class TestEvents:
         q = queue.PriorityQueue()
         
         # Inserisci in ordine casuale
-        q.put(Event(EventPriority.LOW, EventType.LOG_INFO, "low"))
+        q.put(Event(EventPriority.LOW, EventType.SPEAK, "low"))
         q.put(Event(EventPriority.CRITICAL, EventType.SHUTDOWN, "critical"))
         q.put(Event(EventPriority.NORMAL, EventType.USER_SPEECH, "normal"))
         
@@ -145,10 +145,10 @@ class TestEventRouter:
         queue2 = queue.PriorityQueue()
         
         # Registra due destinazioni per lo stesso evento
-        router.register_route(EventType.LOG_INFO, queue1, "console")
-        router.register_route(EventType.LOG_INFO, queue2, "file")
+        router.register_route(EventType.SAVE_HISTORY, queue1, "db1")
+        router.register_route(EventType.SAVE_HISTORY, queue2, "db2")
         
-        event = create_output_event(EventType.LOG_INFO, "log message")
+        event = create_output_event(EventType.SAVE_HISTORY, "save data")
         routed = router.route_event(event)
         
         assert routed == 2
@@ -161,11 +161,11 @@ class TestEventRouter:
         test_queue = queue.PriorityQueue()
         
         router.register_route(EventType.SPEAK, test_queue, "voice")
-        router.register_route(EventType.LOG_INFO, test_queue, "log")
+        router.register_route(EventType.SAVE_HISTORY, test_queue, "db")
         
         events = [
             create_output_event(EventType.SPEAK, "speak1"),
-            create_output_event(EventType.LOG_INFO, "log1"),
+            create_output_event(EventType.SAVE_HISTORY, "save1"),
             create_output_event(EventType.SPEAK, "speak2")
         ]
         

@@ -154,7 +154,7 @@ User speaks → Jabra Mic → VoiceInputAdapter
           ▼            ▼          ▼          ▼
     Voice Queue  LED Queue  DB Queue  Log Queue
           ▼            ▼          ▼          ▼
-    VoiceOutput  LEDOutput  DBOutput  LogOutput
+    VoiceOutput  LEDOutput  DBOutput
 ```
 
 ### Event Types
@@ -211,7 +211,6 @@ Migrazione adapters esistenti:
 - [ ] `LEDOutputAdapter` (GPIO)
 - [ ] `MockLEDOutputAdapter` (console)
 - [ ] `DatabaseOutputAdapter` (SQLite + ChromaDB)
-- [ ] `LogOutputAdapter` (file + console)
 
 ### Registrazione nel Factory
 

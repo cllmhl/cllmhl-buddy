@@ -79,13 +79,6 @@ class BuddyBrain:
         output_events = []
         
         try:
-            # Log dell'input ricevuto
-            output_events.append(create_output_event(
-                EventType.LOG_INFO,
-                f"Brain received: {input_event.type.value} from {input_event.source}",
-                priority=EventPriority.LOW
-            ))
-            
             # Gestione per tipo di evento
             if input_event.type == EventType.USER_SPEECH:
                 output_events.extend(self._handle_user_input(input_event))
@@ -101,11 +94,6 @@ class BuddyBrain:
         
         except Exception as e:
             logger.error(f"Brain processing error: {e}", exc_info=True)
-            output_events.append(create_output_event(
-                EventType.LOG_ERROR,
-                f"Brain error: {str(e)}",
-                priority=EventPriority.HIGH
-            ))
         
         return output_events
     
@@ -140,25 +128,11 @@ class BuddyBrain:
                 metadata={"triggered_by": "user_speech"}
             ))
         
-        # Log della risposta
-        output_events.append(create_output_event(
-            EventType.LOG_INFO,
-            f"Brain response: {response_text[:100]}...",
-            priority=EventPriority.LOW
-        ))
-        
         return output_events
     
     def _handle_sensor_input(self, event: Event) -> List[Event]:
         """Gestisce eventi dai sensori"""
         output_events = []
-        
-        # Log del sensore
-        output_events.append(create_output_event(
-            EventType.LOG_INFO,
-            f"Sensor {event.type.value}: {event.content}",
-            priority=EventPriority.LOW
-        ))
         
         # Logica proattiva (esempio)
         if event.type == EventType.SENSOR_PRESENCE:
@@ -185,12 +159,6 @@ class BuddyBrain:
                 "Mi sto spegnendo. A presto!",
                 priority=EventPriority.CRITICAL
             ))
-        
-        output_events.append(create_output_event(
-            EventType.LOG_INFO,
-            "Shutdown requested",
-            priority=EventPriority.HIGH
-        ))
         
         return output_events
     

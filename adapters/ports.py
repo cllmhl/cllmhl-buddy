@@ -63,7 +63,7 @@ class OutputPort(ABC):
     - Consumano eventi dalla loro coda dedicata
     - Eseguono azioni nel mondo esterno (parlare, LED, DB, etc)
     
-    Esempi: VoiceOutput, LEDOutput, DatabaseOutput, LogOutput
+    Esempi: VoiceOutput, LEDOutput, DatabaseOutput
     """
     
     def __init__(self, name: str, config: dict):

@@ -86,7 +86,6 @@ class BuddyOrchestrator:
         self.voice_queue = queue.PriorityQueue(maxsize=queue_config['voice_maxsize'])
         self.led_queue = queue.PriorityQueue(maxsize=queue_config['led_maxsize'])
         self.database_queue = queue.PriorityQueue(maxsize=queue_config['database_maxsize'])
-        self.log_queue = queue.PriorityQueue(maxsize=queue_config['log_maxsize'])
         
         # Event Router
         self.router = EventRouter()
@@ -118,12 +117,6 @@ class BuddyOrchestrator:
         # Route per Database
         self.router.register_route(EventType.SAVE_HISTORY, self.database_queue, "database_output")
         self.router.register_route(EventType.SAVE_MEMORY, self.database_queue, "database_output")
-        
-        # Route per Logging
-        self.router.register_route(EventType.LOG_DEBUG, self.log_queue, "log_output")
-        self.router.register_route(EventType.LOG_INFO, self.log_queue, "log_output")
-        self.router.register_route(EventType.LOG_WARNING, self.log_queue, "log_output")
-        self.router.register_route(EventType.LOG_ERROR, self.log_queue, "log_output")
         
         self.logger.info("📍 Router routes configured")
     
