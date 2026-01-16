@@ -62,15 +62,15 @@ class TestEvents:
     def test_create_input_event_helper(self):
         """Test helper per creare eventi di input"""
         event = create_input_event(
-            EventType.KEYBOARD_INPUT,
+            EventType.PIPE_COMMAND,
             "test message",
-            source="keyboard",
+            source="pipe",
             priority=EventPriority.HIGH
         )
         
-        assert event.type == EventType.KEYBOARD_INPUT
+        assert event.type == EventType.PIPE_COMMAND
         assert event.content == "test message"
-        assert event.source == "keyboard"
+        assert event.source == "pipe"
         assert event.priority == EventPriority.HIGH
     
     def test_create_output_event_helper(self):
@@ -226,33 +226,6 @@ class TestBuddyBrain:
         speak_events = [e for e in output_events if e.type == EventType.SPEAK]
         assert len(speak_events) == 1
         assert "Ciao" in speak_events[0].content
-    
-    @patch('core.brain.genai.Client')
-    def test_brain_process_keyboard_input(self, mock_client, mock_brain_config):
-        """Test processing di input tastiera (non deve parlare)"""
-        mock_session = Mock()
-        mock_response = Mock()
-        mock_response.text = "Risposta"
-        mock_response.candidates = [Mock(grounding_metadata=None)]
-        mock_session.send_message.return_value = mock_response
-        
-        mock_client_instance = Mock()
-        mock_client_instance.chats.create.return_value = mock_session
-        mock_client.return_value = mock_client_instance
-        
-        brain = BuddyBrain("fake_api_key", mock_brain_config)
-        
-        input_event = create_input_event(
-            EventType.KEYBOARD_INPUT,
-            "test",
-            source="keyboard"
-        )
-        
-        output_events = brain.process_event(input_event)
-        
-        # Non ci dovrebbero essere eventi SPEAK
-        speak_events = [e for e in output_events if e.type == EventType.SPEAK]
-        assert len(speak_events) == 0
 
 
 if __name__ == "__main__":

@@ -161,7 +161,6 @@ User speaks → Jabra Mic → VoiceInputAdapter
 
 **Input Events:**
 - `USER_SPEECH` - Voice input
-- `KEYBOARD_INPUT` - Keyboard input
 - `PIPE_COMMAND` - Named pipe command
 - `SENSOR_*` - Sensor data
 

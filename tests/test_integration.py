@@ -23,7 +23,7 @@ class TestIntegration:
         # Inserisci eventi in ordine casuale
         events = [
             create_input_event(EventType.USER_SPEECH, "low priority", "test", priority=EventPriority.LOW),
-            create_input_event(EventType.KEYBOARD_INPUT, "critical!", "test", priority=EventPriority.CRITICAL),
+            create_input_event(EventType.PIPE_COMMAND, "critical!", "test", priority=EventPriority.CRITICAL),
             create_input_event(EventType.PIPE_COMMAND, "high priority", "test", priority=EventPriority.HIGH),
             create_input_event(EventType.USER_SPEECH, "normal", "test", priority=EventPriority.NORMAL),
         ]
@@ -113,12 +113,6 @@ class TestIntegration:
         """Test che il Factory crei gli adapter corretti"""
         
         # Test input adapters
-        stdin_adapter = AdapterFactory.create_input_adapter(
-            'keyboard', {'implementation': 'stdin', 'config': {}}
-        )
-        assert stdin_adapter is not None
-        assert stdin_adapter.name == 'keyboard_stdin'
-        
         pipe_adapter = AdapterFactory.create_input_adapter(
             'pipe', {'implementation': 'pipe', 'config': {'pipe_path': '/tmp/test'}}
         )

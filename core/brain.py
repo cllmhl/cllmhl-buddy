@@ -89,7 +89,6 @@ class BuddyBrain:
             # Gestione per tipo di evento
             if input_event.type in [
                 EventType.USER_SPEECH,
-                EventType.KEYBOARD_INPUT,
                 EventType.PIPE_COMMAND
             ]:
                 output_events.extend(self._handle_user_input(input_event))

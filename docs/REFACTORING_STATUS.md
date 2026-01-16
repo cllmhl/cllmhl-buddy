@@ -135,7 +135,7 @@ print('Output:', list(AdapterFactory._output_implementations.keys()))
 #### Event Flow Completo
 
 ```
-Keyboard Input → Event(KEYBOARD_INPUT) → Input Queue
+Pipe Input → Event(PIPE_COMMAND) → Input Queue
                           ↓
                     Brain.process_event()
                           ↓
