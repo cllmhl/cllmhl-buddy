@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import os
 
 # Lancia main.py con config voice output test
-os.environ["BUDDY_CONFIG"] = "config/voice_output_test.yaml"
+os.environ["BUDDY_CONFIG"] = "tests/hardware/config/voice_output_test.yaml"
 
 from main import main
 

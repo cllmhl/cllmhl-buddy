@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import os
 
 # Lancia main.py con config led test automatico
-os.environ["BUDDY_CONFIG"] = "config/led_test_auto.yaml"
+os.environ["BUDDY_CONFIG"] = "tests/hardware/config/led_test_auto.yaml"
 
 from main import main
 

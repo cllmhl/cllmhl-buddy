@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 
 # Lancia main.py con config hardware test
-os.environ["BUDDY_CONFIG"] = "config/hardware_test.yaml"
+os.environ["BUDDY_CONFIG"] = "tests/hardware/config/hardware_test.yaml"
 
 print("=" * 70)
 print("🔧 BUDDY HARDWARE TEST MODE")

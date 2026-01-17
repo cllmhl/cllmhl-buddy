@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import os
 
 # Lancia main.py con config radar test
-os.environ["BUDDY_CONFIG"] = "config/radar_test.yaml"
+os.environ["BUDDY_CONFIG"] = "tests/hardware/config/radar_test.yaml"
 
 from main import main
 
