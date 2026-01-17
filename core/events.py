@@ -20,6 +20,9 @@ class EventType(Enum):
     SENSOR_HUMIDITY = "sensor_humidity"
     SENSOR_MOVEMENT = "sensor_movement"
     
+    # Bypass Brain - per test e comandi diretti
+    DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un output event da inoltrare direttamente
+    
     # ===== OUTPUT EVENTS =====
     SPEAK = "speak"                       # Emetti audio vocale
     

@@ -90,7 +90,11 @@ class BuddyBrain:
         
         try:
             # Gestione per tipo di evento
-            if input_event.type == EventType.USER_SPEECH:
+            if input_event.type == EventType.DIRECT_OUTPUT:
+                # Bypass Brain: unwrap l'evento interno e inoltralo direttamente
+                output_events.extend(self._handle_direct_output(input_event))
+            
+            elif input_event.type == EventType.USER_SPEECH:
                 output_events.extend(self._handle_user_input(input_event))
             
             elif input_event.type.name.startswith("SENSOR_"):
@@ -113,6 +117,47 @@ class BuddyBrain:
             # Non propaghiamo per non bloccare il sistema, ma loggiamo tutto
         
         return output_events
+    
+    def _handle_direct_output(self, event: Event) -> List[Event]:
+        """
+        Gestisce DIRECT_OUTPUT: unwrap l'evento interno e inoltralo.
+        Utile per:
+        - Test hardware
+        - Comandi diretti da API/console
+        - Bypass della logica LLM
+        - Automazioni hardware
+        
+        Il content deve essere un Event di tipo OUTPUT.
+        """
+        try:
+            inner_event = event.content
+            
+            # Verifica che sia un Event valido
+            if not isinstance(inner_event, Event):
+                logger.error(
+                    f"DIRECT_OUTPUT content must be an Event, got {type(inner_event)}"
+                )
+                return []
+            
+            # Verifica che sia un evento di output (non input)
+            if inner_event.type in [EventType.USER_SPEECH, EventType.DIRECT_OUTPUT] or \
+               inner_event.type.name.startswith("SENSOR_"):
+                logger.warning(
+                    f"DIRECT_OUTPUT should contain output events, got {inner_event.type}"
+                )
+                return []
+            
+            logger.info(
+                f"🎯 Direct output bypass: {inner_event.type.value} "
+                f"(content: {str(inner_event.content)[:50]})"
+            )
+            
+            # Inoltra direttamente l'evento interno
+            return [inner_event]
+            
+        except Exception as e:
+            logger.error(f"Error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
+            return []
     
     def _handle_user_input(self, event: Event) -> List[Event]:
         """Gestisce input testuale/vocale dell'utente"""
