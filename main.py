@@ -117,7 +117,8 @@ def main():
     try:
         db = BuddyDatabase()
         buddy = BuddyBrain(api_key)
-        archivist = BuddyArchivist(api_key=api_key)
+        # Archivist necessita config, main.py è obsoleto - usa main_new.py
+        archivist = None  # BuddyArchivist(api_key=api_key, config=...)
         
         # IO Systems
         voice = BuddyVoice() # Gestisce TTS e LED Verde

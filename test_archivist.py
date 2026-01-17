@@ -7,7 +7,15 @@ import os
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 db = BuddyDatabase()
-archivist = BuddyArchivist(api_key)
+
+# Config archivist
+archivist_config = {
+    "model_id": "gemini-2.5-flash-lite",
+    "temperature": 0.1,
+    "system_instruction": "Sei l'Archivista di Buddy. Distilla la conversazione in fatti memorabili. Rispondi ESCLUSIVAMENTE con un array JSON di oggetti con chiavi: 'fatto', 'categoria', 'importanza' (1-5).",
+    "output_format": "json_array"
+}
+archivist = BuddyArchivist(api_key, archivist_config)
 
 # 2. Simula una conversazione aggiungendo log manualmente in SQL
 db.add_history("user", "Ciao Buddy, io mi chiamo Michele e vivo a Ferrara.")

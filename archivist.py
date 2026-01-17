@@ -1,16 +1,17 @@
 from google import genai
 from google.genai import types
-import json
 import logging
 
 logger = logging.getLogger(__name__)
 
 class BuddyArchivist:
-    def __init__(self, api_key: str):
-        # Carica la configurazione una volta all'avvio
-        with open("buddy_config.json", "r") as f:
-            self.config = json.load(f)["archivist"]
-            
+    def __init__(self, api_key: str, config: dict):
+        """
+        Args:
+            api_key: Google API key
+            config: Configurazione archivist da YAML
+        """
+        self.config = config
         self.client = genai.Client(api_key=api_key)
         self.model_id = self.config["model_id"]
 
