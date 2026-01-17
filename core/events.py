@@ -17,6 +17,7 @@ class OutputChannel(Enum):
     LED = "led"              # LED di stato/segnalazione
     DATABASE = "database"    # Persistenza dati
     ARCHIVIST = "archivist"  # Distillazione memoria
+    CONSOLE = "console"      # Output console/debug
 
 
 class EventType(Enum):
