@@ -132,8 +132,7 @@ class BuddyOrchestrator:
         output_queue_map = {
             'voice': self.voice_queue,
             'led': self.led_queue,
-            'database': self.database_queue,
-            'log': self.log_queue
+            'database': self.database_queue
         }
         
         for name, cfg in self.config['adapters']['output'].items():
