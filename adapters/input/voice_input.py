@@ -224,6 +224,10 @@ class JabraVoiceInput(VoiceInputPort):
         """Loop principale: Wake Word → Conversation Session"""
         logger.info("🎤 Voice input loop started (waiting for wake word)")
         
+        if not self.recorder or not self.porcupine:
+            logger.error("❌ Voice input hardware not initialized")
+            return
+        
         try:
             self.recorder.start()
             
