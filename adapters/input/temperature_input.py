@@ -63,8 +63,11 @@ class TemperatureInput(TemperatureInputPort):
             pin_map = {
                 4: board.D4,
                 17: board.D17,
+                18: board.D18,
                 27: board.D27,
-                22: board.D22
+                22: board.D22,
+                23: board.D23,
+                24: board.D24
             }
             
             board_pin = pin_map.get(self.pin, board.D4)
@@ -112,6 +115,10 @@ class TemperatureInput(TemperatureInputPort):
         """Worker per DHT11 (polling periodico)"""
         logger.info("🌡️  DHT11 worker loop started")
         
+        # Stati precedenti per rilevare cambiamenti significativi
+        prev_temperature = None
+        prev_humidity = None
+        
         while self.running:
             try:
                 # Leggi temperatura e umidità
@@ -121,23 +128,33 @@ class TemperatureInput(TemperatureInputPort):
                 if temperature is not None and humidity is not None:
                     logger.debug(f"🌡️  T={temperature:.1f}°C, H={humidity:.1f}%")
                     
-                    # Eventi temperatura e umidità
-                    temp_event = create_input_event(
-                        EventType.SENSOR_TEMPERATURE,
-                        temperature,
-                        source="dht11",
-                        priority=EventPriority.LOW
-                    )
+                    # Invia evento temperatura solo se cambia di almeno 0.5°C
+                    if prev_temperature is None or abs(temperature - prev_temperature) >= 0.5:
+                        prev_temperature = temperature
+                        
+                        temp_event = create_input_event(
+                            EventType.SENSOR_TEMPERATURE,
+                            temperature,
+                            source="dht11",
+                            priority=EventPriority.LOW,
+                            metadata={'unit': 'celsius'}
+                        )
+                        self.input_queue.put(temp_event)
+                        logger.info(f"🌡️  Temperatura: {temperature:.1f}°C")
                     
-                    humidity_event = create_input_event(
-                        EventType.SENSOR_HUMIDITY,
-                        humidity,
-                        source="dht11",
-                        priority=EventPriority.LOW
-                    )
-                    
-                    self.input_queue.put(temp_event)
-                    self.input_queue.put(humidity_event)
+                    # Invia evento umidità solo se cambia di almeno 5%
+                    if prev_humidity is None or abs(humidity - prev_humidity) >= 5.0:
+                        prev_humidity = humidity
+                        
+                        humidity_event = create_input_event(
+                            EventType.SENSOR_HUMIDITY,
+                            humidity,
+                            source="dht11",
+                            priority=EventPriority.LOW,
+                            metadata={'unit': 'percent'}
+                        )
+                        self.input_queue.put(humidity_event)
+                        logger.info(f"💧 Umidità: {humidity:.1f}%")
             
             except RuntimeError as e:
                 # DHT11 spesso fallisce letture singole - è normale

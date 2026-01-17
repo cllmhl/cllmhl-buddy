@@ -24,8 +24,8 @@ adapters:
     # Sensore temperatura/umidità fisico
     - class: "TemperatureInput"
       config:
-        pin: 4
-        interval: 30.0
+        pin: 18
+        interval: 1.0
   
   output:
     # Voice output con Jabra
