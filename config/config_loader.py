@@ -11,6 +11,56 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def get_buddy_home() -> Path:
+    """
+    Ottiene la directory home di Buddy.
+    
+    Usa in ordine:
+    1. BUDDY_HOME environment variable (se impostata)
+    2. Directory del file che importa questo modulo
+    3. Current working directory (fallback)
+    
+    Returns:
+        Path assoluto alla directory home di Buddy
+    """
+    # 1. Prova con variabile d'ambiente
+    if 'BUDDY_HOME' in os.environ:
+        buddy_home = Path(os.environ['BUDDY_HOME']).resolve()
+        logger.debug(f"BUDDY_HOME from env: {buddy_home}")
+        return buddy_home
+    
+    # 2. Usa directory di questo file (config/) e risali alla root
+    config_dir = Path(__file__).parent.resolve()
+    buddy_home = config_dir.parent
+    logger.debug(f"BUDDY_HOME auto-detected: {buddy_home}")
+    return buddy_home
+
+
+def resolve_path(path: str, relative_to: Optional[Path] = None) -> Path:
+    """
+    Risolve un path in assoluto.
+    
+    Se il path è già assoluto, lo restituisce così com'è.
+    Se è relativo, lo risolve rispetto a BUDDY_HOME o alla directory specificata.
+    
+    Args:
+        path: Path da risolvere (può essere relativo o assoluto)
+        relative_to: Directory base per path relativi (default: BUDDY_HOME)
+        
+    Returns:
+        Path assoluto
+    """
+    p = Path(path)
+    
+    # Se è già assoluto, restituiscilo
+    if p.is_absolute():
+        return p.resolve()
+    
+    # Se è relativo, risolvilo rispetto a BUDDY_HOME
+    base_dir = relative_to if relative_to else get_buddy_home()
+    return (base_dir / p).resolve()
+
+
 class ConfigLoader:
     """
     Loader per configurazioni YAML con validazione.
@@ -22,23 +72,28 @@ class ConfigLoader:
         Carica configurazione da file YAML.
         
         Args:
-            config_path: Path al file YAML
+            config_path: Path al file YAML (può essere relativo o assoluto)
             validate_adapters: Se True, valida che gli adapter configurati esistano
             
         Returns:
-            Dict con configurazione completa
+            Dict con configurazione completa (con 'buddy_home' aggiunto)
             
         Raises:
             FileNotFoundError: Se il file non esiste
             yaml.YAMLError: Se c'è un errore di parsing YAML
             ValueError: Se la configurazione non è valida
         """
-        config_file = Path(config_path)
+        # Risolvi il path del config rispetto a BUDDY_HOME
+        config_file = resolve_path(config_path)
+        
+        # Ottieni BUDDY_HOME
+        buddy_home = get_buddy_home()
         
         # Se il file non esiste, solleva errore
         if not config_file.exists():
-            error_msg = f"Configuration file not found: {config_path}"
+            error_msg = f"Configuration file not found: {config_file} (from: {config_path})"
             logger.error(f"❌ {error_msg}")
+            logger.error(f"   BUDDY_HOME: {buddy_home}")
             raise FileNotFoundError(error_msg)
         
         try:
@@ -55,7 +110,11 @@ class ConfigLoader:
             if validate_adapters:
                 cls._validate_adapters(config)
             
-            logger.info(f"✅ Configuration loaded from: {config_path}")
+            # Aggiungi BUDDY_HOME alla configurazione per uso futuro
+            config['buddy_home'] = str(buddy_home)
+            
+            logger.info(f"✅ Configuration loaded from: {config_file}")
+            logger.info(f"   BUDDY_HOME: {buddy_home}")
             cls._log_config_summary(config)
             
             return config

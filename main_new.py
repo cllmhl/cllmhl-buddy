@@ -24,13 +24,23 @@ from core import (
 from adapters import AdapterFactory
 
 # Config imports
-from config.config_loader import ConfigLoader
+from config.config_loader import ConfigLoader, get_buddy_home, resolve_path
 
 
 # ===== LOGGING SETUP =====
-def setup_logging(log_config: dict) -> None:
-    """Configura il sistema di logging"""
-    log_file = log_config.get('log_file', 'buddy_system.log')
+def setup_logging(log_config: dict, buddy_home: Path) -> None:
+    """
+    Configura il sistema di logging
+    
+    Args:
+        log_config: Configurazione logging dal YAML
+        buddy_home: Path alla home directory di Buddy
+    """
+    log_file_path = log_config.get('log_file', 'buddy_system.log')
+    
+    # Risolvi il path del log rispetto a BUDDY_HOME
+    log_file = resolve_path(log_file_path, relative_to=buddy_home)
+    
     max_bytes = log_config.get('max_bytes', 10*1024*1024)
     backup_count = log_config.get('backup_count', 3)
     
@@ -70,13 +80,17 @@ class BuddyOrchestrator:
     def __init__(self, config_path: str):
         """
         Args:
-            config_path: Path al file di configurazione YAML
+            config_path: Path al file di configurazione YAML (relativo o assoluto)
         """
         self.logger = logging.getLogger(__name__)
         self.running = False
         
-        # Carica configurazione
+        # Carica configurazione (risolve automaticamente i path)
         self.config = ConfigLoader.load(config_path)
+        
+        # Ottieni BUDDY_HOME dalla configurazione
+        self.buddy_home = Path(self.config['buddy_home'])
+        self.logger.info(f"🏠 BUDDY_HOME: {self.buddy_home}")
         
         # Setup coda di input centralizzata
         queue_config = self.config['queues']
@@ -256,18 +270,30 @@ def main():
     # Carica variabili d'ambiente
     load_dotenv(".env")
     
+    # Ottieni BUDDY_HOME presto (per setup logging)
+    buddy_home = get_buddy_home()
+    
     # BUDDY_CONFIG è OBBLIGATORIO - fail fast se mancante
     config_file = os.getenv("BUDDY_CONFIG")
     if not config_file:
         print("❌ ERROR: BUDDY_CONFIG environment variable not set")
-        print("   Add it to .env file:")
+        print("   Set it in .env file or as environment variable:")
         print("   BUDDY_CONFIG=config/adapter_config_test.yaml")
+        print("")
+        print("   You can also set BUDDY_HOME (optional):")
+        print(f"   Current BUDDY_HOME: {buddy_home}")
         sys.exit(1)
     
-    # Setup logging
-    setup_logging({})
+    # Setup logging CON path risolto
+    log_config = {
+        'log_file': 'buddy_system.log',
+        'max_bytes': 10*1024*1024,
+        'backup_count': 3
+    }
+    setup_logging(log_config, buddy_home)
     
     logger = logging.getLogger(__name__)
+    logger.info(f"🏠 BUDDY_HOME: {buddy_home}")
     logger.info(f"🚀 Starting Buddy with config: {config_file}")
     
     try:
