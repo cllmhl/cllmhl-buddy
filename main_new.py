@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 # Core imports
 from core import (
     Event, EventType, EventPriority, OutputChannel,
+    EVENT_TO_CHANNEL, get_output_channel,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )
@@ -105,20 +106,29 @@ class BuddyOrchestrator:
         self.logger.info("🚀 BuddyOrchestrator initialized")
     
     def _setup_routes(self) -> None:
-        """Configura le route del router"""
-        # Route per SPEAK
-        self.router.register_route(EventType.SPEAK, self.voice_queue, "voice_output")
+        """
+        Configura le route del router usando EVENT_TO_CHANNEL mapping.
+        Il routing è definito nel core domain (events.py).
+        """
+        queue_map = {
+            OutputChannel.VOICE: self.voice_queue,
+            OutputChannel.LED: self.led_queue,
+            OutputChannel.DATABASE: self.database_queue
+        }
         
-        # Route per LED
-        self.router.register_route(EventType.LED_ON, self.led_queue, "led_output")
-        self.router.register_route(EventType.LED_OFF, self.led_queue, "led_output")
-        self.router.register_route(EventType.LED_BLINK, self.led_queue, "led_output")
+        # Registra tutte le route dal mapping del dominio
+        for event_type, channel in EVENT_TO_CHANNEL.items():
+            if channel in queue_map:
+                self.router.register_route(
+                    event_type,
+                    queue_map[channel],
+                    f"{channel.value}_output"
+                )
         
-        # Route per Database
-        self.router.register_route(EventType.SAVE_HISTORY, self.database_queue, "database_output")
-        self.router.register_route(EventType.SAVE_MEMORY, self.database_queue, "database_output")
-        
-        self.logger.info("📍 Router routes configured")
+        self.logger.info(
+            f"📍 Router configured with {len(EVENT_TO_CHANNEL)} routes "
+            f"across {len(queue_map)} channels"
+        )
     
     def _create_adapters(self) -> None:
         """Crea adapters dalla configurazione usando Factory"""

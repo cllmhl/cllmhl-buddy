@@ -47,6 +47,36 @@ class EventType(Enum):
     RESTART = "restart"
 
 
+# ===== EVENT ROUTING MAP =====
+# Mappa EventType -> OutputChannel per routing automatico
+EVENT_TO_CHANNEL: dict[EventType, OutputChannel] = {
+    # Voice Output
+    EventType.SPEAK: OutputChannel.VOICE,
+    
+    # LED Output
+    EventType.LED_ON: OutputChannel.LED,
+    EventType.LED_OFF: OutputChannel.LED,
+    EventType.LED_BLINK: OutputChannel.LED,
+    
+    # Database Output
+    EventType.SAVE_HISTORY: OutputChannel.DATABASE,
+    EventType.SAVE_MEMORY: OutputChannel.DATABASE,
+}
+
+
+def get_output_channel(event_type: EventType) -> OutputChannel | None:
+    """
+    Ritorna il canale di output per un dato tipo di evento.
+    
+    Args:
+        event_type: Tipo di evento
+        
+    Returns:
+        OutputChannel corrispondente o None se è un evento di input/sistema
+    """
+    return EVENT_TO_CHANNEL.get(event_type)
+
+
 class EventPriority(Enum):
     """
     Priorità eventi per PriorityQueue.
