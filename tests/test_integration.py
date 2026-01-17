@@ -130,10 +130,11 @@ class TestIntegration:
         )
         assert mock_led is not None
     
-    def test_voice_input_adapter_registered(self):
-        """Test che Voice Input adapter sia registrato"""
-        assert "JabraVoiceInput" in AdapterFactory._input_classes
-        assert "MockVoiceInput" in AdapterFactory._input_classes
+    def test_voice_input_adapter_available(self):
+        """Test che Voice Input adapter sia disponibile"""
+        available = AdapterFactory.get_available_classes()
+        assert "JabraVoiceInput" in available['input']
+        assert "MockVoiceInput" in available['input']
         
         # Crea mock ear adapter
         input_queue = PriorityQueue()
@@ -142,10 +143,11 @@ class TestIntegration:
         )
         assert mock_ear is not None
     
-    def test_radar_adapter_registered(self):
-        """Test che Radar adapter sia registrato"""
-        assert "RadarInput" in AdapterFactory._input_classes
-        assert "MockRadarInput" in AdapterFactory._input_classes
+    def test_radar_adapter_available(self):
+        """Test che Radar adapter sia disponibile"""
+        available = AdapterFactory.get_available_classes()
+        assert "RadarInput" in available['input']
+        assert "MockRadarInput" in available['input']
         
         # Crea mock radar adapter
         input_queue = PriorityQueue()
@@ -154,10 +156,11 @@ class TestIntegration:
         )
         assert mock_radar is not None
     
-    def test_temperature_adapter_registered(self):
-        """Test che Temperature adapter sia registrato"""
-        assert "TemperatureInput" in AdapterFactory._input_classes
-        assert "MockTemperatureInput" in AdapterFactory._input_classes
+    def test_temperature_adapter_available(self):
+        """Test che Temperature adapter sia disponibile"""
+        available = AdapterFactory.get_available_classes()
+        assert "TemperatureInput" in available['input']
+        assert "MockTemperatureInput" in available['input']
         
         # Crea mock temperature adapter
         input_queue = PriorityQueue()

@@ -73,32 +73,25 @@ class TestPorts:
 class TestAdapterFactory:
     """Test per AdapterFactory"""
     
-    def test_register_input_implementation(self):
-        """Test registrazione classe input"""
-        AdapterFactory.register_input("DummyInputAdapter", DummyInputAdapter)
+    def test_get_available_classes(self):
+        """Test recupero classi disponibili dai moduli"""
+        classes = AdapterFactory.get_available_classes()
         
-        classes = AdapterFactory.get_registered_classes()
-        assert "DummyInputAdapter" in classes['input']
-    
-    def test_register_output_implementation(self):
-        """Test registrazione classe output"""
-        AdapterFactory.register_output("DummyOutputAdapter", DummyOutputAdapter)
-        
-        classes = AdapterFactory.get_registered_classes()
-        assert "DummyOutputAdapter" in classes['output']
+        # Verifica che siano presenti le classi principali
+        assert 'MockVoiceInput' in classes['input']
+        assert 'MockVoiceOutput' in classes['output']
+        assert 'DirectOutputInput' in classes['input']
     
     def test_create_input_adapter_success(self):
         """Test creazione adapter input con successo"""
-        AdapterFactory.register_input("DummyInputAdapter", DummyInputAdapter)
-        
         test_queue = queue.PriorityQueue()
         config = {'test': 'value'}
         
-        adapter = AdapterFactory.create_input_adapter("DummyInputAdapter", config, test_queue)
+        # Usa un adapter reale esistente
+        adapter = AdapterFactory.create_input_adapter("MockVoiceInput", config, test_queue)
         
         assert adapter is not None
-        assert isinstance(adapter, DummyInputAdapter)
-        assert adapter.name == "DummyInputAdapter"
+        assert adapter.name == "MockVoiceInput"
         assert adapter.input_queue == test_queue
     
     def test_create_input_adapter_unknown(self):
@@ -110,14 +103,13 @@ class TestAdapterFactory:
     
     def test_create_output_adapter_success(self):
         """Test creazione adapter output con successo"""
-        AdapterFactory.register_output("DummyOutputAdapter", DummyOutputAdapter)
-        
         config = {}
         
-        adapter = AdapterFactory.create_output_adapter("DummyOutputAdapter", config)
+        # Usa un adapter reale esistente
+        adapter = AdapterFactory.create_output_adapter("MockVoiceOutput", config)
         
         assert adapter is not None
-        assert isinstance(adapter, DummyOutputAdapter)
+        assert adapter.name == "MockVoiceOutput"
     
     def test_create_output_adapter_unknown(self):
         """Test creazione output adapter con classe sconosciuta solleva ValueError"""

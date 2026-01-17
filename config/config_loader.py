@@ -183,7 +183,7 @@ class ConfigLoader:
     @classmethod
     def _validate_adapters(cls, config: Dict[str, Any]) -> None:
         """
-        Valida che gli adapter configurati esistano nel registry del factory.
+        Valida che gli adapter configurati esistano nei moduli.
         
         Raises:
             ValueError: Se un adapter configurato non esiste
@@ -191,15 +191,15 @@ class ConfigLoader:
         # Import qui per evitare circular import
         from adapters.factory import AdapterFactory
         
-        registered = AdapterFactory.get_registered_classes()
+        available_classes = AdapterFactory.get_available_classes()
         
         # Valida input adapters (ora sono liste con 'class')
         if isinstance(config['adapters']['input'], list):
             for adapter_config in config['adapters']['input']:
                 class_name = adapter_config.get('class', '')
                 
-                if class_name not in registered['input']:
-                    available = ', '.join(registered['input'])
+                if class_name not in available_classes['input']:
+                    available = ', '.join(available_classes['input'])
                     raise ValueError(
                         f"Unknown input adapter class '{class_name}'. "
                         f"Available: {available}"
@@ -212,8 +212,8 @@ class ConfigLoader:
             
             # Skip disabled adapters
                 
-                if class_name not in registered['output']:
-                    available = ', '.join(registered['output'])
+                if class_name not in available_classes['output']:
+                    available = ', '.join(available_classes['output'])
                     raise ValueError(
                         f"Unknown output adapter class '{class_name}'. "
                         f"Available: {available}"

@@ -2,6 +2,9 @@
 Adapter Factory - Crea adapter da configurazione
 Pattern Factory per instanziare adapter dal nome diretto della classe.
 Fail-fast: solleva eccezioni se la configurazione non è valida.
+
+Le classi vengono risolte dinamicamente dai moduli adapters.input e adapters.output
+usando getattr(), eliminando la necessità di un registry esplicito.
 """
 
 import logging
@@ -16,42 +19,9 @@ class AdapterFactory:
     """
     Factory per creare adapter Input/Output da configurazione.
     
-    Supporta registrazione dinamica di classi adapter.
+    Risolve le classi dinamicamente dai moduli importati,
+    senza bisogno di registrazione esplicita.
     """
-    
-    # Registry delle classi disponibili
-    _input_classes: dict[str, type] = {}
-    _output_classes: dict[str, type] = {}
-    
-    @classmethod
-    def register_input(cls, class_name: str, adapter_class: type) -> None:
-        """
-        Registra una classe di InputPort.
-        
-        Args:
-            class_name: Nome della classe (es: "MockVoiceInput", "JabraVoiceInput")
-            adapter_class: Classe dell'adapter (deve estendere InputPort)
-        """
-        if not issubclass(adapter_class, InputPort):
-            raise ValueError(f"{adapter_class} must extend InputPort")
-        
-        cls._input_classes[class_name] = adapter_class
-        logger.debug(f"📝 Registered input class: {class_name}")
-    
-    @classmethod
-    def register_output(cls, class_name: str, adapter_class: type) -> None:
-        """
-        Registra una classe di OutputPort.
-        
-        Args:
-            class_name: Nome della classe (es: "MockVoiceOutput", "JabraVoiceOutput")
-            adapter_class: Classe dell'adapter (deve estendere OutputPort)
-        """
-        if not issubclass(adapter_class, OutputPort):
-            raise ValueError(f"{adapter_class} must extend OutputPort")
-        
-        cls._output_classes[class_name] = adapter_class
-        logger.debug(f"📝 Registered output class: {class_name}")
     
     @classmethod
     def create_input_adapter(
@@ -72,25 +42,32 @@ class AdapterFactory:
             Istanza di InputPort
             
         Raises:
-            ValueError: Se la classe non è registrata
+            ValueError: Se la classe non esiste nel modulo
             RuntimeError: Se la creazione fallisce
         """
-        # Cerca classe nel registry
-        if class_name not in cls._input_classes:
-            available = ', '.join(cls._input_classes.keys())
-            logger.error(
-                f"❌ Unknown input class: '{class_name}'"
-            )
-            logger.info(f"Available classes: {available}")
-            raise ValueError(
-                f"Unknown input adapter class '{class_name}'. "
-                f"Available: {available}"
-            )
-        
         try:
-            # Crea istanza
-            adapter_class = cls._input_classes[class_name]
+            # Importa il modulo degli input adapter
+            import adapters.input as input_module
             
+            # Ottieni la classe dal modulo usando getattr
+            if not hasattr(input_module, class_name):
+                available = ', '.join(input_module.__all__)
+                logger.error(f"❌ Unknown input class: '{class_name}'")
+                logger.info(f"Available classes: {available}")
+                raise ValueError(
+                    f"Unknown input adapter class '{class_name}'. "
+                    f"Available: {available}"
+                )
+            
+            adapter_class = getattr(input_module, class_name)
+            
+            # Verifica che estenda InputPort
+            if not issubclass(adapter_class, InputPort):
+                raise ValueError(
+                    f"{class_name} must extend InputPort"
+                )
+            
+            # Crea istanza
             adapter = adapter_class(
                 name=class_name,
                 config=config,
@@ -100,6 +77,8 @@ class AdapterFactory:
             logger.info(f"✅ Created input adapter: {adapter.name}")
             return adapter
             
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(
                 f"❌ Failed to create input adapter '{class_name}': {e}",
@@ -126,25 +105,32 @@ class AdapterFactory:
             Istanza di OutputPort
             
         Raises:
-            ValueError: Se la classe non è registrata
+            ValueError: Se la classe non esiste nel modulo
             RuntimeError: Se la creazione fallisce
         """
-        # Cerca classe nel registry
-        if class_name not in cls._output_classes:
-            available = ', '.join(cls._output_classes.keys())
-            logger.error(
-                f"❌ Unknown output class: '{class_name}'"
-            )
-            logger.info(f"Available classes: {available}")
-            raise ValueError(
-                f"Unknown output adapter class '{class_name}'. "
-                f"Available: {available}"
-            )
-        
         try:
-            # Crea istanza
-            adapter_class = cls._output_classes[class_name]
+            # Importa il modulo degli output adapter
+            import adapters.output as output_module
             
+            # Ottieni la classe dal modulo usando getattr
+            if not hasattr(output_module, class_name):
+                available = ', '.join(output_module.__all__)
+                logger.error(f"❌ Unknown output class: '{class_name}'")
+                logger.info(f"Available classes: {available}")
+                raise ValueError(
+                    f"Unknown output adapter class '{class_name}'. "
+                    f"Available: {available}"
+                )
+            
+            adapter_class = getattr(output_module, class_name)
+            
+            # Verifica che estenda OutputPort
+            if not issubclass(adapter_class, OutputPort):
+                raise ValueError(
+                    f"{class_name} must extend OutputPort"
+                )
+            
+            # Crea istanza
             adapter = adapter_class(
                 name=class_name,
                 config=config
@@ -153,6 +139,8 @@ class AdapterFactory:
             logger.info(f"✅ Created output adapter: {adapter.name}")
             return adapter
             
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(
                 f"❌ Failed to create output adapter '{class_name}': {e}",
@@ -163,9 +151,15 @@ class AdapterFactory:
             ) from e
     
     @classmethod
-    def get_registered_classes(cls) -> dict:
-        """Ritorna tutte le classi registrate"""
+    def get_available_classes(cls) -> dict:
+        """
+        Ritorna tutte le classi disponibili nei moduli.
+        Utile per debugging e validazione.
+        """
+        import adapters.input as input_module
+        import adapters.output as output_module
+        
         return {
-            'input': list(cls._input_classes.keys()),
-            'output': list(cls._output_classes.keys())
+            'input': list(input_module.__all__),
+            'output': list(output_module.__all__)
         }
