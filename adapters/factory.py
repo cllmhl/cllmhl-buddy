@@ -1,10 +1,10 @@
 """
 Adapter Factory - Crea adapter da configurazione
 Pattern Factory per instanziare adapter dal nome diretto della classe.
+Fail-fast: solleva eccezioni se la configurazione non è valida.
 """
 
 import logging
-from typing import Optional
 from queue import PriorityQueue
 
 from .ports import InputPort, OutputPort
@@ -59,7 +59,7 @@ class AdapterFactory:
         class_name: str,
         config: dict,
         input_queue: PriorityQueue
-    ) -> Optional[InputPort]:
+    ) -> InputPort:
         """
         Crea un input adapter dalla configurazione.
         
@@ -69,15 +69,23 @@ class AdapterFactory:
             input_queue: Coda centralizzata per gli eventi
         
         Returns:
-            Istanza di InputPort o None se errore
+            Istanza di InputPort
+            
+        Raises:
+            ValueError: Se la classe non è registrata
+            RuntimeError: Se la creazione fallisce
         """
         # Cerca classe nel registry
         if class_name not in cls._input_classes:
+            available = ', '.join(cls._input_classes.keys())
             logger.error(
                 f"❌ Unknown input class: '{class_name}'"
             )
-            logger.info(f"Available classes: {list(cls._input_classes.keys())}")
-            return None
+            logger.info(f"Available classes: {available}")
+            raise ValueError(
+                f"Unknown input adapter class '{class_name}'. "
+                f"Available: {available}"
+            )
         
         try:
             # Crea istanza
@@ -106,7 +114,7 @@ class AdapterFactory:
         cls,
         class_name: str,
         config: dict
-    ) -> Optional[OutputPort]:
+    ) -> OutputPort:
         """
         Crea un output adapter dalla configurazione.
         
@@ -115,15 +123,23 @@ class AdapterFactory:
             config: Configurazione specifica dell'adapter (include queue_maxsize)
         
         Returns:
-            Istanza di OutputPort o None se errore
+            Istanza di OutputPort
+            
+        Raises:
+            ValueError: Se la classe non è registrata
+            RuntimeError: Se la creazione fallisce
         """
         # Cerca classe nel registry
         if class_name not in cls._output_classes:
+            available = ', '.join(cls._output_classes.keys())
             logger.error(
                 f"❌ Unknown output class: '{class_name}'"
             )
-            logger.info(f"Available classes: {list(cls._output_classes.keys())}")
-            return None
+            logger.info(f"Available classes: {available}")
+            raise ValueError(
+                f"Unknown output adapter class '{class_name}'. "
+                f"Available: {available}"
+            )
         
         try:
             # Crea istanza

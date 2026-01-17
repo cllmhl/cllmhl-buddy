@@ -102,12 +102,11 @@ class TestAdapterFactory:
         assert adapter.input_queue == test_queue
     
     def test_create_input_adapter_unknown(self):
-        """Test creazione adapter con classe sconosciuta"""
+        """Test creazione adapter con classe sconosciuta solleva ValueError"""
         test_queue = queue.PriorityQueue()
         
-        adapter = AdapterFactory.create_input_adapter("NonexistentAdapter", {}, test_queue)
-        
-        assert adapter is None
+        with pytest.raises(ValueError, match="Unknown input adapter class 'NonexistentAdapter'"):
+            AdapterFactory.create_input_adapter("NonexistentAdapter", {}, test_queue)
     
     def test_create_output_adapter_success(self):
         """Test creazione adapter output con successo"""
@@ -119,6 +118,12 @@ class TestAdapterFactory:
         
         assert adapter is not None
         assert isinstance(adapter, DummyOutputAdapter)
+    
+    def test_create_output_adapter_unknown(self):
+        """Test creazione output adapter con classe sconosciuta solleva ValueError"""
+        
+        with pytest.raises(ValueError, match="Unknown output adapter class 'NonexistentAdapter'"):
+            AdapterFactory.create_output_adapter("NonexistentAdapter", {})
 
 
 if __name__ == "__main__":
