@@ -257,24 +257,19 @@ class BuddyOrchestrator:
 # ===== ENTRY POINT =====
 def main():
     """Entry point principale"""
-    import argparse
     
-    # Parse arguments
-    parser = argparse.ArgumentParser(description='Buddy AI Assistant - Hexagonal Architecture')
-    parser.add_argument('--config', type=str, help='Path to configuration file')
-    parser.add_argument('--dry-run', action='store_true', help='Initialize and exit (test configuration)')
-    args = parser.parse_args()
-    
-    # Carica variabili d'ambiente (solo .env per API keys)
+    # Carica variabili d'ambiente
     load_dotenv(".env")
     
-    # Determina quale config usare
-    config_file = args.config or os.getenv(
-        "BUDDY_CONFIG",
-        "config/adapter_config_test.yaml"
-    )
+    # BUDDY_CONFIG è OBBLIGATORIO - fail fast se mancante
+    config_file = os.getenv("BUDDY_CONFIG")
+    if not config_file:
+        print("❌ ERROR: BUDDY_CONFIG environment variable not set")
+        print("   Add it to .env file:")
+        print("   BUDDY_CONFIG=config/adapter_config_test.yaml")
+        sys.exit(1)
     
-    # Setup logging (con defaults se config non disponibile)
+    # Setup logging
     setup_logging({})
     
     logger = logging.getLogger(__name__)
@@ -283,10 +278,6 @@ def main():
     try:
         # Crea orchestrator
         orchestrator = BuddyOrchestrator(config_file)
-        
-        if args.dry_run:
-            logger.info("✅ Dry-run successful. Exiting.")
-            sys.exit(0)
         
         # Avvia orchestrator
         orchestrator.run()
