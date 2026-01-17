@@ -40,7 +40,7 @@ print("  ✓ Temperatura/umidità realistiche (~20-25°C, 40-60%)")
 print("\n🛑 Ctrl+C per terminare")
 print("=" * 70 + "\n")
 
-from main_new import main
+from main import main
 
 if __name__ == "__main__":
     try:

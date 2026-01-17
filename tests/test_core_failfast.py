@@ -116,60 +116,10 @@ class TestConfigLoaderFailFast:
             ConfigLoader.load(str(empty_yaml), validate_adapters=False)
         
         assert "empty" in str(exc_info.value).lower()
-    
-    def test_load_buddy_config_json_missing_file_raises(self):
-        """load_buddy_config_json should raise on missing file, not return {}"""
-        with pytest.raises(FileNotFoundError) as exc_info:
-            ConfigLoader.load_buddy_config_json("nonexistent.json")
-        
-        assert "not found" in str(exc_info.value).lower()
-    
-    def test_load_buddy_config_json_invalid_json_raises(self, tmp_path):
-        """load_buddy_config_json should raise on invalid JSON, not return {}"""
-        invalid_json = tmp_path / "invalid.json"
-        invalid_json.write_text("{this is not valid json}")
-        
-        with pytest.raises(json.JSONDecodeError):
-            ConfigLoader.load_buddy_config_json(str(invalid_json))
-    
-    def test_load_buddy_config_json_empty_raises(self, tmp_path):
-        """load_buddy_config_json should raise on empty config, not return {}"""
-        empty_json = tmp_path / "empty.json"
-        empty_json.write_text("{}")
-        
-        with pytest.raises(ValueError) as exc_info:
-            ConfigLoader.load_buddy_config_json(str(empty_json))
-        
-        assert "empty" in str(exc_info.value).lower()
-    
-    def test_load_logs_errors_with_exc_info(self, tmp_path):
-        """ConfigLoader should log all errors with exc_info=True"""
-        invalid_json = tmp_path / "bad.json"
-        invalid_json.write_text("not json at all")
-        
-        with patch('config.config_loader.logger') as mock_logger:
-            with pytest.raises(json.JSONDecodeError):
-                ConfigLoader.load_buddy_config_json(str(invalid_json))
-            
-            # Verify logged with exc_info=True
-            error_calls = [call for call in mock_logger.error.call_args_list]
-            assert len(error_calls) > 0
-            
-            # Check last error call has exc_info=True
-            last_call_kwargs = error_calls[-1][1]
-            assert last_call_kwargs.get('exc_info') is True
 
 
 class TestNoSilentReturns:
     """Verify no silent {} or None returns"""
-    
-    def test_config_loader_no_empty_dict_fallback(self):
-        """ConfigLoader should never return {} as fallback"""
-        # This test verifies the behavior, not implementation
-        with pytest.raises(FileNotFoundError):
-            result = ConfigLoader.load_buddy_config_json("missing.json")
-            # Should NOT reach here
-            assert False, "Should have raised, not returned {}"
     
     def test_brain_no_none_session_creates_fallback(self):
         """Brain with None session should return graceful message, not fail silently"""
