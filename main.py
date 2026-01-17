@@ -1,3 +1,8 @@
+"""
+⚠️  OBSOLETO - Questo file usa la vecchia architettura
+Usa main_new.py per la nuova architettura esagonale con adapters
+"""
+
 from logging.handlers import RotatingFileHandler
 import os
 import sys
@@ -17,8 +22,8 @@ from archivist import BuddyArchivist
 # Nuova gestione IO separata
 from io_buddy import BuddyEars, BuddyVoice, silence_alsa, BuddyEvent
 
-# Modulo sensori fisici
-from senses import BuddySenses, SensorEvent
+# Modulo sensori fisici (OBSOLETO - file rimosso, usa adapters in main_new.py)
+# from senses import BuddySenses, SensorEvent
 
 # --- CONFIGURAZIONE LOGGING ---
 handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupCount=1)
