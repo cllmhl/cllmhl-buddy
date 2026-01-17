@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Radar Test Runner
-Test hardware per sensore di presenza (radar).
-Stampa in console tutte le rilevazioni.
+Voice Test Runner
+Test hardware per input vocale (Jabra + Porcupine wake word).
 """
 
 import sys
@@ -11,8 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import os
 
-# Lancia main.py con config radar test
-os.environ["BUDDY_CONFIG"] = "config/radar_test.yaml"
+# Lancia main.py con config voice test
+os.environ["BUDDY_CONFIG"] = "config/voice_test.yaml"
 
 from main import main
 
@@ -20,4 +19,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n✅ Test radar terminato")
+        print("\n\n✅ Test voice terminato")
