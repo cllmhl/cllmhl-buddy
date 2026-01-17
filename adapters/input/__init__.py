@@ -11,8 +11,8 @@ from .temperature_input import TemperatureInput, MockTemperatureInput
 from adapters.factory import AdapterFactory
 from adapters.adapter_types import InputAdapterType
 
-AdapterFactory.register_input(InputAdapterType.EAR.value, JabraVoiceInput)
-AdapterFactory.register_input(InputAdapterType.MOCK_EAR.value, MockVoiceInput)
+AdapterFactory.register_input(InputAdapterType.VOICE.value, JabraVoiceInput)
+AdapterFactory.register_input(InputAdapterType.MOCK_VOICE.value, MockVoiceInput)
 AdapterFactory.register_input(InputAdapterType.RADAR.value, RadarInput)
 AdapterFactory.register_input(InputAdapterType.MOCK_RADAR.value, MockRadarInput)
 AdapterFactory.register_input(InputAdapterType.TEMPERATURE.value, TemperatureInput)

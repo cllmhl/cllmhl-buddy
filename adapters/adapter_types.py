@@ -7,8 +7,8 @@ from enum import Enum
 
 class InputAdapterType(Enum):
     """Tipi di Input Adapters disponibili"""
-    EAR = "jabra"
-    MOCK_EAR = "mock_ear"
+    VOICE = "jabra"
+    MOCK_VOICE = "mock_voice"
     RADAR = "radar"
     MOCK_RADAR = "mock_radar"
     TEMPERATURE = "temperature"

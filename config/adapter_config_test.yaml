@@ -10,7 +10,7 @@ adapters:
   input:
     # Voice input MOCK in test mode
     voice:
-      implementation: "mock_ear"
+      implementation: "mock_voice"
       config:
         interval: 10.0
     

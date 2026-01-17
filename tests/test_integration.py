@@ -127,14 +127,14 @@ class TestIntegration:
     
     def test_voice_input_adapter_registered(self):
         """Test che Voice Input adapter sia registrato"""
-        assert InputAdapterType.EAR.value in AdapterFactory._input_implementations
-        assert InputAdapterType.MOCK_EAR.value in AdapterFactory._input_implementations
+        assert InputAdapterType.VOICE.value in AdapterFactory._input_implementations
+        assert InputAdapterType.MOCK_VOICE.value in AdapterFactory._input_implementations
         
-        # Crea mock voice adapter
-        mock_voice = AdapterFactory.create_input_adapter(
-            'voice', {'implementation': InputAdapterType.MOCK_EAR.value, 'config': {'interval': 5.0}}
+        # Crea mock ear adapter
+        mock_ear = AdapterFactory.create_input_adapter(
+            'ear', {'implementation': InputAdapterType.MOCK_VOICE.value, 'config': {'interval': 5.0}}
         )
-        assert mock_voice is not None
+        assert mock_ear is not None
     
     def test_radar_adapter_registered(self):
         """Test che Radar adapter sia registrato"""
