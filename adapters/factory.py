@@ -101,8 +101,15 @@ class AdapterFactory:
             return adapter
             
         except Exception as e:
-            logger.error(f"❌ Failed to create input adapter '{adapter_type}': {e}")
-            return None
+            logger.error(
+                f"❌ Failed to create input adapter '{adapter_type}' "
+                f"(implementation: '{implementation}'): {e}",
+                exc_info=True  # Include full stack trace
+            )
+            # Fail-fast: propaga l'errore invece di ritornare None
+            raise RuntimeError(
+                f"Input adapter creation failed: {adapter_type}/{implementation}"
+            ) from e
     
     @classmethod
     def create_output_adapter(
@@ -152,8 +159,15 @@ class AdapterFactory:
             return adapter
             
         except Exception as e:
-            logger.error(f"❌ Failed to create output adapter '{adapter_type}': {e}")
-            return None
+            logger.error(
+                f"❌ Failed to create output adapter '{adapter_type}' "
+                f"(implementation: '{implementation}'): {e}",
+                exc_info=True  # Include full stack trace
+            )
+            # Fail-fast: propaga l'errore invece di ritornare None
+            raise RuntimeError(
+                f"Output adapter creation failed: {adapter_type}/{implementation}"
+            ) from e
     
     @classmethod
     def get_registered_implementations(cls) -> dict:

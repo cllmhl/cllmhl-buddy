@@ -14,13 +14,13 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import OutputPort
-from core.events import Event, EventType
+from adapters.ports import LEDOutputPort
+from core.events import Event, EventType, OutputChannel
 
 logger = logging.getLogger(__name__)
 
 
-class GPIOLEDOutput(OutputPort):
+class GPIOLEDOutput(LEDOutputPort):
     """
     LED Output con GPIO reale (Raspberry Pi).
     """
@@ -33,14 +33,15 @@ class GPIOLEDOutput(OutputPort):
         self.led_stato_pin = config.get('led_stato_pin', 21)      # Verde
         
         # Initialize LEDs
+        # LED sono CRITICI per questo adapter - fail se non disponibili
         try:
             self.led_ascolto = LED(self.led_ascolto_pin)
             self.led_stato = LED(self.led_stato_pin)
             logger.info(f"✅ LEDs initialized: Ascolto(GPIO{self.led_ascolto_pin}), Stato(GPIO{self.led_stato_pin})")
         except Exception as e:
             logger.error(f"❌ LED initialization failed: {e}")
-            self.led_ascolto = None
-            self.led_stato = None
+            logger.error("LEDOutputPort requires working LEDs - cannot continue")
+            raise RuntimeError(f"LED initialization failed: {e}") from e
         
         self.worker_thread = None
     
@@ -89,8 +90,15 @@ class GPIOLEDOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("LED worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in LED worker: {e}")
+                logger.error(
+                    f"Error in LED worker: {e}",
+                    exc_info=True  # Full stack trace per debugging
+                )
+                # Continue loop - un errore non deve fermare il worker
     
     def _handle_led_on(self, event: Event) -> None:
         """Accendi LED"""
@@ -133,7 +141,7 @@ class GPIOLEDOutput(OutputPort):
                 time.sleep(0.2)
 
 
-class MockLEDOutput(OutputPort):
+class MockLEDOutput(LEDOutputPort):
     """
     Mock LED Output per testing.
     Scrive su console invece di accendere LED.
@@ -183,8 +191,14 @@ class MockLEDOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("Mock LED worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in mock LED worker: {e}")
+                logger.error(
+                    f"Error in mock LED worker: {e}",
+                    exc_info=True  # Full stack trace
+                )
     
     def _handle_mock_led(self, event: Event, action: str) -> None:
         """Simula LED action"""

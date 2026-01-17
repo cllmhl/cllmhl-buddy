@@ -5,7 +5,7 @@ Logica di business pura, zero dipendenze esterne.
 
 from .events import (
     Event, EventType, EventPriority, OutputChannel,
-    EVENT_TO_CHANNEL, get_output_channel,
+    EVENT_TO_CHANNEL, get_output_channel, build_event_routing_from_ports,
     create_input_event, create_output_event
 )
 from .event_router import EventRouter
@@ -18,6 +18,7 @@ __all__ = [
     'OutputChannel',
     'EVENT_TO_CHANNEL',
     'get_output_channel',
+    'build_event_routing_from_ports',
     'create_input_event',
     'create_output_event',
     'EventRouter',

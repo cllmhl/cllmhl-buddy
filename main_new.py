@@ -148,6 +148,27 @@ class BuddyOrchestrator:
         for name, cfg in self.config['adapters']['output'].items():
             adapter = AdapterFactory.create_output_adapter(name, cfg)
             if adapter and name in output_queue_map:
+                # Validazione: verifica che il channel_type dell'adapter
+                # corrisponda al canale configurato
+                expected_channel = None
+                for channel in OutputChannel:
+                    if channel.value == name:
+                        expected_channel = channel
+                        break
+                
+                if expected_channel and hasattr(adapter, 'channel_type'):
+                    if adapter.channel_type != expected_channel:
+                        self.logger.error(
+                            f"❌ CONFIGURATION ERROR: Adapter '{adapter.name}' "
+                            f"has channel_type={adapter.channel_type.value} "
+                            f"but is configured under channel '{name}'. "
+                            f"This is a dangerous mismatch!"
+                        )
+                        raise ValueError(
+                            f"Adapter channel mismatch: {adapter.name} "
+                            f"({adapter.channel_type.value}) configured as '{name}'"
+                        )
+                
                 self.output_adapters.append((adapter, output_queue_map[name]))
         
         self.logger.info(

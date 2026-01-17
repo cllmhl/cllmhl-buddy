@@ -18,14 +18,14 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import OutputPort
+from adapters.ports import VoiceOutputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import Event, EventType
+from core.events import Event, EventType, OutputChannel
 
 logger = logging.getLogger(__name__)
 
 
-class JabraVoiceOutput(OutputPort):
+class JabraVoiceOutput(VoiceOutputPort):
     """
     Voice Output con Jabra - Implementazione REALE.
     Gestisce TTS (gTTS o Piper) e LED di stato.
@@ -41,12 +41,14 @@ class JabraVoiceOutput(OutputPort):
         
         # LED di stato (GPIO 21)
         self.led_pin = config.get('led_stato_pin', 21)
+        # LED di stato è OPZIONALE (solo per visual feedback)
+        self.led_stato = None
         try:
             self.led_stato = LED(self.led_pin)
             logger.info(f"✅ LED status on GPIO {self.led_pin}")
         except Exception as e:
-            logger.warning(f"⚠️ LED init failed: {e}")
-            self.led_stato = None
+            logger.warning(f"⚠️  LED status initialization failed: {e}")
+            logger.warning("Continuing without LED status indicator (non-critical)")
         
         # Device Manager per coordinamento Jabra
         self.device_manager = get_jabra_manager()
@@ -118,8 +120,15 @@ class JabraVoiceOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("Voice output worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in voice output worker: {e}", exc_info=True)
+                logger.error(
+                    f"Error in voice output worker: {e}",
+                    exc_info=True  # Full stack trace per debugging
+                )
+                # Continue loop - un errore non deve fermare il worker
     
     def _handle_speak_event(self, event: Event) -> None:
         """Gestisce evento SPEAK"""
@@ -224,7 +233,7 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"Piper TTS error: {e}")
 
 
-class MockVoiceOutput(OutputPort):
+class MockVoiceOutput(VoiceOutputPort):
     """
     Mock Voice Output per testing.
     Scrive nel log applicativo invece di parlare.
@@ -270,8 +279,14 @@ class MockVoiceOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("Mock voice worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in mock voice worker: {e}")
+                logger.error(
+                    f"Error in mock voice worker: {e}",
+                    exc_info=True  # Full stack trace
+                )
     
     def _handle_speak_event(self, event: Event) -> None:
         """Gestisce SPEAK scrivendo nel log"""

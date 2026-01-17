@@ -49,6 +49,8 @@ class EventType(Enum):
 
 # ===== EVENT ROUTING MAP =====
 # Mappa EventType -> OutputChannel per routing automatico
+# NOTA: Questo mapping è derivato dalle Port specializzate.
+# Ogni Port dichiara quali eventi gestisce tramite handled_events()
 EVENT_TO_CHANNEL: dict[EventType, OutputChannel] = {
     # Voice Output
     EventType.SPEAK: OutputChannel.VOICE,
@@ -75,6 +77,40 @@ def get_output_channel(event_type: EventType) -> OutputChannel | None:
         OutputChannel corrispondente o None se è un evento di input/sistema
     """
     return EVENT_TO_CHANNEL.get(event_type)
+
+
+def build_event_routing_from_ports() -> dict[EventType, OutputChannel]:
+    """
+    Costruisce automaticamente il mapping EventType -> OutputChannel
+    interrogando le Port specializzate.
+    
+    Utile per validare che EVENT_TO_CHANNEL sia sincronizzato con le Port.
+    
+    Returns:
+        Dict con mapping completo da Port declarations
+    
+    Raises:
+        ImportError: Se gli adapter non sono disponibili (fail-fast)
+    """
+    # Fail-fast: require adapters
+    from adapters.output.voice_output import MockVoiceOutput
+    from adapters.output.led_output import MockLEDOutput
+    from adapters.output.database_output import MockDatabaseOutput
+    
+    adapters = [
+        MockVoiceOutput("temp", {}),
+        MockLEDOutput("temp", {}),
+        MockDatabaseOutput("temp", {})
+    ]
+    
+    mapping = {}
+    for adapter in adapters:
+        channel = adapter.channel_type
+        events = adapter.__class__.__bases__[0].handled_events()  # Get from Port base class
+        for event_type in events:
+            mapping[event_type] = channel
+    
+    return mapping
 
 
 class EventPriority(Enum):

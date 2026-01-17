@@ -6,14 +6,14 @@ import logging
 import threading
 from queue import PriorityQueue, Empty
 
-from adapters.ports import OutputPort
-from core.events import Event, EventType
+from adapters.ports import DatabaseOutputPort
+from core.events import Event, EventType, OutputChannel
 from database_buddy import BuddyDatabase
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseOutput(OutputPort):
+class DatabaseOutput(DatabaseOutputPort):
     """
     Database Output Adapter.
     Gestisce salvataggio history e memoria permanente.
@@ -76,8 +76,14 @@ class DatabaseOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("Database worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in database worker: {e}", exc_info=True)
+                logger.error(
+                    f"Error in database worker: {e}",
+                    exc_info=True  # Full stack trace
+                )
     
     def _handle_save_history(self, event: Event) -> None:
         """Salva in history (conversazione temporanea)"""
@@ -121,7 +127,7 @@ class DatabaseOutput(OutputPort):
             logger.error(f"Error saving memory: {e}")
 
 
-class MockDatabaseOutput(OutputPort):
+class MockDatabaseOutput(DatabaseOutputPort):
     """
     Mock Database Output per testing.
     Scrive nel log applicativo invece di salvare nel database.
@@ -169,8 +175,14 @@ class MockDatabaseOutput(OutputPort):
                 
             except Empty:
                 continue
+            except KeyboardInterrupt:
+                logger.info("Mock database worker interrupted")
+                break
             except Exception as e:
-                logger.error(f"Error in mock database worker: {e}")
+                logger.error(
+                    f"Error in mock database worker: {e}",
+                    exc_info=True  # Full stack trace
+                )
     
     def _handle_mock_save_history(self, event: Event) -> None:
         """Simula salvataggio history"""

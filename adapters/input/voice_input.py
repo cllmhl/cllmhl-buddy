@@ -26,7 +26,7 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import InputPort
+from adapters.ports import VoiceInputPort
 from adapters.audio_device_manager import get_jabra_manager
 from core.events import create_input_event, EventType, EventPriority
 
@@ -46,7 +46,7 @@ class SuppressStream:
         os.close(self.old_err)
 
 
-class JabraVoiceInput(InputPort):
+class JabraVoiceInput(VoiceInputPort):
     """
     Voice Input con Jabra + Porcupine Wake Word.
     Gestisce riconoscimento wake word e speech-to-text.
@@ -144,11 +144,38 @@ class JabraVoiceInput(InputPort):
             self.enabled = True
             logger.info("✅ Voice input hardware ready")
         
-        except Exception as e:
-            logger.error(f"❌ Voice input hardware setup failed: {e}")
+        except ImportError as e:
+            logger.error(
+                f"❌ Voice input dependencies missing: {e}\n"
+                "Install with: pip install pvporcupine pvrecorder"
+            )
+            raise
+        except (OSError, RuntimeError) as e:
+            logger.error(
+                f"❌ Voice input hardware setup failed: {e}",
+                exc_info=True
+            )
+            # Cleanup su errore hardware
             if self.porcupine:
-                self.porcupine.delete()
+                try:
+                    self.porcupine.delete()
+                except:
+                    pass
                 self.porcupine = None
+            raise RuntimeError("Voice input hardware unavailable") from e
+        except Exception as e:
+            logger.error(
+                f"❌ Unexpected error in voice input setup: {e}",
+                exc_info=True
+            )
+            # Cleanup
+            if self.porcupine:
+                try:
+                    self.porcupine.delete()
+                except:
+                    pass
+                self.porcupine = None
+            raise
     
     def start(self, input_queue: PriorityQueue) -> None:
         """Avvia worker thread"""
@@ -339,7 +366,7 @@ class JabraVoiceInput(InputPort):
             logger.error(f"Speech recognition error: {e}")
 
 
-class MockVoiceInput(InputPort):
+class MockVoiceInput(VoiceInputPort):
     """
     Mock Voice Input per testing.
     Genera frasi simulate per testare il sistema.

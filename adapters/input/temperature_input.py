@@ -21,13 +21,13 @@ except ImportError:
     DHT_AVAILABLE = False
     logging.warning("⚠️ adafruit_dht not available. DHT11 disabled.")
 
-from adapters.ports import InputPort
+from adapters.ports import TemperatureInputPort
 from core.events import create_input_event, EventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
 
-class TemperatureInput(InputPort):
+class TemperatureInput(TemperatureInputPort):
     """
     DHT11 Temperature/Humidity Input Adapter.
     Rileva temperatura e umidità tramite sensore GPIO.
@@ -103,8 +103,9 @@ class TemperatureInput(InputPort):
         if self.dht11:
             try:
                 self.dht11.exit()
-            except:
-                pass
+            except (AttributeError, RuntimeError) as e:
+                # DHT11 già chiuso o non inizializzato
+                logger.debug(f"DHT11 exit: {e}")
         
         logger.info(f"⏹️  {self.name} stopped")
     
@@ -140,16 +141,19 @@ class TemperatureInput(InputPort):
                     self.input_queue.put(humidity_event)
             
             except RuntimeError as e:
-                # DHT11 spesso fallisce letture, normale
-                logger.debug(f"DHT11 read error (normal): {e}")
+                # DHT11 spesso fallisce letture singole - è normale
+                logger.debug(f"DHT11 read error (expected): {e}")
+            except KeyboardInterrupt:
+                logger.info("Temperature worker interrupted by user")
+                break
             except Exception as e:
-                logger.error(f"DHT11 worker error: {e}")
+                logger.error(f"DHT11 worker error: {e}", exc_info=True)
             
             # Attendi intervallo
             time.sleep(self.interval)
 
 
-class MockTemperatureInput(InputPort):
+class MockTemperatureInput(TemperatureInputPort):
     """
     Mock Temperature Input per testing.
     Genera dati fake per simulare sensore temperatura/umidità.

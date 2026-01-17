@@ -9,13 +9,13 @@ import serial
 from queue import PriorityQueue
 from typing import Optional, Dict, Any
 
-from adapters.ports import InputPort
+from adapters.ports import RadarInputPort
 from core.events import create_input_event, EventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
 
-class RadarInput(InputPort):
+class RadarInput(RadarInputPort):
     """
     Radar LD2410C Input Adapter.
     Rileva presenza e movimento tramite radar UART.
@@ -83,8 +83,9 @@ class RadarInput(InputPort):
         if self.radar:
             try:
                 self.radar.close()
-            except:
-                pass
+            except (AttributeError, RuntimeError) as e:
+                # Radar già chiuso o non inizializzato
+                logger.debug(f"Radar close: {e}")
         
         logger.info(f"⏹️  {self.name} stopped")
     
@@ -129,9 +130,12 @@ class RadarInput(InputPort):
                 
                 time.sleep(self.interval)
             
+            except KeyboardInterrupt:
+                logger.info("Radar worker interrupted by user")
+                break
             except Exception as e:
-                logger.error(f"Radar worker error: {e}")
-                time.sleep(1.0)
+                logger.error(f"Radar worker error: {e}", exc_info=True)
+                time.sleep(1.0)  # Backoff prima di retry
     
     def _read_radar_data(self) -> Optional[Dict[str, Any]]:
         """Legge dati dal radar LD2410C"""
@@ -169,13 +173,19 @@ class RadarInput(InputPort):
                         'static_distance': static_distance
                     }
         
+        except (OSError, IOError) as e:
+            # Errori di comunicazione seriale - comuni, non critici
+            logger.debug(f"Radar read error (communication): {e}")
         except Exception as e:
-            logger.error(f"Radar read error: {e}")
+            logger.error(
+                f"Unexpected radar read error: {e}",
+                exc_info=True
+            )
         
         return None
 
 
-class MockRadarInput(InputPort):
+class MockRadarInput(RadarInputPort):
     """
     Mock Radar Input per testing.
     Genera dati fake per simulare radar.
