@@ -8,8 +8,8 @@ from queue import PriorityQueue, Empty
 
 from core.events import Event, EventType, OutputChannel
 from adapters.ports import ArchivistOutputPort
-from database_buddy import BuddyDatabase
-from archivist import BuddyArchivist
+from infrastructure.memory_store import MemoryStore
+from core.archivist import BuddyArchivist
 import os
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class ArchivistOutput(ArchivistOutputPort):
         
         # Inizializza database
         try:
-            self.db = BuddyDatabase(db_name=sqlite_path, chroma_path=chroma_path)
+            self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
             logger.info(f"✅ Archivist database initialized")
         except Exception as e:
             logger.error(f"❌ Archivist database initialization failed: {e}")

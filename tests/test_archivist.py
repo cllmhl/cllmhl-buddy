@@ -1,12 +1,18 @@
-from database_buddy import BuddyDatabase
-from archivist import BuddyArchivist
+import sys
+from pathlib import Path
+
+# Aggiungi parent directory al path per imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from infrastructure.memory_store import MemoryStore
+from core.archivist import BuddyArchivist
 from dotenv import load_dotenv
 import os
 
 # 1. Inizializza i componenti
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
-db = BuddyDatabase()
+db = MemoryStore()
 
 # Config archivist
 archivist_config = {

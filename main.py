@@ -15,9 +15,9 @@ import time
 from dataclasses import dataclass # Mantenuto per compatibilità type checking se serve
 
 # Le tue classi esistenti
-from database_buddy import BuddyDatabase
+from infrastructure.memory_store import MemoryStore
 from brain import BuddyBrain
-from archivist import BuddyArchivist
+from core.archivist import BuddyArchivist
 
 # Nuova gestione IO separata
 from io_buddy import BuddyEars, BuddyVoice, silence_alsa, BuddyEvent
@@ -115,7 +115,7 @@ def main():
 
     # Inizializzazione Sottosistemi
     try:
-        db = BuddyDatabase()
+        db = MemoryStore()
         buddy = BuddyBrain(api_key)
         # Archivist necessita config, main.py è obsoleto - usa main_new.py
         archivist = None  # BuddyArchivist(api_key=api_key, config=...)

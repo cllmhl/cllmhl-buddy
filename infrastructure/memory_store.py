@@ -1,9 +1,14 @@
+"""
+Memory Store - Gestione persistenza SQLite + ChromaDB
+"""
+
 import sqlite3
 import chromadb
 from chromadb.config import Settings
 import time
 
-class BuddyDatabase:
+
+class MemoryStore:
     def __init__(self, db_name="buddy_system.db", chroma_path="./buddy_memory"):
         # 1. Setup SQLite per History (fatti)
         self.conn = sqlite3.connect(db_name, check_same_thread=False)

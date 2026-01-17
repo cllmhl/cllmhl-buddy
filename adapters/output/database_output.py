@@ -8,7 +8,7 @@ from queue import PriorityQueue, Empty
 
 from adapters.ports import DatabaseOutputPort
 from core.events import Event, EventType, OutputChannel
-from database_buddy import BuddyDatabase
+from infrastructure.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class DatabaseOutput(DatabaseOutputPort):
         
         # Inizializza database
         try:
-            self.db = BuddyDatabase(db_name=sqlite_path, chroma_path=chroma_path)
+            self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
             logger.info(f"✅ Database initialized (SQLite: {sqlite_path}, Chroma: {chroma_path})")
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {e}")
