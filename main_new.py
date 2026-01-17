@@ -265,8 +265,7 @@ def main():
     parser.add_argument('--dry-run', action='store_true', help='Initialize and exit (test configuration)')
     args = parser.parse_args()
     
-    # Carica variabili d'ambiente
-    load_dotenv("config.env")
+    # Carica variabili d'ambiente (solo .env per API keys)
     load_dotenv(".env")
     
     # Determina quale config usare
