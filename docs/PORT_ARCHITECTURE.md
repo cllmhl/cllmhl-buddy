@@ -177,8 +177,8 @@ print(f"RadarInputPort emette: {events}")
 
 ### ✅ Validabile
 - Test verificano che le dichiarazioni siano corrette
-- `build_event_routing_from_ports()` valida sincronizzazione
-- Impossibile avere mapping inconsistenti
+- `build_event_routing_from_adapters()` costruisce il routing dinamicamente
+- Impossibile avere mapping inconsistenti perché il routing viene costruito dagli adapter configurati
 ```yaml
 adapters:
   output:
@@ -207,24 +207,36 @@ Il sistema ora valida automaticamente:
 - Nuovi adapter estendono Port esistenti ed ereditano la signature
 - Pattern chiaro e consistente per tutti gli adapter
 
-## Validazione Automatica
+## Validazione Automatica e Routing Dinamico
 
-Il sistema valida automaticamente la coerenza:
+Il sistema costruisce il routing **dinamicamente** dagli adapter configurati:
 
 ```python
-from core import build_event_routing_from_ports, EVENT_TO_CHANNEL
+from core import build_event_routing_from_adapters
 
-# Costruisce mapping da Port declarations
-port_mapping = build_event_routing_from_ports()
+# Costruisce mapping interrogando gli adapter output configurati
+output_adapters = [voice_adapter, led_adapter, db_adapter]
+event_routing = build_event_routing_from_adapters(output_adapters)
 
-# Verifica coerenza con EVENT_TO_CHANNEL
-assert port_mapping == EVENT_TO_CHANNEL
+# Il routing è costruito dai metodi handled_events() delle Port
+# event_routing = {
+#     EventType.SPEAK: OutputChannel.VOICE,
+#     EventType.LED_ON: OutputChannel.LED,
+#     ...
+# }
 ```
 
+### Vantaggi del Routing Dinamico
+
+✅ **Zero Accoppiamento**: Nessun dictionary statico da mantenere sincronizzato  
+✅ **Single Source of Truth**: Le Port dichiarano cosa gestiscono via `handled_events()`  
+✅ **Configurabile**: Il routing si adatta agli adapter effettivamente configurati  
+✅ **Testabile**: Ogni ambiente (test/prod) ha il suo routing basato sui suoi adapter  
+
 Questo garantisce che:
-- Ogni evento in `EVENT_TO_CHANNEL` sia dichiarato in una Port
-- Il channel associato corrisponda alla Port che lo gestisce
-- Nessun evento venga perso o mal-configurato
+- Il routing sia sempre coerente con gli adapter disponibili
+- Non ci siano eventi "orfani" senza destinazione
+- Il sistema funzioni con qualsiasi combinazione di adapter
 
 ## Test Coverage
 
@@ -233,7 +245,7 @@ I test verificano:
 ✅ Ogni OutputPort dichiara `handled_events()`  
 ✅ Ogni InputPort dichiara `emitted_events()`  
 ✅ Eventi dichiarati corrispondono al channel_type  
-✅ `EVENT_TO_CHANNEL` è sincronizzato con le Port  
+✅ Il routing può essere costruito dinamicamente dagli adapter  
 ✅ Nessun overlap tra eventi di Port diverse  
 
 Vedi [tests/test_port_events.py](../tests/test_port_events.py) per dettagli.
@@ -270,11 +282,18 @@ This is a dangerous mismatch!
 
 ## Relazione con Event System
 
-Il routing `EventType → OutputChannel` è definito in [core/events.py](../core/events.py):
+Il routing `EventType → OutputChannel` viene costruito **dinamicamente** interrogando gli adapter:
 
 ```python
-EVENT_TO_CHANNEL: dict[EventType, OutputChannel] = {
-    EventType.SPEAK: OutputChannel.VOICE,
+# Il routing è costruito all'avvio dagli adapter configurati
+output_adapters = [voice_adapter, led_adapter, db_adapter]
+event_routing = build_event_routing_from_adapters(output_adapters)
+
+# Ogni adapter dichiara cosa gestisce tramite handled_events()
+# VoiceOutputPort.handled_events() → [EventType.SPEAK]
+# LEDOutputPort.handled_events() → [EventType.LED_ON, LED_OFF, LED_BLINK]
+# DatabaseOutputPort.handled_events() → [EventType.SAVE_HISTORY, SAVE_MEMORY]
+```
     EventType.LED_ON: OutputChannel.LED,
     # ...
 }

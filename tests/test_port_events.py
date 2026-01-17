@@ -7,7 +7,7 @@ from adapters.ports import (
     VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
     VoiceInputPort, RadarInputPort, TemperatureInputPort
 )
-from core.events import EventType, OutputChannel, build_event_routing_from_ports, EVENT_TO_CHANNEL
+from core.events import EventType, OutputChannel, build_event_routing_from_adapters
 
 
 class TestOutputPortEvents:
@@ -53,17 +53,29 @@ class TestOutputPortEvents:
         assert voice_channel != db_channel
         assert led_channel != db_channel
     
-    def test_event_routing_matches_port_declarations(self):
-        """Il mapping EVENT_TO_CHANNEL corrisponde alle dichiarazioni delle Port"""
-        port_mapping = build_event_routing_from_ports()
+    def test_event_routing_built_from_port_declarations(self):
+        """Il routing può essere costruito dinamicamente dalle dichiarazioni delle Port"""
+        # Crea adapter mock per testare
+        from adapters.output.voice_output import MockVoiceOutput
+        from adapters.output.led_output import MockLEDOutput
+        from adapters.output.database_output import MockDatabaseOutput
         
-        # Ogni evento in EVENT_TO_CHANNEL deve esistere nel mapping delle Port
-        for event_type, channel in EVENT_TO_CHANNEL.items():
-            assert event_type in port_mapping, \
-                f"EventType.{event_type.name} non dichiarato in nessuna Port"
-            assert port_mapping[event_type] == channel, \
-                f"EventType.{event_type.name} ha channel diverso: " \
-                f"EVENT_TO_CHANNEL={channel.value}, Port={port_mapping[event_type].value}"
+        adapters = [
+            MockVoiceOutput("test_voice", {}),
+            MockLEDOutput("test_led", {}),
+            MockDatabaseOutput("test_db", {})
+        ]
+        
+        # Costruisci il routing dinamico
+        routing = build_event_routing_from_adapters(adapters)
+        
+        # Verifica che tutti gli eventi siano mappati correttamente
+        assert routing[EventType.SPEAK] == OutputChannel.VOICE
+        assert routing[EventType.LED_ON] == OutputChannel.LED
+        assert routing[EventType.LED_OFF] == OutputChannel.LED
+        assert routing[EventType.LED_BLINK] == OutputChannel.LED
+        assert routing[EventType.SAVE_HISTORY] == OutputChannel.DATABASE
+        assert routing[EventType.SAVE_MEMORY] == OutputChannel.DATABASE
 
 
 class TestInputPortEvents:

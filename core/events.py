@@ -48,66 +48,38 @@ class EventType(Enum):
 
 
 # ===== EVENT ROUTING MAP =====
-# Mappa EventType -> OutputChannel per routing automatico
-# NOTA: Questo mapping è derivato dalle Port specializzate.
-# Ogni Port dichiara quali eventi gestisce tramite handled_events()
-EVENT_TO_CHANNEL: dict[EventType, OutputChannel] = {
-    # Voice Output
-    EventType.SPEAK: OutputChannel.VOICE,
-    
-    # LED Output
-    EventType.LED_ON: OutputChannel.LED,
-    EventType.LED_OFF: OutputChannel.LED,
-    EventType.LED_BLINK: OutputChannel.LED,
-    
-    # Database Output
-    EventType.SAVE_HISTORY: OutputChannel.DATABASE,
-    EventType.SAVE_MEMORY: OutputChannel.DATABASE,
-}
+# Il routing è ora DINAMICO: viene costruito interrogando gli adapter configurati
+# tramite i loro metodi handled_events() e channel_type
 
 
-def get_output_channel(event_type: EventType) -> OutputChannel | None:
+def build_event_routing_from_adapters(output_adapters: list) -> dict[EventType, OutputChannel]:
     """
-    Ritorna il canale di output per un dato tipo di evento.
+    Costruisce dinamicamente il mapping EventType -> OutputChannel
+    interrogando gli adapter OUTPUT effettivamente configurati.
     
     Args:
-        event_type: Tipo di evento
+        output_adapters: Lista di adapter output configurati
+    
+    Returns:
+        Dict con mapping EventType -> OutputChannel
         
-    Returns:
-        OutputChannel corrispondente o None se è un evento di input/sistema
+    Example:
+        >>> adapters = [voice_adapter, led_adapter, db_adapter]
+        >>> routing = build_event_routing_from_adapters(adapters)
+        >>> routing[EventType.SPEAK]  # OutputChannel.VOICE
     """
-    return EVENT_TO_CHANNEL.get(event_type)
-
-
-def build_event_routing_from_ports() -> dict[EventType, OutputChannel]:
-    """
-    Costruisce automaticamente il mapping EventType -> OutputChannel
-    interrogando le Port specializzate.
-    
-    Utile per validare che EVENT_TO_CHANNEL sia sincronizzato con le Port.
-    
-    Returns:
-        Dict con mapping completo da Port declarations
-    
-    Raises:
-        ImportError: Se gli adapter non sono disponibili (fail-fast)
-    """
-    # Fail-fast: require adapters
-    from adapters.output.voice_output import MockVoiceOutput
-    from adapters.output.led_output import MockLEDOutput
-    from adapters.output.database_output import MockDatabaseOutput
-    
-    adapters = [
-        MockVoiceOutput("temp", {}),
-        MockLEDOutput("temp", {}),
-        MockDatabaseOutput("temp", {})
-    ]
-    
     mapping = {}
-    for adapter in adapters:
+    
+    for adapter in output_adapters:
         channel = adapter.channel_type
-        events = adapter.__class__.__bases__[0].handled_events()  # Get from Port base class
-        for event_type in events:
+        # Ottieni gli eventi gestiti dalla classe Port dell'adapter
+        handled = adapter.__class__.handled_events()
+        
+        for event_type in handled:
+            if event_type in mapping:
+                # Log warning se due adapter gestiscono lo stesso evento
+                # (potrebbe essere intenzionale per broadcast)
+                pass
             mapping[event_type] = channel
     
     return mapping

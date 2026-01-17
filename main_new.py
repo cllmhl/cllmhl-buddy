@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 # Core imports
 from core import (
     Event, EventType, EventPriority, OutputChannel,
-    EVENT_TO_CHANNEL, get_output_channel,
+    build_event_routing_from_adapters,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )
@@ -90,7 +90,6 @@ class BuddyOrchestrator:
         
         # Event Router
         self.router = EventRouter()
-        self._setup_routes()
         
         # Brain
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -99,25 +98,33 @@ class BuddyOrchestrator:
         
         self.brain = BuddyBrain(api_key, self.config['brain'])
         
-        # Adapters
+        # Adapters - creati PRIMA del setup routes
         self.input_adapters = []
         self.output_adapters = []
+        self._create_adapters()
+        
+        # Setup routes DOPO aver creato gli adapters
+        self._setup_routes()
         
         self.logger.info("🚀 BuddyOrchestrator initialized")
     
     def _setup_routes(self) -> None:
         """
-        Configura le route del router usando EVENT_TO_CHANNEL mapping.
-        Il routing è definito nel core domain (events.py).
+        Configura le route del router in modo DINAMICO interrogando gli adapter output.
+        Il routing viene costruito dai metodi handled_events() e channel_type delle Port.
         """
+        # Mappa canali -> code
         queue_map = {
             OutputChannel.VOICE: self.voice_queue,
             OutputChannel.LED: self.led_queue,
             OutputChannel.DATABASE: self.database_queue
         }
         
-        # Registra tutte le route dal mapping del dominio
-        for event_type, channel in EVENT_TO_CHANNEL.items():
+        # Costruisci routing dinamico dagli adapter configurati
+        event_routing = build_event_routing_from_adapters(self.output_adapters)
+        
+        # Registra tutte le route
+        for event_type, channel in event_routing.items():
             if channel in queue_map:
                 self.router.register_route(
                     event_type,
@@ -126,8 +133,8 @@ class BuddyOrchestrator:
                 )
         
         self.logger.info(
-            f"📍 Router configured with {len(EVENT_TO_CHANNEL)} routes "
-            f"across {len(queue_map)} channels"
+            f"📍 Router configured dynamically with {len(event_routing)} routes "
+            f"across {len(self.output_adapters)} adapters"
         )
     
     def _create_adapters(self) -> None:
