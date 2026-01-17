@@ -43,11 +43,11 @@ else
     echo "⚠️  File .env non trovato. Assicurati che BUDDY_CONFIG sia impostato."
 fi
 
-# 4. Esecuzione di Buddy (usiamo main_new.py con architettura esagonale)
+# 4. Esecuzione di Buddy (usiamo main.py con architettura esagonale)
 # NON cambiamo directory - usiamo path assoluti
 echo ""
 echo "🚀 Avvio Buddy..."
-python3 -u "$BUDDY_HOME/main_new.py"
+python3 -u "$BUDDY_HOME/main.py"
 
 # 5. Disattivazione al termine (solo se abbiamo attivato il venv)
 if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ]; then
