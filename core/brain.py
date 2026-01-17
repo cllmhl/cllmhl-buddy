@@ -146,14 +146,33 @@ class BuddyBrain:
         # Logica proattiva (esempio)
         if event.type == EventType.SENSOR_PRESENCE:
             if event.content is True:
-                # Presenza rilevata - potremmo fare qualcosa
-                logger.debug("Presenza rilevata, nessuna azione per ora")
+                # Presenza rilevata - usa energy levels per valutare qualità
+                metadata = event.metadata or {}
+                mov_energy = metadata.get('mov_energy', 0)
+                static_energy = metadata.get('static_energy', 0)
+                distance = metadata.get('distance', 0)
+                
+                # Rilevamento forte = persona vicina
+                if mov_energy > 60 or static_energy > 60:
+                    logger.info(f"👤 Presenza forte rilevata: dist={distance}cm, "
+                               f"mov_energy={mov_energy}, static_energy={static_energy}")
+                # Rilevamento debole = potrebbe essere rumore
+                elif mov_energy < 20 and static_energy < 20:
+                    logger.debug("👻 Presenza debole (possibile falso positivo)")
+                else:
+                    logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
         
         elif event.type == EventType.SENSOR_TEMPERATURE:
+            # Ora abbiamo sia temperatura che umidità nel metadata
             temp = float(event.content)
+            humidity = event.metadata.get('humidity') if event.metadata else None
+            
             if temp > 30:
-                # Temperatura alta - Buddy potrebbe commentare
-                logger.debug(f"Temperatura alta: {temp}°C")
+                logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
+            
+            # Esempio: logica combinata temperatura + umidità
+            if temp > 28 and humidity and humidity > 70:
+                logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
         
         return output_events
     

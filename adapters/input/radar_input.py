@@ -103,7 +103,13 @@ class RadarInput(RadarInputPort):
                     current_presence = data['presence']
                     
                     if current_presence != last_presence:
-                        logger.info(f"📡 Radar: Presence = {current_presence}")
+                        # Log con info dettagliate inclusi energy levels
+                        logger.info(
+                            f"📡 Radar: Presence={current_presence} | "
+                            f"Distance={data['distance']}cm | "
+                            f"Movement Energy={data['mov_energy']} | "
+                            f"Static Energy={data['static_energy']}"
+                        )
                         
                         event = create_input_event(
                             EventType.SENSOR_PRESENCE,
@@ -116,8 +122,12 @@ class RadarInput(RadarInputPort):
                         self.input_queue.put(event)
                         last_presence = current_presence
                     
-                    # Invia evento movimento se rilevato
-                    if data.get('movement'):
+                    # Invia evento movimento se rilevato (con threshold energia)
+                    if data.get('movement') and data['mov_energy'] > 15:  # Filtra rumore
+                        logger.debug(
+                            f"🏃 Movement detected: distance={data['mov_distance']}cm, "
+                            f"energy={data['mov_energy']}"
+                        )
                         event = create_input_event(
                             EventType.SENSOR_MOVEMENT,
                             True,
@@ -156,9 +166,11 @@ class RadarInput(RadarInputPort):
                     movement = target_state in [1, 3]
                     static = target_state in [2, 3]
                     
-                    # Distanze (little endian)
+                    # Distanze e energie (little endian)
                     mov_distance = data[idx + 9] + (data[idx + 10] << 8)
+                    mov_energy = data[idx + 11]
                     static_distance = data[idx + 12] + (data[idx + 13] << 8)
+                    static_energy = data[idx + 14]
                     detection_distance = data[idx + 15] + (data[idx + 16] << 8)
                     
                     distance = detection_distance if presence else 0
@@ -169,7 +181,9 @@ class RadarInput(RadarInputPort):
                         'static': static,
                         'distance': distance,
                         'mov_distance': mov_distance,
-                        'static_distance': static_distance
+                        'mov_energy': mov_energy,
+                        'static_distance': static_distance,
+                        'static_energy': static_energy
                     }
         
         except (OSError, IOError) as e:
@@ -221,6 +235,8 @@ class MockRadarInput(RadarInputPort):
     
     def _worker_loop(self) -> None:
         """Loop che genera dati fake"""
+        import random
+        
         presence = False
         counter = 0
         
@@ -230,14 +246,33 @@ class MockRadarInput(RadarInputPort):
                 if counter % 3 == 0:
                     presence = not presence
                     
-                    logger.info(f"📡 [MOCK] Radar Presence: {presence}")
+                    # Genera valori realistici con energy levels
+                    distance = random.randint(50, 250) if presence else 0
+                    mov_energy = random.randint(20, 80) if presence else 0
+                    static_energy = random.randint(30, 70) if presence else 0
+                    
+                    logger.info(
+                        f"📡 [MOCK] Radar: Presence={presence} | "
+                        f"Distance={distance}cm | "
+                        f"Mov Energy={mov_energy} | "
+                        f"Static Energy={static_energy}"
+                    )
                     
                     event = create_input_event(
                         EventType.SENSOR_PRESENCE,
                         presence,
                         source="mock_radar",
                         priority=EventPriority.LOW,
-                        metadata={'distance': 150 if presence else 0}
+                        metadata={
+                            'presence': presence,
+                            'movement': presence,
+                            'static': presence,
+                            'distance': distance,
+                            'mov_distance': distance - 10 if presence else 0,
+                            'mov_energy': mov_energy,
+                            'static_distance': distance if presence else 0,
+                            'static_energy': static_energy
+                        }
                     )
                     self.input_queue.put(event)
                 
