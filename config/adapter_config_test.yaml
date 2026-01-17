@@ -56,3 +56,9 @@ adapters:
 queues:
   input_maxsize: 100
   database_maxsize: 500
+
+logging:
+  log_file: "buddy_test.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 3
+  level: "INFO"

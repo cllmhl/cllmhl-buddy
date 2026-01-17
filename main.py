@@ -281,11 +281,11 @@ def main():
     
     # Setup logging
     buddy_home = Path(config['buddy_home'])
-    log_config = {
+    log_config = config.get('logging', {
         'log_file': 'buddy_system.log',
         'max_bytes': 10*1024*1024,
         'backup_count': 3
-    }
+    })
     setup_logging(log_config, buddy_home)
     
     logger = logging.getLogger(__name__)
