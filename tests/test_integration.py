@@ -9,8 +9,6 @@ import os
 from queue import PriorityQueue
 from unittest.mock import Mock, patch
 
-from adapters import InputAdapterType, OutputAdapterType
-
 from core import Event, EventType, EventPriority, create_input_event, create_output_event, EventRouter, BuddyBrain
 from adapters.factory import AdapterFactory
 
