@@ -18,7 +18,7 @@ adapters:
     # Voice input con Jabra e Wake Word
     - class: "JabraVoiceInput"
       config:
-        wake_word_path: "Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+        wake_word_path: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
         stt_mode: "cloud"  # "cloud" o "local"
     
     # Radar fisico
