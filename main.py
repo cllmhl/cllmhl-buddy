@@ -41,6 +41,9 @@ def setup_logging(config: Dict[str, Any]) -> None:
     # Risolvi il path del log rispetto a BUDDY_HOME
     log_file = buddy_home / log_file_path if not Path(log_file_path).is_absolute() else Path(log_file_path)
     
+    # Crea directory del log se non esiste
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    
     max_bytes = log_config.get('max_bytes', 10*1024*1024)
     backup_count = log_config.get('backup_count', 3)
     
