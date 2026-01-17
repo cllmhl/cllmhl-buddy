@@ -13,26 +13,25 @@ logger = logging.getLogger(__name__)
 
 def get_buddy_home() -> Path:
     """
-    Ottiene la directory home di Buddy.
-    
-    Usa in ordine:
-    1. BUDDY_HOME environment variable (se impostata)
-    2. Directory del file che importa questo modulo
-    3. Current working directory (fallback)
+    Ottiene la directory home di Buddy dalla variabile d'ambiente BUDDY_HOME.
     
     Returns:
         Path assoluto alla directory home di Buddy
+        
+    Raises:
+        ValueError: Se BUDDY_HOME non è impostato
     """
-    # 1. Prova con variabile d'ambiente
-    if 'BUDDY_HOME' in os.environ:
-        buddy_home = Path(os.environ['BUDDY_HOME']).resolve()
-        logger.debug(f"BUDDY_HOME from env: {buddy_home}")
-        return buddy_home
+    if 'BUDDY_HOME' not in os.environ:
+        raise ValueError(
+            "BUDDY_HOME environment variable not set. "
+            "Set it in .env or export it before running Buddy."
+        )
     
-    # 2. Usa directory di questo file (config/) e risali alla root
-    config_dir = Path(__file__).parent.resolve()
-    buddy_home = config_dir.parent
-    logger.debug(f"BUDDY_HOME auto-detected: {buddy_home}")
+    buddy_home = Path(os.environ['BUDDY_HOME']).resolve()
+    
+    if not buddy_home.exists():
+        raise ValueError(f"BUDDY_HOME path does not exist: {buddy_home}")
+    
     return buddy_home
 
 

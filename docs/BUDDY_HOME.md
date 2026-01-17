@@ -11,25 +11,19 @@ I **path relativi** (come `config/adapter_config_dev.yaml`, `buddy_system.log`) 
 
 ## Soluzione: BUDDY_HOME
 
-Buddy ora usa la variabile `BUDDY_HOME` per risolvere tutti i path in modo assoluto, indipendentemente da dove viene lanciato.
+Buddy richiede la variabile `BUDDY_HOME` per risolvere tutti i path in modo assoluto, indipendentemente da dove viene lanciato.
 
 ### Come Funziona
 
-1. **Auto-detection**: Se `BUDDY_HOME` NON è impostato, viene automaticamente rilevato come la directory parent del file `config_loader.py`
-
-2. **Manual override**: Puoi impostare esplicitamente `BUDDY_HOME` per sovrascrivere l'auto-detection
-
-3. **Path resolution**: Tutti i path relativi vengono risolti rispetto a `BUDDY_HOME`
+`BUDDY_HOME` deve essere impostato come variabile d'ambiente e puntare alla directory root del progetto. Tutti i path relativi (config, log, memory) vengono risolti rispetto a questo path.
 
 ### Configurazione
 
 #### 1. File .env (sviluppo locale)
 
 ```bash
-# Opzionale - se non impostato viene auto-rilevato
-BUDDY_HOME=/workspaces/cllmhl-buddy
-
 # Obbligatorio
+BUDDY_HOME=/workspaces/cllmhl-buddy
 BUDDY_CONFIG=config/adapter_config_dev.yaml
 GOOGLE_API_KEY=your_api_key_here
 ```
@@ -61,8 +55,7 @@ $BUDDY_HOME/venv/bin/python3 $BUDDY_HOME/main_new.py
 #### Sviluppo in DevContainer/Codespaces
 
 ```bash
-# Auto-detection - funziona ovunque tu sia
-cd /tmp
+# Imposta BUDDY_HOME nel .env
 python3 /workspaces/cllmhl-buddy/main_new.py
 ```
 
@@ -111,11 +104,11 @@ sudo systemctl start buddy
 
 ### Vantaggi
 
+✅ **Esplicito**: Nessuna magia, configurazione chiara  
 ✅ **Portabilità**: Lancia Buddy da qualsiasi directory  
 ✅ **Servizi**: Funziona con systemd senza problemi  
 ✅ **Scripts**: Nessun `cd` obbligatorio  
-✅ **Auto-detection**: Funziona out-of-the-box senza configurazione  
-✅ **Override**: Puoi forzare una directory specifica se necessario
+✅ **Fail-fast**: Errori chiari se non configurato
 
 ### Debugging
 

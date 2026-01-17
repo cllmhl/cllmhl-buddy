@@ -270,18 +270,26 @@ def main():
     # Carica variabili d'ambiente
     load_dotenv(".env")
     
-    # Ottieni BUDDY_HOME presto (per setup logging)
-    buddy_home = get_buddy_home()
+    # BUDDY_HOME è OBBLIGATORIO - fail fast
+    if not os.getenv("BUDDY_HOME"):
+        print("❌ ERROR: BUDDY_HOME environment variable not set")
+        print("   Set it in .env file or export before running:")
+        print("   BUDDY_HOME=/path/to/cllmhl-buddy")
+        sys.exit(1)
+    
+    # Ottieni BUDDY_HOME (validato)
+    try:
+        buddy_home = get_buddy_home()
+    except ValueError as e:
+        print(f"❌ ERROR: {e}")
+        sys.exit(1)
     
     # BUDDY_CONFIG è OBBLIGATORIO - fail fast se mancante
     config_file = os.getenv("BUDDY_CONFIG")
     if not config_file:
         print("❌ ERROR: BUDDY_CONFIG environment variable not set")
-        print("   Set it in .env file or as environment variable:")
-        print("   BUDDY_CONFIG=config/adapter_config_test.yaml")
-        print("")
-        print("   You can also set BUDDY_HOME (optional):")
-        print(f"   Current BUDDY_HOME: {buddy_home}")
+        print("   Set it in .env file:")
+        print("   BUDDY_CONFIG=config/adapter_config_dev.yaml")
         sys.exit(1)
     
     # Setup logging CON path risolto
