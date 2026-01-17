@@ -66,6 +66,34 @@ class ConfigLoader:
     """
     
     @classmethod
+    def from_env(cls) -> Dict[str, Any]:
+        """
+        Carica configurazione dalle variabili d'ambiente.
+        
+        Legge BUDDY_HOME e BUDDY_CONFIG, valida e carica tutto.
+        
+        Returns:
+            Dict con configurazione completa
+            
+        Raises:
+            ValueError: Se variabili d'ambiente mancanti o configurazione invalida
+            FileNotFoundError: Se il file di configurazione non esiste
+        """
+        # Valida BUDDY_HOME
+        buddy_home = get_buddy_home()
+        
+        # Valida BUDDY_CONFIG
+        config_path = os.getenv('BUDDY_CONFIG')
+        if not config_path:
+            raise ValueError(
+                "BUDDY_CONFIG environment variable not set. "
+                "Set it in .env or export it before running Buddy."
+            )
+        
+        # Carica configurazione
+        return cls.load(config_path)
+    
+    @classmethod
     def load(cls, config_path: str, validate_adapters: bool = True) -> Dict[str, Any]:
         """
         Carica configurazione da file YAML.
@@ -80,8 +108,15 @@ class ConfigLoader:
         Raises:
             FileNotFoundError: Se il file non esiste
             yaml.YAMLError: Se c'è un errore di parsing YAML
-            ValueError: Se la configurazione non è valida
+            ValueError: Se la configurazione non è valida o config_path è vuoto
         """
+        # Valida che config_path sia fornito
+        if not config_path:
+            raise ValueError(
+                "Configuration path not provided. "
+                "Set BUDDY_CONFIG environment variable."
+            )
+        
         # Risolvi il path del config rispetto a BUDDY_HOME
         config_file = resolve_path(config_path)
         
@@ -111,6 +146,7 @@ class ConfigLoader:
             
             # Aggiungi BUDDY_HOME alla configurazione per uso futuro
             config['buddy_home'] = str(buddy_home)
+            config['_config_file'] = str(config_file)  # Per debugging
             
             logger.info(f"✅ Configuration loaded from: {config_file}")
             logger.info(f"   BUDDY_HOME: {buddy_home}")

@@ -10,6 +10,7 @@ import queue
 import signal
 import logging
 from pathlib import Path
+from typing import Dict, Any
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
@@ -24,7 +25,7 @@ from core import (
 from adapters import AdapterFactory
 
 # Config imports
-from config.config_loader import ConfigLoader, get_buddy_home, resolve_path
+from config.config_loader import ConfigLoader
 
 
 # ===== LOGGING SETUP =====
@@ -39,7 +40,7 @@ def setup_logging(log_config: dict, buddy_home: Path) -> None:
     log_file_path = log_config.get('log_file', 'buddy_system.log')
     
     # Risolvi il path del log rispetto a BUDDY_HOME
-    log_file = resolve_path(log_file_path, relative_to=buddy_home)
+    log_file = buddy_home / log_file_path if not Path(log_file_path).is_absolute() else Path(log_file_path)
     
     max_bytes = log_config.get('max_bytes', 10*1024*1024)
     backup_count = log_config.get('backup_count', 3)
@@ -77,20 +78,17 @@ class BuddyOrchestrator:
     - Gestione shutdown
     """
     
-    def __init__(self, config_path: str):
+    def __init__(self, config: Dict[str, Any]):
         """
         Args:
-            config_path: Path al file di configurazione YAML (relativo o assoluto)
+            config: Configurazione già caricata e validata
         """
         self.logger = logging.getLogger(__name__)
         self.running = False
         
-        # Carica configurazione (risolve automaticamente i path)
-        self.config = ConfigLoader.load(config_path)
-        
-        # Ottieni BUDDY_HOME dalla configurazione
-        self.buddy_home = Path(self.config['buddy_home'])
-        self.logger.info(f"🏠 BUDDY_HOME: {self.buddy_home}")
+        # Usa configurazione già caricata
+        self.config = config
+        self.buddy_home = Path(config['buddy_home'])
         
         # Setup coda di input centralizzata
         queue_config = self.config['queues']
@@ -270,29 +268,15 @@ def main():
     # Carica variabili d'ambiente
     load_dotenv(".env")
     
-    # BUDDY_HOME è OBBLIGATORIO - fail fast
-    if not os.getenv("BUDDY_HOME"):
-        print("❌ ERROR: BUDDY_HOME environment variable not set")
-        print("   Set it in .env file or export before running:")
-        print("   BUDDY_HOME=/path/to/cllmhl-buddy")
-        sys.exit(1)
-    
-    # Ottieni BUDDY_HOME (validato)
+    # Carica configurazione (gestisce BUDDY_HOME e BUDDY_CONFIG internamente)
     try:
-        buddy_home = get_buddy_home()
-    except ValueError as e:
+        config = ConfigLoader.from_env()
+    except (ValueError, FileNotFoundError) as e:
         print(f"❌ ERROR: {e}")
         sys.exit(1)
     
-    # BUDDY_CONFIG è OBBLIGATORIO - fail fast se mancante
-    config_file = os.getenv("BUDDY_CONFIG")
-    if not config_file:
-        print("❌ ERROR: BUDDY_CONFIG environment variable not set")
-        print("   Set it in .env file:")
-        print("   BUDDY_CONFIG=config/adapter_config_dev.yaml")
-        sys.exit(1)
-    
-    # Setup logging CON path risolto
+    # Setup logging
+    buddy_home = Path(config['buddy_home'])
     log_config = {
         'log_file': 'buddy_system.log',
         'max_bytes': 10*1024*1024,
@@ -302,13 +286,11 @@ def main():
     
     logger = logging.getLogger(__name__)
     logger.info(f"🏠 BUDDY_HOME: {buddy_home}")
-    logger.info(f"🚀 Starting Buddy with config: {config_file}")
+    logger.info(f"🚀 Starting Buddy with config: {config.get('_config_file', 'unknown')}")
     
     try:
-        # Crea orchestrator
-        orchestrator = BuddyOrchestrator(config_file)
-        
-        # Avvia orchestrator
+        # Crea e avvia orchestrator
+        orchestrator = BuddyOrchestrator(config)
         orchestrator.run()
         
     except Exception as e:
