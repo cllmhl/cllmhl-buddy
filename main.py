@@ -223,7 +223,12 @@ class BuddyOrchestrator:
             while self.running:
                 # Preleva evento input (blocca se vuota, timeout 1s)
                 try:
-                    input_event = self.input_queue.get(timeout=1.0)
+                    queue_item = self.input_queue.get(timeout=1.0)
+                    # PriorityQueue contiene (priority, event)
+                    if isinstance(queue_item, tuple):
+                        _, input_event = queue_item
+                    else:
+                        input_event = queue_item
                 except queue.Empty:
                     continue
                 

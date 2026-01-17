@@ -1,0 +1,64 @@
+# Test LED Mock - Sequence Mode
+# Test senza hardware GPIO usando MockLEDOutput
+
+buddy_home: ${BUDDY_HOME:-.}
+
+# Brain - configurazione minima (non serve API key per DIRECT_OUTPUT)
+brain:
+  model_id: "gemini-2.0-flash-exp"
+  generation_config:
+    temperature: 0.7
+    max_tokens: 150
+  archivist_interval: 300.0
+
+# Queues
+queues:
+  input_maxsize: 100
+  output_maxsize: 50
+
+# Logging
+logging:
+  log_file: "logs/led_test_mock.log"
+  max_bytes: 5242880
+  backup_count: 2
+
+# Adapters
+adapters:
+  # Input: DirectOutputInput con sequenza di test
+  input:
+    - class: "DirectOutputInput"
+      config:
+        mode: "sequence"
+        sequence:
+          # Test LED Ascolto
+          - type: "LED_ON"
+            metadata: {led: "ascolto"}
+            delay: 0.5
+          
+          - type: "LED_OFF"
+            metadata: {led: "ascolto"}
+            delay: 0.5
+          
+          # Test LED Stato
+          - type: "LED_ON"
+            metadata: {led: "stato"}
+            delay: 0.5
+          
+          - type: "LED_OFF"
+            metadata: {led: "stato"}
+            delay: 0.5
+          
+          # Test Blink
+          - type: "LED_BLINK"
+            metadata: {led: "ascolto", times: 3}
+            delay: 2.0  # Aspetta che termini
+  
+  # Output: MOCK LED (niente GPIO reale)
+  output:
+    - class: "MockLEDOutput"
+      config:
+        queue_maxsize: 50
+    
+    - class: "ConsoleOutput"
+      config:
+        verbose: true
