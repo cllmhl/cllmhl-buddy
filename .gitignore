@@ -1,9 +1,6 @@
 .env
 __pycache__/
-*.db
-*.db-shm
-*.db-wal
-*.log
 venv/
+logs/
 data/
 
