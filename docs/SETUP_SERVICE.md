@@ -165,7 +165,7 @@ sudo systemctl restart buddy
 
 ## 📝 Note Importanti
 
-- **File log:** Il servizio scrive su `journalctl` (systemd logs) E sul file `buddy_system.log` nella directory del progetto
+- **File log:** Il servizio scrive su `journalctl` (systemd logs) E sul file `logs/system.log` nella directory del progetto
 - **Auto-restart:** Se Buddy crasha, systemd lo riavvierà automaticamente dopo 10 secondi
 - **Input tastiera:** Con Buddy in background, l'input da terminale NON funzionerà. Questo sarà risolto nella prossima fase con le Named Pipes (FIFO)
 

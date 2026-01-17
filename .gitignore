@@ -5,5 +5,5 @@ __pycache__/
 *.db-wal
 *.log
 venv/
-buddy_memory/
+data/
 

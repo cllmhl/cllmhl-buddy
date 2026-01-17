@@ -27,8 +27,8 @@ class ArchivistOutput(ArchivistOutputPort):
         
         # Configurazione
         self.archivist_config = config.get('archivist_config', {})
-        sqlite_path = config.get('sqlite_path', 'buddy_system.db')
-        chroma_path = config.get('chroma_path', './buddy_memory')
+        sqlite_path = config.get('sqlite_path', 'data/system.db')
+        chroma_path = config.get('chroma_path', 'data/memory')
         
         # Inizializza database
         try:

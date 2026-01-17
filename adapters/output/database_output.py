@@ -24,8 +24,8 @@ class DatabaseOutput(DatabaseOutputPort):
         super().__init__(name, config, queue_maxsize)
         
         # Configurazione database
-        sqlite_path = config.get('sqlite_path', 'buddy_system.db')
-        chroma_path = config.get('chroma_path', './buddy_memory')
+        sqlite_path = config.get('sqlite_path', 'data/system.db')
+        chroma_path = config.get('chroma_path', 'data/memory')
         
         # Inizializza database
         try:

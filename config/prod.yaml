@@ -53,15 +53,15 @@ adapters:
     - class: "DatabaseOutput"
       config:
         queue_maxsize: 500
-        sqlite_path: "buddy_system.db"
-        chroma_path: "./buddy_memory"
+        sqlite_path: "data/system.db"
+        chroma_path: "data/memory"
     
     # Archivist - Distillazione memoria
     - class: "ArchivistOutput"
       config:
         queue_maxsize: 50
-        sqlite_path: "buddy_system.db"
-        chroma_path: "./buddy_memory"
+        sqlite_path: "data/system.db"
+        chroma_path: "data/memory"
         archivist_config:
           model_id: "gemini-2.5-flash-lite"
           temperature: 0.1

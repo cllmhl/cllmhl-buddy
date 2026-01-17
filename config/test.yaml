@@ -45,8 +45,8 @@ adapters:
     - class: "MockDatabaseOutput"
       config:
         queue_maxsize: 50
-        sqlite_path: "buddy_system.db"
-        chroma_path: "./buddy_memory"
+        sqlite_path: "data/system.db"
+        chroma_path: "data/memory"
     
     # Archivist -> MOCK
     - class: "MockArchivistOutput"

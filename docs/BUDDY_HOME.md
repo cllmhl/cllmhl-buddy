@@ -7,7 +7,7 @@ Quando Buddy viene lanciato da:
 - Uno script esterno
 - Una directory diversa da quella del progetto
 
-I **path relativi** (come `config/adapter_config_dev.yaml`, `buddy_system.log`) causano errori perché vengono risolti rispetto alla directory di lavoro corrente, non alla directory del progetto.
+I **path relativi** (come `config/adapter_config_dev.yaml`, `logs/system.log`) causano errori perché vengono risolti rispetto alla directory di lavoro corrente, non alla directory del progetto.
 
 ## Soluzione: BUDDY_HOME
 
@@ -97,8 +97,8 @@ sudo systemctl start buddy
 ✅ Questi path sono ora **sempre assoluti**:
 
 - `BUDDY_CONFIG` (es. `config/adapter_config_dev.yaml`)
-- Log file (`buddy_system.log`)
-- Memory store (`buddy_memory/`)
+- Log file (`logs/*.log`)
+- Database e Memory store (`data/system.db`, `data/memory/`)
 - Models (`models/Ei-Buddy_*.ppn`)
 - Tutti i file di configurazione
 

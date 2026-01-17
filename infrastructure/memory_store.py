@@ -9,7 +9,7 @@ import time
 
 
 class MemoryStore:
-    def __init__(self, db_name="buddy_system.db", chroma_path="./buddy_memory"):
+    def __init__(self, db_name="data/system.db", chroma_path="data/memory"):
         # 1. Setup SQLite per History (fatti)
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL;") 

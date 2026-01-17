@@ -1,8 +1,8 @@
 import sqlite3
 import chromadb
 
-DB_NAME = "buddy_system.db"
-CHROMA_PATH = "./buddy_memory"
+DB_NAME = "data/system.db"
+CHROMA_PATH = "data/memory"
 
 print(f"--- Controllo Database SQLite: {DB_NAME} ---")
 try:
