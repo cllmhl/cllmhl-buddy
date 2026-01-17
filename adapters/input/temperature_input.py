@@ -22,7 +22,7 @@ except ImportError:
     logging.warning("⚠️ adafruit_dht not available. DHT11 disabled.")
 
 from adapters.ports import TemperatureInputPort
-from core.events import create_input_event, EventType, EventPriority
+from core.events import create_input_event, InputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class TemperatureInput(TemperatureInputPort):
                         
                         # Emetti un unico evento con tutti i dati DHT11
                         climate_event = create_input_event(
-                            EventType.SENSOR_TEMPERATURE,  # Tipo primario
+                            InputEventType.SENSOR_TEMPERATURE,  # Tipo primario
                             temperature,                    # Valore primario
                             source="dht11",
                             priority=EventPriority.LOW,
@@ -258,7 +258,7 @@ class MockTemperatureInput(TemperatureInputPort):
                     
                     # Emetti evento combinato come il sensore reale
                     climate_event = create_input_event(
-                        EventType.SENSOR_TEMPERATURE,
+                        InputEventType.SENSOR_TEMPERATURE,
                         temp,
                         source="mock_dht11",
                         priority=EventPriority.LOW,

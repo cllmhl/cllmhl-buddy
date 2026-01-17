@@ -9,7 +9,7 @@ from typing import Optional
 import logging
 
 # Import required - fail fast if not available
-from core.events import EventType
+from core.events import InputEventType, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class VoiceInputPort(InputPort):
     @classmethod
     def emitted_events(cls):
         """Eventi emessi da questa Port"""
-        return [EventType.USER_SPEECH]
+        return [InputEventType.USER_SPEECH]
 
 
 class SensorInputPort(InputPort):
@@ -88,7 +88,7 @@ class RadarInputPort(SensorInputPort):
     @classmethod
     def emitted_events(cls):
         """Eventi emessi da questa Port"""
-        return [EventType.SENSOR_PRESENCE, EventType.SENSOR_MOVEMENT]
+        return [InputEventType.SENSOR_PRESENCE, InputEventType.SENSOR_MOVEMENT]
 
 
 class TemperatureInputPort(SensorInputPort):
@@ -99,7 +99,7 @@ class TemperatureInputPort(SensorInputPort):
     @classmethod
     def emitted_events(cls):
         """Eventi emessi da questa Port"""
-        return [EventType.SENSOR_TEMPERATURE, EventType.SENSOR_HUMIDITY]
+        return [InputEventType.SENSOR_TEMPERATURE, InputEventType.SENSOR_HUMIDITY]
 
 
 class OutputPort(ABC):
@@ -176,7 +176,7 @@ class VoiceOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
-        return [EventType.SPEAK]
+        return [OutputEventType.SPEAK]
 
 
 class LEDOutputPort(OutputPort):
@@ -187,7 +187,7 @@ class LEDOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
-        return [EventType.LED_ON, EventType.LED_OFF, EventType.LED_BLINK]
+        return [OutputEventType.LED_ON, OutputEventType.LED_OFF, OutputEventType.LED_BLINK]
 
 
 class DatabaseOutputPort(OutputPort):
@@ -198,7 +198,7 @@ class DatabaseOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
-        return [EventType.SAVE_HISTORY, EventType.SAVE_MEMORY]
+        return [OutputEventType.SAVE_HISTORY, OutputEventType.SAVE_MEMORY]
 
 
 class ArchivistOutputPort(OutputPort):
@@ -209,7 +209,7 @@ class ArchivistOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
-        return [EventType.DISTILL_MEMORY]
+        return [OutputEventType.DISTILL_MEMORY]
 
 
 class AudioDevicePort(ABC):

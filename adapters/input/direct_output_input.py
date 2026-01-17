@@ -17,7 +17,7 @@ from typing import List, Dict, Any
 
 from adapters.ports import InputPort
 from core.events import (
-    Event, EventType, EventPriority, 
+    Event, InputEventType, OutputEventType, EventPriority, 
     create_input_event, create_output_event
 )
 
@@ -222,7 +222,7 @@ class DirectOutputInput(InputPort):
                 return
             
             try:
-                event_type = EventType[event_type_name]
+                event_type = OutputEventType[event_type_name]
             except KeyError:
                 logger.error(f"Unknown event type: {event_type_name}")
                 return
@@ -244,7 +244,7 @@ class DirectOutputInput(InputPort):
             
             # Wrappa in DIRECT_OUTPUT
             wrapper_event = create_input_event(
-                event_type=EventType.DIRECT_OUTPUT,
+                event_type=InputEventType.DIRECT_OUTPUT,
                 content=inner_event,
                 source=self.name,
                 priority=priority

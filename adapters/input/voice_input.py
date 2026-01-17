@@ -28,7 +28,7 @@ from gpiozero import LED
 
 from adapters.ports import VoiceInputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import create_input_event, EventType, EventPriority
+from core.events import create_input_event, InputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
@@ -354,7 +354,7 @@ class JabraVoiceInput(VoiceInputPort):
                 
                 # Crea evento
                 event = create_input_event(
-                    EventType.USER_SPEECH,
+                    InputEventType.USER_SPEECH,
                     text,
                     source="voice",
                     priority=EventPriority.HIGH
@@ -426,7 +426,7 @@ class MockVoiceInput(VoiceInputPort):
                 
                 # Crea evento
                 event = create_input_event(
-                    EventType.USER_SPEECH,
+                    InputEventType.USER_SPEECH,
                     phrase,
                     source="voice_mock",
                     priority=EventPriority.HIGH

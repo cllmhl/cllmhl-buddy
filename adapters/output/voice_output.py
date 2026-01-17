@@ -20,7 +20,7 @@ from gpiozero import LED
 
 from adapters.ports import VoiceOutputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import Event, EventType
+from core.events import Event, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class JabraVoiceOutput(VoiceOutputPort):
                 # Preleva evento con timeout
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.SPEAK:
+                if event.type == OutputEventType.SPEAK:
                     self._handle_speak_event(event)
                 
                 self.output_queue.task_done()
@@ -272,7 +272,7 @@ class MockVoiceOutput(VoiceOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.SPEAK:
+                if event.type == OutputEventType.SPEAK:
                     self._handle_speak_event(event)
                 
                 self.output_queue.task_done()

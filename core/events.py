@@ -1,17 +1,20 @@
 """
 Event System - Definizioni eventi e priorità
+Architettura Esagonale: separazione esplicita tra Input e Output events
 """
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Union
 import time
 
 
-class EventType(Enum):
-    """Tipi di eventi nel sistema"""
-    
-    # ===== INPUT EVENTS =====
+class InputEventType(Enum):
+    """
+    Eventi di Input - Generati da Input Adapters (Primary Ports).
+    Rappresentano stimoli dal mondo esterno verso il core.
+    """
+    # Input vocale
     USER_SPEECH = "user_speech"           # Input vocale utente
     
     # Sensori
@@ -21,9 +24,19 @@ class EventType(Enum):
     SENSOR_MOVEMENT = "sensor_movement"
     
     # Bypass Brain - per test e comandi diretti
-    DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un output event da inoltrare direttamente
+    DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente
     
-    # ===== OUTPUT EVENTS =====
+    # Sistema
+    SHUTDOWN = "shutdown"
+    RESTART = "restart"
+
+
+class OutputEventType(Enum):
+    """
+    Eventi di Output - Consumati da Output Adapters (Secondary Ports).
+    Rappresentano azioni che il core richiede verso il mondo esterno.
+    """
+    # Audio
     SPEAK = "speak"                       # Emetti audio vocale
     
     # LED
@@ -35,10 +48,32 @@ class EventType(Enum):
     SAVE_HISTORY = "save_history"         # Salva in history DB
     SAVE_MEMORY = "save_memory"           # Salva in memoria permanente
     DISTILL_MEMORY = "distill_memory"     # Avvia distillazione memoria (Archivist)
+
+
+# Compatibility layer: EventType with all events accessible
+class EventType:
+    """
+    Backward compatibility wrapper for tests and legacy code.
+    Provides access to both Input and Output event types.
+    """
+    # Input events
+    USER_SPEECH = InputEventType.USER_SPEECH
+    SENSOR_PRESENCE = InputEventType.SENSOR_PRESENCE
+    SENSOR_TEMPERATURE = InputEventType.SENSOR_TEMPERATURE
+    SENSOR_HUMIDITY = InputEventType.SENSOR_HUMIDITY
+    SENSOR_MOVEMENT = InputEventType.SENSOR_MOVEMENT
+    DIRECT_OUTPUT = InputEventType.DIRECT_OUTPUT
+    SHUTDOWN = InputEventType.SHUTDOWN
+    RESTART = InputEventType.RESTART
     
-    # Sistema
-    SHUTDOWN = "shutdown"
-    RESTART = "restart"
+    # Output events
+    SPEAK = OutputEventType.SPEAK
+    LED_ON = OutputEventType.LED_ON
+    LED_OFF = OutputEventType.LED_OFF
+    LED_BLINK = OutputEventType.LED_BLINK
+    SAVE_HISTORY = OutputEventType.SAVE_HISTORY
+    SAVE_MEMORY = OutputEventType.SAVE_MEMORY
+    DISTILL_MEMORY = OutputEventType.DISTILL_MEMORY
 
 
 class EventPriority(Enum):
@@ -66,7 +101,7 @@ class Event:
     priority: EventPriority = field(compare=True)
     
     # Event data
-    type: EventType = field(compare=False)
+    type: Union[InputEventType, OutputEventType] = field(compare=False)
     content: Any = field(compare=False)
     
     # Metadata
@@ -86,7 +121,7 @@ class Event:
 # ===== HELPER FUNCTIONS =====
 
 def create_input_event(
-    event_type: EventType,
+    event_type: InputEventType,
     content: Any,
     source: str,
     priority: EventPriority = EventPriority.NORMAL,
@@ -103,7 +138,7 @@ def create_input_event(
 
 
 def create_output_event(
-    event_type: EventType,
+    event_type: OutputEventType,
     content: Any,
     priority: EventPriority = EventPriority.NORMAL,
     metadata: Optional[dict] = None

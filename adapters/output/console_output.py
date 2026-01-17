@@ -8,7 +8,7 @@ import threading
 from queue import PriorityQueue, Empty
 
 from adapters.ports import OutputPort
-from core.events import Event, EventType
+from core.events import Event, InputEventType, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,12 @@ class ConsoleOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         return [
-            EventType.SENSOR_PRESENCE,
-            EventType.SENSOR_MOVEMENT, 
-            EventType.SENSOR_TEMPERATURE,
-            EventType.SENSOR_HUMIDITY,
-            EventType.USER_SPEECH,
-            EventType.SPEAK
+            InputEventType.SENSOR_PRESENCE,
+            InputEventType.SENSOR_MOVEMENT, 
+            InputEventType.SENSOR_TEMPERATURE,
+            InputEventType.SENSOR_HUMIDITY,
+            InputEventType.USER_SPEECH,
+            OutputEventType.SPEAK
         ]
 
 
@@ -70,24 +70,24 @@ class ConsoleOutput(ConsoleOutputPort):
     def _print_event(self, event: Event):
         """Formatta e stampa evento"""
         icons = {
-            EventType.SENSOR_PRESENCE: "👤",
-            EventType.SENSOR_MOVEMENT: "🏃",
-            EventType.SENSOR_TEMPERATURE: "🌡️",
-            EventType.SENSOR_HUMIDITY: "💧",
-            EventType.USER_SPEECH: "🎤",
-            EventType.SPEAK: "🔊"
+            InputEventType.SENSOR_PRESENCE: "👤",
+            InputEventType.SENSOR_MOVEMENT: "🏃",
+            InputEventType.SENSOR_TEMPERATURE: "🌡️",
+            InputEventType.SENSOR_HUMIDITY: "💧",
+            InputEventType.USER_SPEECH: "🎤",
+            OutputEventType.SPEAK: "🔊"
         }
         
         icon = icons.get(event.type, "📊")
         
-        if event.type == EventType.SENSOR_PRESENCE:
+        if event.type == InputEventType.SENSOR_PRESENCE:
             status = "PRESENTE" if event.content else "ASSENTE"
             msg = f"{icon} Presenza: {status}"
             if self.verbose and event.metadata:
                 msg += f" | Dist: {event.metadata.get('distance', 0)}cm"
                 msg += f" | Mov: {event.metadata.get('mov_energy', 0)}"
         
-        elif event.type == EventType.SENSOR_TEMPERATURE:
+        elif event.type == InputEventType.SENSOR_TEMPERATURE:
             temp = event.content
             msg = f"{icon} Temperatura: {temp}°C"
             if self.verbose and event.metadata:
@@ -95,14 +95,14 @@ class ConsoleOutput(ConsoleOutputPort):
                 if hum:
                     msg += f" | 💧 {hum}%"
         
-        elif event.type == EventType.SENSOR_HUMIDITY:
+        elif event.type == InputEventType.SENSOR_HUMIDITY:
             hum = event.content
             msg = f"{icon} Umidità: {hum}%"
         
-        elif event.type == EventType.USER_SPEECH:
+        elif event.type == InputEventType.USER_SPEECH:
             msg = f"{icon} Utente: {event.content}"
         
-        elif event.type == EventType.SPEAK:
+        elif event.type == OutputEventType.SPEAK:
             msg = f"{icon} Buddy: {event.content}"
         
         else:

@@ -4,7 +4,7 @@ Logica di business pura, zero dipendenze esterne.
 """
 
 from .events import (
-    Event, EventType, EventPriority,
+    Event, EventType, InputEventType, OutputEventType, EventPriority,
     create_input_event, create_output_event
 )
 from .event_router import EventRouter
@@ -12,7 +12,12 @@ from .brain import BuddyBrain
 
 __all__ = [
     'Event',
-    'EventType', 
+    'EventType',  # Union type for backwards compatibility
+    'InputEventType',
+    'OutputEventType',
     'EventPriority',
-
+    'create_input_event',
+    'create_output_event',
+    'EventRouter',
+    'BuddyBrain'
 ]

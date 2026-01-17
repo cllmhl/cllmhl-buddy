@@ -8,7 +8,7 @@ import time
 from unittest.mock import Mock, patch
 
 from core import (
-    Event, EventType, EventPriority,
+    Event, EventType, InputEventType, OutputEventType, EventPriority,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )

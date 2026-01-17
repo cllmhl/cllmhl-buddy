@@ -15,7 +15,7 @@ if not os.path.exists('/proc/device-tree/model'):
 from gpiozero import LED
 
 from adapters.ports import LEDOutputPort
-from core.events import Event, EventType
+from core.events import Event, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +79,11 @@ class GPIOLEDOutput(LEDOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.LED_ON:
+                if event.type == OutputEventType.LED_ON:
                     self._handle_led_on(event)
-                elif event.type == EventType.LED_OFF:
+                elif event.type == OutputEventType.LED_OFF:
                     self._handle_led_off(event)
-                elif event.type == EventType.LED_BLINK:
+                elif event.type == OutputEventType.LED_BLINK:
                     self._handle_led_blink(event)
                 
                 self.output_queue.task_done()
@@ -180,11 +180,11 @@ class MockLEDOutput(LEDOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.LED_ON:
+                if event.type == OutputEventType.LED_ON:
                     self._handle_mock_led(event, "ON")
-                elif event.type == EventType.LED_OFF:
+                elif event.type == OutputEventType.LED_OFF:
                     self._handle_mock_led(event, "OFF")
-                elif event.type == EventType.LED_BLINK:
+                elif event.type == OutputEventType.LED_BLINK:
                     self._handle_mock_led(event, "BLINK")
                 
                 self.output_queue.task_done()

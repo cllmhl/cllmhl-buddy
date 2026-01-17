@@ -7,7 +7,7 @@ import threading
 from queue import PriorityQueue, Empty
 
 from adapters.ports import DatabaseOutputPort
-from core.events import Event, EventType
+from core.events import Event, OutputEventType
 from infrastructure.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -67,9 +67,9 @@ class DatabaseOutput(DatabaseOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.SAVE_HISTORY:
+                if event.type == OutputEventType.SAVE_HISTORY:
                     self._handle_save_history(event)
-                elif event.type == EventType.SAVE_MEMORY:
+                elif event.type == OutputEventType.SAVE_MEMORY:
                     self._handle_save_memory(event)
                 
                 self.output_queue.task_done()
@@ -166,9 +166,9 @@ class MockDatabaseOutput(DatabaseOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.SAVE_HISTORY:
+                if event.type == OutputEventType.SAVE_HISTORY:
                     self._handle_mock_save_history(event)
-                elif event.type == EventType.SAVE_MEMORY:
+                elif event.type == OutputEventType.SAVE_MEMORY:
                     self._handle_mock_save_memory(event)
                 
                 self.output_queue.task_done()

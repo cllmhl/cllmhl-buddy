@@ -9,7 +9,7 @@ from typing import List, Optional
 from google import genai
 from google.genai import types
 
-from .events import Event, EventType, EventPriority, create_output_event
+from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
 
 logger = logging.getLogger(__name__)
 
@@ -90,17 +90,17 @@ class BuddyBrain:
         
         try:
             # Gestione per tipo di evento
-            if input_event.type == EventType.DIRECT_OUTPUT:
+            if input_event.type == InputEventType.DIRECT_OUTPUT:
                 # Bypass Brain: unwrap l'evento interno e inoltralo direttamente
                 output_events.extend(self._handle_direct_output(input_event))
             
-            elif input_event.type == EventType.USER_SPEECH:
+            elif input_event.type == InputEventType.USER_SPEECH:
                 output_events.extend(self._handle_user_input(input_event))
             
             elif input_event.type.name.startswith("SENSOR_"):
                 output_events.extend(self._handle_sensor_input(input_event))
             
-            elif input_event.type == EventType.SHUTDOWN:
+            elif input_event.type == InputEventType.SHUTDOWN:
                 output_events.extend(self._handle_shutdown(input_event))
             
             else:
@@ -140,8 +140,7 @@ class BuddyBrain:
                 return []
             
             # Verifica che sia un evento di output (non input)
-            if inner_event.type in [EventType.USER_SPEECH, EventType.DIRECT_OUTPUT] or \
-               inner_event.type.name.startswith("SENSOR_"):
+            if isinstance(inner_event.type, InputEventType):
                 logger.warning(
                     f"DIRECT_OUTPUT should contain output events, got {inner_event.type}"
                 )
@@ -166,7 +165,7 @@ class BuddyBrain:
         
         # Salva in history
         output_events.append(create_output_event(
-            EventType.SAVE_HISTORY,
+            OutputEventType.SAVE_HISTORY,
             {"role": "user", "text": user_text},
             priority=EventPriority.LOW
         ))
@@ -176,15 +175,15 @@ class BuddyBrain:
         
         # Salva risposta in history
         output_events.append(create_output_event(
-            EventType.SAVE_HISTORY,
+            OutputEventType.SAVE_HISTORY,
             {"role": "model", "text": response_text},
             priority=EventPriority.LOW
         ))
         
         # Parla solo se input era vocale
-        if event.type == EventType.USER_SPEECH:
+        if event.type == InputEventType.USER_SPEECH:
             output_events.append(create_output_event(
-                EventType.SPEAK,
+                OutputEventType.SPEAK,
                 response_text,
                 priority=EventPriority.HIGH,
                 metadata={"triggered_by": "user_speech"}
@@ -197,7 +196,7 @@ class BuddyBrain:
         output_events = []
         
         # Logica proattiva (esempio)
-        if event.type == EventType.SENSOR_PRESENCE:
+        if event.type == InputEventType.SENSOR_PRESENCE:
             if event.content is True:
                 # Presenza rilevata - usa energy levels per valutare qualità
                 metadata = event.metadata or {}
@@ -215,7 +214,7 @@ class BuddyBrain:
                 else:
                     logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
         
-        elif event.type == EventType.SENSOR_TEMPERATURE:
+        elif event.type == InputEventType.SENSOR_TEMPERATURE:
             # Ora abbiamo sia temperatura che umidità nel metadata
             temp = float(event.content)
             humidity = event.metadata.get('humidity') if event.metadata else None
@@ -236,7 +235,7 @@ class BuddyBrain:
         # Se era vocale, saluta
         if event.source == "voice":
             output_events.append(create_output_event(
-                EventType.SPEAK,
+                OutputEventType.SPEAK,
                 "Mi sto spegnendo. A presto!",
                 priority=EventPriority.CRITICAL
             ))
@@ -291,7 +290,7 @@ class BuddyBrain:
             self.last_archivist_time = current_time
             
             return [create_output_event(
-                EventType.DISTILL_MEMORY,
+                OutputEventType.DISTILL_MEMORY,
                 None,
                 priority=EventPriority.LOW,
                 metadata={"elapsed_seconds": elapsed}

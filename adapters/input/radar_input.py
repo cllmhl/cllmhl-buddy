@@ -10,7 +10,7 @@ from queue import PriorityQueue
 from typing import Optional, Dict, Any
 
 from adapters.ports import RadarInputPort
-from core.events import create_input_event, EventType, EventPriority
+from core.events import create_input_event, InputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class RadarInput(RadarInputPort):
                         )
                         
                         event = create_input_event(
-                            EventType.SENSOR_PRESENCE,
+                            InputEventType.SENSOR_PRESENCE,
                             current_presence,
                             source="radar",
                             priority=EventPriority.LOW,
@@ -129,7 +129,7 @@ class RadarInput(RadarInputPort):
                             f"energy={data['mov_energy']}"
                         )
                         event = create_input_event(
-                            EventType.SENSOR_MOVEMENT,
+                            InputEventType.SENSOR_MOVEMENT,
                             True,
                             source="radar",
                             priority=EventPriority.LOW,

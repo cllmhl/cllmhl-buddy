@@ -6,7 +6,7 @@ import logging
 import threading
 from queue import PriorityQueue, Empty
 
-from core.events import Event, EventType
+from core.events import Event, OutputEventType
 from adapters.ports import ArchivistOutputPort
 from infrastructure.memory_store import MemoryStore
 from core.archivist import BuddyArchivist
@@ -79,7 +79,7 @@ class ArchivistOutput(ArchivistOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.DISTILL_MEMORY:
+                if event.type == OutputEventType.DISTILL_MEMORY:
                     self._handle_distill_memory(event)
                 
                 self.output_queue.task_done()
@@ -159,7 +159,7 @@ class MockArchivistOutput(ArchivistOutputPort):
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
-                if event.type == EventType.DISTILL_MEMORY:
+                if event.type == OutputEventType.DISTILL_MEMORY:
                     logger.info("📚 MOCK: Distillation triggered (no actual processing)")
                 
                 self.output_queue.task_done()
