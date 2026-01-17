@@ -26,14 +26,16 @@ from config.config_loader import ConfigLoader
 
 
 # ===== LOGGING SETUP =====
-def setup_logging(log_config: dict, buddy_home: Path) -> None:
+def setup_logging(config: Dict[str, Any]) -> None:
     """
     Configura il sistema di logging
     
     Args:
-        log_config: Configurazione logging dal YAML
-        buddy_home: Path alla home directory di Buddy
+        config: Configurazione completa di Buddy
     """
+    log_config = config['logging']
+    buddy_home = Path(config['buddy_home'])
+    
     log_file_path = log_config.get('log_file', 'buddy_system.log')
     
     # Risolvi il path del log rispetto a BUDDY_HOME
@@ -280,16 +282,10 @@ def main():
         sys.exit(1)
     
     # Setup logging
-    buddy_home = Path(config['buddy_home'])
-    log_config = config.get('logging', {
-        'log_file': 'buddy_system.log',
-        'max_bytes': 10*1024*1024,
-        'backup_count': 3
-    })
-    setup_logging(log_config, buddy_home)
+    setup_logging(config)
     
     logger = logging.getLogger(__name__)
-    logger.info(f"🏠 BUDDY_HOME: {buddy_home}")
+    logger.info(f"🏠 BUDDY_HOME: {config['buddy_home']}")
     logger.info(f"🚀 Starting Buddy with config: {config.get('_config_file', 'unknown')}")
     
     try:
