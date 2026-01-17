@@ -7,7 +7,7 @@ from adapters.ports import (
     VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
     VoiceInputPort, RadarInputPort, TemperatureInputPort
 )
-from core.events import EventType, OutputChannel
+from core.events import EventType
 
 
 class TestOutputPortEvents:
@@ -33,25 +33,6 @@ class TestOutputPortEvents:
         assert EventType.SAVE_HISTORY in events
         assert EventType.SAVE_MEMORY in events
         assert len(events) == 2
-    
-    def test_all_output_ports_have_unique_channels(self):
-        """Ogni OutputPort ha un channel_type unico"""
-        from adapters.output.voice_output import MockVoiceOutput
-        from adapters.output.led_output import MockLEDOutput
-        from adapters.output.database_output import MockDatabaseOutput
-        
-        voice_channel = MockVoiceOutput("test", {}).channel_type
-        led_channel = MockLEDOutput("test", {}).channel_type
-        db_channel = MockDatabaseOutput("test", {}).channel_type
-        
-        assert voice_channel == OutputChannel.VOICE
-        assert led_channel == OutputChannel.LED
-        assert db_channel == OutputChannel.DATABASE
-        
-        # Tutti diversi
-        assert voice_channel != led_channel
-        assert voice_channel != db_channel
-        assert led_channel != db_channel
     
     def test_event_routing_built_from_port_declarations(self):
         """Il routing può essere costruito dinamicamente dalle dichiarazioni delle Port"""
@@ -143,21 +124,3 @@ class TestPortSignatures:
             events = port_class.emitted_events()
             assert len(events) > 0, \
                 f"{port_class.__name__}.emitted_events() must return at least one event"
-    
-    def test_output_ports_have_channel_type(self):
-        """Tutte le OutputPort hanno channel_type property"""
-        from adapters.output.voice_output import MockVoiceOutput
-        from adapters.output.led_output import MockLEDOutput
-        from adapters.output.database_output import MockDatabaseOutput
-        
-        output_ports = [
-            MockVoiceOutput("test", {}),
-            MockLEDOutput("test", {}),
-            MockDatabaseOutput("test", {})
-        ]
-        
-        for port in output_ports:
-            assert hasattr(port, 'channel_type'), \
-                f"{port.__class__.__name__} must have channel_type property"
-            assert port.channel_type in OutputChannel, \
-                f"{port.__class__.__name__}.channel_type must be a valid OutputChannel"

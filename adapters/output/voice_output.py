@@ -20,7 +20,7 @@ from gpiozero import LED
 
 from adapters.ports import VoiceOutputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import Event, EventType, OutputChannel
+from core.events import Event, EventType
 
 logger = logging.getLogger(__name__)
 

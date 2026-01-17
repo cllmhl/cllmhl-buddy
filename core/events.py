@@ -8,18 +8,6 @@ from typing import Any, Optional
 import time
 
 
-class OutputChannel(Enum):
-    """
-    Canali di output del sistema.
-    Questi devono corrispondere ai nomi degli adapter nella configurazione YAML.
-    """
-    VOICE = "voice"          # Output vocale (TTS)
-    LED = "led"              # LED di stato/segnalazione
-    DATABASE = "database"    # Persistenza dati
-    ARCHIVIST = "archivist"  # Distillazione memoria
-    CONSOLE = "console"      # Output console/debug
-
-
 class EventType(Enum):
     """Tipi di eventi nel sistema"""
     

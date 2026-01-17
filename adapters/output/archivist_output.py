@@ -6,7 +6,7 @@ import logging
 import threading
 from queue import PriorityQueue, Empty
 
-from core.events import Event, EventType, OutputChannel
+from core.events import Event, EventType
 from adapters.ports import ArchivistOutputPort
 from infrastructure.memory_store import MemoryStore
 from core.archivist import BuddyArchivist

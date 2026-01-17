@@ -8,7 +8,7 @@ import threading
 from queue import PriorityQueue, Empty
 
 from adapters.ports import OutputPort
-from core.events import Event, EventType, OutputChannel
+from core.events import Event, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,7 @@ logger = logging.getLogger(__name__)
 class ConsoleOutputPort(OutputPort):
     """Port per output console"""
     
-    @property
-    def channel_type(self):
-        return OutputChannel.CONSOLE
-    
+
     @classmethod
     def handled_events(cls):
         return [

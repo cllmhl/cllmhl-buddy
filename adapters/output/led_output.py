@@ -15,7 +15,7 @@ if not os.path.exists('/proc/device-tree/model'):
 from gpiozero import LED
 
 from adapters.ports import LEDOutputPort
-from core.events import Event, EventType, OutputChannel
+from core.events import Event, EventType
 
 logger = logging.getLogger(__name__)
 

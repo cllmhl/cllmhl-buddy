@@ -40,28 +40,6 @@ class TestFailFast:
             if 'adapters.ports' in sys.modules:
                 del sys.modules['adapters.ports']
     
-    def test_ports_return_enums_not_strings(self):
-        """Port ritornano enum members, non stringhe"""
-        from adapters.output.voice_output import MockVoiceOutput
-        from adapters.output.led_output import MockLEDOutput
-        from adapters.output.database_output import MockDatabaseOutput
-        from core.events import OutputChannel
-        
-        voice = MockVoiceOutput("test", {})
-        led = MockLEDOutput("test", {})
-        db = MockDatabaseOutput("test", {})
-        
-        # Deve essere enum, non string
-        assert voice.channel_type == OutputChannel.VOICE
-        assert isinstance(voice.channel_type, OutputChannel)
-        assert not isinstance(voice.channel_type, str)
-        
-        assert led.channel_type == OutputChannel.LED
-        assert isinstance(led.channel_type, OutputChannel)
-        
-        assert db.channel_type == OutputChannel.DATABASE
-        assert isinstance(db.channel_type, OutputChannel)
-    
     def test_ports_return_event_types_not_empty_list(self):
         """Port ritornano EventType reali, non liste vuote"""
         from adapters.ports import (
@@ -131,18 +109,6 @@ class TestFailFast:
 
 class TestNoSilentFallbacks:
     """Verifica che non ci siano fallback silenziosi che mascherano errori"""
-    
-    def test_no_try_except_in_channel_type(self):
-        """channel_type property non ha try/except che maschera errori"""
-        from adapters.ports import VoiceOutputPort
-        import inspect
-        
-        # Ottieni il source della property
-        source = inspect.getsource(VoiceOutputPort.channel_type.fget)
-        
-        # Non deve contenere try/except
-        assert 'try:' not in source.lower()
-        assert 'except' not in source.lower()
     
     def test_no_try_except_in_handled_events(self):
         """handled_events() non ha try/except che maschera errori"""

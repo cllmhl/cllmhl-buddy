@@ -9,7 +9,7 @@ from typing import Optional
 import logging
 
 # Import required - fail fast if not available
-from core.events import OutputChannel, EventType
+from core.events import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -173,11 +173,6 @@ class VoiceOutputPort(OutputPort):
     Port per output VOCALE (TTS, audio).
     """
     
-    @property
-    def channel_type(self):
-        """Tipo di canale: VOICE"""
-        return OutputChannel.VOICE
-    
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
@@ -188,11 +183,6 @@ class LEDOutputPort(OutputPort):
     """
     Port per output LED (segnalazioni visive).
     """
-    
-    @property
-    def channel_type(self):
-        """Tipo di canale: LED"""
-        return OutputChannel.LED
     
     @classmethod
     def handled_events(cls):
@@ -205,11 +195,6 @@ class DatabaseOutputPort(OutputPort):
     Port per output DATABASE (persistenza).
     """
     
-    @property
-    def channel_type(self):
-        """Tipo di canale: DATABASE"""
-        return OutputChannel.DATABASE
-    
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
@@ -220,11 +205,6 @@ class ArchivistOutputPort(OutputPort):
     """
     Port per output ARCHIVIST (distillazione memoria).
     """
-    
-    @property
-    def channel_type(self):
-        """Tipo di canale: ARCHIVIST"""
-        return OutputChannel.ARCHIVIST
     
     @classmethod
     def handled_events(cls):

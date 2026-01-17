@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 # Core imports
 from core import (
-    Event, EventType, EventPriority, OutputChannel,
+    Event, EventType, EventPriority,
     EventRouter, BuddyBrain
 )
 

@@ -7,7 +7,7 @@ import threading
 from queue import PriorityQueue, Empty
 
 from adapters.ports import DatabaseOutputPort
-from core.events import Event, EventType, OutputChannel
+from core.events import Event, EventType
 from infrastructure.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
