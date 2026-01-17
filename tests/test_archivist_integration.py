@@ -110,14 +110,12 @@ def test_archivist_trigger():
     print("\n" + "=" * 60)
     print("✅ TEST PASSED: Archivist trigger periodico funziona")
     print("=" * 60)
-    
-    return True
 
 
 if __name__ == "__main__":
     try:
-        success = test_archivist_trigger()
-        exit(0 if success else 1)
+        test_archivist_trigger()
+        exit(0)
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
         import traceback

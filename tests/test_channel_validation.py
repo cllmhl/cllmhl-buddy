@@ -39,11 +39,21 @@ class TestChannelValidation:
     
     def test_all_output_channels_covered(self):
         """Verifica che tutti i canali abbiano un adapter corrispondente"""
+        from adapters.output import MockVoiceOutput, MockLEDOutput, MockDatabaseOutput, MockArchivistOutput, MockConsoleOutput
+        
         voice = MockVoiceOutput("voice", {})
         led = MockLEDOutput("led", {})
         database = MockDatabaseOutput("db", {})
+        archivist = MockArchivistOutput("archivist", {})
+        console = MockConsoleOutput("console", {})
         
-        adapter_channels = {voice.channel_type, led.channel_type, database.channel_type}
+        adapter_channels = {
+            voice.channel_type, 
+            led.channel_type, 
+            database.channel_type,
+            archivist.channel_type,
+            console.channel_type
+        }
         all_channels = set(OutputChannel)
         
         assert adapter_channels == all_channels, \
