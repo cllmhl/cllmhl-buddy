@@ -21,8 +21,8 @@ class RadarInput(RadarInputPort):
     Rileva presenza e movimento tramite radar UART.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione radar
         self.port = config.get('port', '/dev/ttyAMA0')
@@ -54,9 +54,8 @@ class RadarInput(RadarInputPort):
             logger.warning(f"⚠️ Radar connection failed: {e}")
             self.radar = None
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker thread"""
-        self.input_queue = input_queue
         self.running = True
         
         if self.radar:
@@ -191,17 +190,16 @@ class MockRadarInput(RadarInputPort):
     Genera dati fake per simulare radar.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 5.0)
         self.worker_thread = None
         
         logger.info(f"📡 MockRadarInput initialized")
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker"""
-        self.input_queue = input_queue
         self.running = True
         
         self.worker_thread = threading.Thread(

@@ -9,51 +9,45 @@ brain:
 adapters:
   input:
     # Voice input con Jabra e Wake Word
-    voice:
-      implementation: "jabra"
+    - class: "JabraVoiceInput"
       config:
         wake_word_path: "Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
         stt_mode: "cloud"  # "cloud" o "local"
     
     # Radar fisico
-    radar:
-      implementation: "radar"
+    - class: "RadarInput"
       config:
         port: "/dev/ttyAMA0"
         baudrate: 256000
         interval: 0.5
     
     # Sensore temperatura/umidità fisico
-    temperature:
-      implementation: "temperature"
+    - class: "TemperatureInput"
       config:
         pin: 4
         interval: 30.0
   
   output:
     # Voice output con Jabra
-    voice:
-      implementation: "jabra"
+    - class: "JabraVoiceOutput"
       config:
+        queue_maxsize: 50
         tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
         voice_name: "paola"  # "paola" o "riccardo"
     
     # LED con GPIO
-    led:
-      implementation: "led"
+    - class: "GPIOLEDOutput"
       config:
+        queue_maxsize: 100
         led_ascolto_pin: 26  # LED Blu
         led_stato_pin: 21    # LED Verde
     
     # Database
-    database:
-      implementation: "db"
+    - class: "DatabaseOutput"
       config:
+        queue_maxsize: 500
         sqlite_path: "buddy_system.db"
         chroma_path: "./buddy_memory"
 
 queues:
   input_maxsize: 100
-  voice_maxsize: 50
-  led_maxsize: 100
-  database_maxsize: 500

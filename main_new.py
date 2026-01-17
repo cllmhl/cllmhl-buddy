@@ -130,22 +130,25 @@ class BuddyOrchestrator:
     
     def _create_adapters(self) -> None:
         """Crea adapters dalla configurazione usando Factory"""
-        # Estrai configurazioni dimensioni code
-        queue_config = self.config['queues']
-        
-        # Input Adapters
-        for name, cfg in self.config['adapters']['input'].items():
-            adapter = AdapterFactory.create_input_adapter(name, cfg)
+        # Input Adapters - passano input_queue nel costruttore
+        for adapter_cfg in self.config['adapters']['input']:
+            class_name = adapter_cfg.get('class')
+            config = adapter_cfg.get('config', {})
+            
+            adapter = AdapterFactory.create_input_adapter(
+                class_name, 
+                config,
+                self.input_queue
+            )
             if adapter:
                 self.input_adapters.append(adapter)
         
         # Output Adapters - autocontenuti con code interne
-        for name, cfg in self.config['adapters']['output'].items():
-            # Passa la dimensione della coda specifica per questo canale
-            queue_size = queue_config.get(f'{name}_maxsize', 50)
-            cfg['queue_maxsize'] = queue_size
+        for adapter_cfg in self.config['adapters']['output']:
+            class_name = adapter_cfg.get('class')
+            config = adapter_cfg.get('config', {})
             
-            adapter = AdapterFactory.create_output_adapter(name, cfg)
+            adapter = AdapterFactory.create_output_adapter(class_name, config)
             if adapter:
                 self.output_adapters.append(adapter)
         
@@ -156,10 +159,10 @@ class BuddyOrchestrator:
     
     def _start_adapters(self) -> None:
         """Avvia tutti gli adapters"""
-        # Start input adapters
+        # Start input adapters (non ricevono più la coda - ce l'hanno già)
         for adapter in self.input_adapters:
             try:
-                adapter.start(self.input_queue)
+                adapter.start()
                 self.logger.info(f"▶️  Started input adapter: {adapter.name}")
             except Exception as e:
                 self.logger.error(f"❌ Failed to start {adapter.name}: {e}")

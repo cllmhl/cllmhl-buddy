@@ -9,14 +9,13 @@ from .database_output import DatabaseOutput, MockDatabaseOutput
 
 # Auto-register nel Factory
 from adapters.factory import AdapterFactory
-from adapters.adapter_types import OutputAdapterType
 
-AdapterFactory.register_output(OutputAdapterType.VOICE.value, JabraVoiceOutput)
-AdapterFactory.register_output(OutputAdapterType.MOCK_VOICE.value, MockVoiceOutput)
-AdapterFactory.register_output(OutputAdapterType.LED.value, GPIOLEDOutput)
-AdapterFactory.register_output(OutputAdapterType.MOCK_LED.value, MockLEDOutput)
-AdapterFactory.register_output(OutputAdapterType.DATABASE.value, DatabaseOutput)
-AdapterFactory.register_output(OutputAdapterType.MOCK_DATABASE.value, MockDatabaseOutput)
+AdapterFactory.register_output("JabraVoiceOutput", JabraVoiceOutput)
+AdapterFactory.register_output("MockVoiceOutput", MockVoiceOutput)
+AdapterFactory.register_output("GPIOLEDOutput", GPIOLEDOutput)
+AdapterFactory.register_output("MockLEDOutput", MockLEDOutput)
+AdapterFactory.register_output("DatabaseOutput", DatabaseOutput)
+AdapterFactory.register_output("MockDatabaseOutput", MockDatabaseOutput)
 
 __all__ = [
     'JabraVoiceOutput',

@@ -9,43 +9,38 @@ brain:
 adapters:
   input:
     # Voice input MOCK in test mode
-    voice:
-      implementation: "mock_voice"
+    - class: "MockVoiceInput"
       config:
         interval: 10.0
     
     # Radar MOCK in test mode
-    radar:
-      implementation: "mock_radar"
+    - class: "MockRadarInput"
       config:
         interval: 5.0
     
     # Temperature/Humidity MOCK in test mode
-    temperature:
-      implementation: "mock_temperature"
+    - class: "MockTemperatureInput"
       config:
         interval: 10.0
   
   output:
     # Voice output -> MOCK (log instead of audio)
-    voice:
-      implementation: "mock_voice"
-      config: {}
+    - class: "MockVoiceOutput"
+      config:
+        queue_maxsize: 50
     
     # LED -> MOCK (console output)
-    led:
-      implementation: "mock_led"
-      config: {}
+    - class: "MockLEDOutput"
+      config:
+        queue_maxsize: 100
     
     # Database -> MOCK
-    database:
-      implementation: "mock_db"
+    - class: "MockDatabaseOutput"
       config:
+        queue_maxsize: 50
         sqlite_path: "buddy_system.db"
         chroma_path: "./buddy_memory"
 
 queues:
   input_maxsize: 100
-  voice_maxsize: 50
-  led_maxsize: 100
   database_maxsize: 500

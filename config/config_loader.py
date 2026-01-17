@@ -97,39 +97,33 @@ class ConfigLoader:
         # Import qui per evitare circular import
         from adapters.factory import AdapterFactory
         
-        registered = AdapterFactory.get_registered_implementations()
+        registered = AdapterFactory.get_registered_classes()
         
-        # Valida input adapters
-        for adapter_name, adapter_config in config['adapters']['input'].items():
-            implementation = adapter_config.get('implementation', '').lower()
+        # Valida input adapters (ora sono liste con 'class')
+        if isinstance(config['adapters']['input'], list):
+            for adapter_config in config['adapters']['input']:
+                class_name = adapter_config.get('class', '')
+                
+                if class_name not in registered['input']:
+                    available = ', '.join(registered['input'])
+                    raise ValueError(
+                        f"Unknown input adapter class '{class_name}'. "
+                        f"Available: {available}"
+                    )
+        
+        # Valida output adapters (ora sono liste con 'class')
+        if isinstance(config['adapters']['output'], list):
+            for adapter_config in config['adapters']['output']:
+                class_name = adapter_config.get('class', '')
             
             # Skip disabled adapters
-            if implementation == 'disabled':
-                continue
-            
-            if implementation not in registered['input']:
-                available = ', '.join(registered['input'])
-                raise ValueError(
-                    f"Unknown input adapter implementation '{implementation}' "
-                    f"for adapter '{adapter_name}'. "
-                    f"Available: {available}"
-                )
-        
-        # Valida output adapters
-        for adapter_name, adapter_config in config['adapters']['output'].items():
-            implementation = adapter_config.get('implementation', '').lower()
-            
-            # Skip disabled adapters
-            if implementation == 'disabled':
-                continue
-            
-            if implementation not in registered['output']:
-                available = ', '.join(registered['output'])
-                raise ValueError(
-                    f"Unknown output adapter implementation '{implementation}' "
-                    f"for adapter '{adapter_name}'. "
-                    f"Available: {available}"
-                )
+                
+                if class_name not in registered['output']:
+                    available = ', '.join(registered['output'])
+                    raise ValueError(
+                        f"Unknown output adapter class '{class_name}'. "
+                        f"Available: {available}"
+                    )
     
     @classmethod
     def _log_config_summary(cls, config: Dict[str, Any]) -> None:

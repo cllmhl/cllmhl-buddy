@@ -26,12 +26,13 @@ class TestConfigLoader:
                 'temperature': 0.5
             },
             'adapters': {
-                'input': {
-                    'voice': {
-                        'implementation': 'jabra'
+                'input': [
+                    {
+                        'class': 'JabraVoiceInput',
+                        'config': {}
                     }
-                },
-                'output': {}
+                ],
+                'output': []
             }
         }
         
@@ -45,7 +46,7 @@ class TestConfigLoader:
             
             assert config['brain']['model_id'] == 'test-model'
             assert config['brain']['temperature'] == 0.5
-            assert 'voice' in config['adapters']['input']
+            assert len(config['adapters']['input']) == 1
         finally:
             Path(temp_path).unlink()
     
@@ -53,8 +54,8 @@ class TestConfigLoader:
         """Test validazione configurazione senza brain"""
         invalid_config = {
             'adapters': {
-                'input': {},
-                'output': {}
+                'input': [],
+                'output': []
             }
         }
         
@@ -88,13 +89,13 @@ class TestConfigLoader:
                 'temperature': 0.5
             },
             'adapters': {
-                'input': {
-                    'voice': {
-                        'implementation': 'unknown_adapter',
+                'input': [
+                    {
+                        'class': 'UnknownAdapter',
                         'config': {}
                     }
-                },
-                'output': {}
+                ],
+                'output': []
             }
         }
         
@@ -103,7 +104,7 @@ class TestConfigLoader:
             temp_path = f.name
         
         try:
-            with pytest.raises(ValueError, match="Unknown input adapter implementation 'unknown_adapter'"):
+            with pytest.raises(ValueError, match="Unknown input adapter class 'UnknownAdapter'"):
                 ConfigLoader.load(temp_path)
         finally:
             Path(temp_path).unlink()
@@ -116,13 +117,13 @@ class TestConfigLoader:
                 'temperature': 0.5
             },
             'adapters': {
-                'input': {},
-                'output': {
-                    'voice': {
-                        'implementation': 'nonexistent',
+                'input': [],
+                'output': [
+                    {
+                        'class': 'NonexistentAdapter',
                         'config': {}
                     }
-                }
+                ]
             }
         }
         
@@ -131,26 +132,21 @@ class TestConfigLoader:
             temp_path = f.name
         
         try:
-            with pytest.raises(ValueError, match="Unknown output adapter implementation 'nonexistent'"):
+            with pytest.raises(ValueError, match="Unknown output adapter class 'NonexistentAdapter'"):
                 ConfigLoader.load(temp_path)
         finally:
             Path(temp_path).unlink()
     
-    def test_validate_disabled_adapter_ok(self):
-        """Test che adapter 'disabled' non sollevi errore"""
+    def test_validate_empty_adapters_ok(self):
+        """Test che liste di adapter vuote non sollevino errore"""
         valid_config = {
             'brain': {
                 'model_id': 'test-model',
                 'temperature': 0.5
             },
             'adapters': {
-                'input': {
-                    'voice': {
-                        'implementation': 'disabled',
-                        'config': {}
-                    }
-                },
-                'output': {}
+                'input': [],
+                'output': []
             }
         }
         

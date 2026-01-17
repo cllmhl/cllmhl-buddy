@@ -53,8 +53,8 @@ class JabraVoiceInput(VoiceInputPort):
     Usa AudioDeviceManager per coordinamento con output.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione
         self.stt_mode = config.get('stt_mode', 'cloud').lower()
@@ -177,9 +177,8 @@ class JabraVoiceInput(VoiceInputPort):
                 self.porcupine = None
             raise
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker thread"""
-        self.input_queue = input_queue
         self.running = True
         
         if not self.enabled:
@@ -376,8 +375,8 @@ class MockVoiceInput(VoiceInputPort):
     Genera frasi simulate per testare il sistema.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 10.0)
         self.worker_thread = None
@@ -393,9 +392,8 @@ class MockVoiceInput(VoiceInputPort):
         
         logger.info(f"🎤 MockVoiceInput initialized")
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker"""
-        self.input_queue = input_queue
         self.running = True
         
         self.worker_thread = threading.Thread(

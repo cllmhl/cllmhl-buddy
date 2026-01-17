@@ -28,25 +28,24 @@ class InputPort(ABC):
     - SensorInputPort per sensori generici
     """
     
-    def __init__(self, name: str, config: dict):
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         """
         Args:
             name: Nome identificativo dell'adapter
             config: Configurazione specifica dell'adapter
+            input_queue: Coda centralizzata dove pubblicare gli eventi
         """
         self.name = name
         self.config = config
         self.running = False
-        self.input_queue: Optional[PriorityQueue] = None
+        self.input_queue = input_queue
         logger.info(f"🔌 InputPort '{name}' initialized")
     
     @abstractmethod
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """
         Avvia l'adapter.
-        
-        Args:
-            input_queue: Coda dove pubblicare gli eventi catturati
+        L'adapter usa self.input_queue per pubblicare eventi.
         """
         pass
     

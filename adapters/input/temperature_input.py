@@ -33,8 +33,8 @@ class TemperatureInput(TemperatureInputPort):
     Rileva temperatura e umidità tramite sensore GPIO.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione DHT11
         self.pin = config.get('pin', 4)
@@ -74,9 +74,8 @@ class TemperatureInput(TemperatureInputPort):
             logger.warning(f"⚠️ DHT11 initialization failed: {e}")
             self.dht11 = None
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker thread"""
-        self.input_queue = input_queue
         self.running = True
         
         if self.dht11:
@@ -159,17 +158,16 @@ class MockTemperatureInput(TemperatureInputPort):
     Genera dati fake per simulare sensore temperatura/umidità.
     """
     
-    def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 10.0)
         self.worker_thread = None
         
         logger.info(f"🌡️  MockTemperatureInput initialized")
     
-    def start(self, input_queue: PriorityQueue) -> None:
+    def start(self) -> None:
         """Avvia worker"""
-        self.input_queue = input_queue
         self.running = True
         
         self.worker_thread = threading.Thread(
