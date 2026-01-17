@@ -62,8 +62,13 @@ class BuddyBrain:
             )
             logger.info("✅ Chat session initialized")
             
+        except (ValueError, TypeError) as e:
+            # Configuration errors - fail fast
+            logger.error(f"❌ Invalid chat configuration: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize chat session: {e}") from e
         except Exception as e:
-            logger.error(f"❌ Failed to initialize chat session: {e}")
+            # Network/API errors - critical but allow retry
+            logger.error(f"❌ Failed to initialize chat session: {e}", exc_info=True)
             self.chat_session = None
     
     def process_event(self, input_event: Event) -> List[Event]:
@@ -92,8 +97,12 @@ class BuddyBrain:
             else:
                 logger.warning(f"Unhandled event type: {input_event.type}")
         
+        except KeyboardInterrupt:
+            logger.info("Brain interrupted by user")
+            raise
         except Exception as e:
-            logger.error(f"Brain processing error: {e}", exc_info=True)
+            logger.error(f"Brain processing error for event {input_event.type}: {e}", exc_info=True)
+            # Non propaghiamo per non bloccare il sistema, ma loggiamo tutto
         
         return output_events
     
@@ -168,7 +177,8 @@ class BuddyBrain:
         Logica isolata per facilitare testing/mocking.
         """
         if not self.chat_session:
-            return "Errore: Sessione LLM non disponibile."
+            logger.error("Chat session not available - cannot generate response")
+            return "Mi dispiace, non sono momentaneamente disponibile."
         
         try:
             response = self.chat_session.send_message(user_text)
@@ -179,9 +189,14 @@ class BuddyBrain:
             
             return response.text
             
+        except (ValueError, TypeError) as e:
+            # Input/configuration errors - log and return graceful message
+            logger.error(f"Invalid input for LLM: {e}", exc_info=True)
+            return "Mi dispiace, non ho capito la richiesta."
         except Exception as e:
-            logger.error(f"LLM generation error: {e}")
-            return f"Errore neurale: {str(e)}"
+            # Network/API errors - log with full trace
+            logger.error(f"LLM API error: {e}", exc_info=True)
+            return "Mi dispiace, ho avuto un problema tecnico."
     
     def reset_session(self) -> None:
         """Reset della sessione chat (utile per testing)"""

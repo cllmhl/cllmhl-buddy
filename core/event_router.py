@@ -107,7 +107,8 @@ class EventRouter:
                 except queue.Full:
                     logger.error(
                         f"❌ Queue FULL for {event.type.value}! "
-                        f"Event dropped: {event.content}"
+                        f"Event dropped: {event.content}",
+                        exc_info=True
                     )
                     self._stats['dropped'] += 1
             

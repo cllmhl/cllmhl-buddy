@@ -149,19 +149,35 @@ class ConfigLoader:
             
         Returns:
             Dict con configurazione brain
+            
+        Raises:
+            FileNotFoundError: Se il file non esiste
+            json.JSONDecodeError: Se il file non è JSON valido
+            ValueError: Se la configurazione è vuota o invalida
         """
         import json
         
+        config_file = Path(json_path)
+        
+        if not config_file.exists():
+            error_msg = f"Configuration file not found: {json_path}"
+            logger.error(f"❌ {error_msg}")
+            raise FileNotFoundError(error_msg)
+        
         try:
-            with open(json_path, 'r') as f:
+            with open(config_file, 'r') as f:
                 data = json.load(f)
             
-            logger.info(f"✅ Loaded buddy_config.json")
+            if not data:
+                raise ValueError(f"Configuration file is empty: {json_path}")
+            
+            logger.info(f"✅ Loaded {json_path}")
             return data
             
-        except FileNotFoundError:
-            logger.warning(f"⚠️  {json_path} not found")
-            return {}
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON in {json_path}: {e}"
+            logger.error(f"❌ {error_msg}", exc_info=True)
+            raise
         except Exception as e:
-            logger.error(f"❌ Error loading {json_path}: {e}")
-            return {}
+            logger.error(f"❌ Error loading {json_path}: {e}", exc_info=True)
+            raise

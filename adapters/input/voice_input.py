@@ -159,8 +159,8 @@ class JabraVoiceInput(VoiceInputPort):
             if self.porcupine:
                 try:
                     self.porcupine.delete()
-                except:
-                    pass
+                except Exception as cleanup_err:
+                    logger.debug(f"Porcupine cleanup error: {cleanup_err}")
                 self.porcupine = None
             raise RuntimeError("Voice input hardware unavailable") from e
         except Exception as e:
@@ -172,8 +172,8 @@ class JabraVoiceInput(VoiceInputPort):
             if self.porcupine:
                 try:
                     self.porcupine.delete()
-                except:
-                    pass
+                except Exception as cleanup_err:
+                    logger.debug(f"Porcupine cleanup error: {cleanup_err}")
                 self.porcupine = None
             raise
     
@@ -206,14 +206,14 @@ class JabraVoiceInput(VoiceInputPort):
         if self.recorder:
             try:
                 self.recorder.delete()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Recorder cleanup error: {e}")
         
         if self.porcupine:
             try:
                 self.porcupine.delete()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Porcupine cleanup error: {e}")
         
         if self.led_ascolto:
             self.led_ascolto.off()
@@ -275,13 +275,13 @@ class JabraVoiceInput(VoiceInputPort):
             if self.recorder:
                 try:
                     self.recorder.delete()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Recorder cleanup error: {e}")
             if self.porcupine:
                 try:
                     self.porcupine.delete()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Porcupine cleanup error: {e}")
             if self.led_ascolto:
                 self.led_ascolto.off()
     
