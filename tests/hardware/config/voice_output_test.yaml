@@ -1,0 +1,44 @@
+# Test Voice Output Hardware - Interactive Mode
+# DirectOutputInput + JabraVoiceOutput per testare TTS
+
+buddy_home: ${BUDDY_HOME:-.}
+
+# Brain - configurazione minima
+brain:
+  model_id: "gemini-2.0-flash-exp"
+  generation_config:
+    temperature: 0.7
+    max_tokens: 150
+  archivist_interval: 300.0
+
+# Queues
+queues:
+  input_maxsize: 100
+  output_maxsize: 50
+
+# Logging
+logging:
+  log_file: "logs/voice_output_test.log"
+  max_bytes: 5242880
+  backup_count: 2
+
+# Adapters
+adapters:
+  # Input: DirectOutputInput in modalità interattiva
+  input:
+    - class: "DirectOutputInput"
+      config:
+        mode: "interactive"  # Menu per test TTS manuali
+  
+  # Output: Jabra Voice Output + console
+  output:
+    - class: "JabraVoiceOutput"
+      config:
+        tts_mode: "cloud"  # o "local" per Piper
+        voice_name: "paola"
+        led_stato_pin: 21
+        queue_maxsize: 50
+    
+    - class: "ConsoleOutput"
+      config:
+        verbose: true

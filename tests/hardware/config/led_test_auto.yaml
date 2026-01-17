@@ -1,0 +1,71 @@
+# Test LED Hardware - Sequence Mode (automatico)
+# Esegue una sequenza predefinita di test LED
+
+buddy_home: ${BUDDY_HOME:-.}
+
+# Brain - configurazione minima
+brain:
+  model_id: "gemini-2.0-flash-exp"
+  generation_config:
+    temperature: 0.7
+    max_tokens: 150
+  archivist_interval: 300.0
+
+# Queues
+queues:
+  input_maxsize: 100
+  output_maxsize: 50
+
+# Logging
+logging:
+  log_file: "logs/led_test_auto.log"
+  max_bytes: 5242880
+  backup_count: 2
+
+# Adapters
+adapters:
+  # Input: DirectOutputInput con sequenza automatica
+  input:
+    - class: "DirectOutputInput"
+      config:
+        mode: "sequence"  # Esegue sequenza e termina
+        sequence:
+          # Test LED Ascolto
+          - type: "LED_ON"
+            metadata: {led: "ascolto"}
+            delay: 2.0
+          
+          - type: "LED_OFF"
+            metadata: {led: "ascolto"}
+            delay: 1.0
+          
+          # Test LED Stato
+          - type: "LED_ON"
+            metadata: {led: "stato"}
+            delay: 2.0
+          
+          - type: "LED_OFF"
+            metadata: {led: "stato"}
+            delay: 1.0
+          
+          # Test Blink Ascolto
+          - type: "LED_BLINK"
+            metadata: {led: "ascolto", times: 3}
+            delay: 2.0
+          
+          # Test Blink Stato
+          - type: "LED_BLINK"
+            metadata: {led: "stato", times: 5}
+            delay: 2.0
+  
+  # Output: LED reali + console
+  output:
+    - class: "GPIOLEDOutput"
+      config:
+        led_ascolto_pin: 26
+        led_stato_pin: 21
+        queue_maxsize: 50
+    
+    - class: "ConsoleOutput"
+      config:
+        verbose: true

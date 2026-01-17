@@ -1,260 +1,310 @@
-from logging.handlers import RotatingFileHandler
+"""
+Buddy Main - Hexagonal Architecture Orchestrator
+Entry point con Event-Driven Architecture e Router Pattern.
+"""
+
 import os
 import sys
-import stat
-import logging
-from dotenv import load_dotenv
-import threading
 import queue
-import time
-from dataclasses import dataclass # Mantenuto per compatibilità type checking se serve
+import logging
+from pathlib import Path
+from typing import Dict, Any
+from logging.handlers import RotatingFileHandler
+from dotenv import load_dotenv
 
-# Le tue classi esistenti
-from database_buddy import BuddyDatabase
-from brain import BuddyBrain
-from archivist import BuddyArchivist
+# Core imports
+from core import (
+    Event, EventType, EventPriority,
+    EventRouter, BuddyBrain
+)
 
-# Nuova gestione IO separata
-from io_buddy import BuddyEars, BuddyVoice, silence_alsa, BuddyEvent
+# Adapters imports
+from adapters import AdapterFactory
 
-# Modulo sensori fisici
-from senses import BuddySenses, SensorEvent
+# Config imports
+from config.config_loader import ConfigLoader
 
-# --- CONFIGURAZIONE LOGGING ---
-handler = RotatingFileHandler('buddy_system.log', maxBytes=10*1024*1024, backupCount=1)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
-handler.setFormatter(formatter)
 
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("chromadb").setLevel(logging.INFO)
-logging.getLogger("posthog").setLevel(logging.ERROR)
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
-
-# --- CONFIGURAZIONE NAMED PIPE (FIFO) ---
-PIPE_PATH = "/tmp/buddy_pipe"
-
-def create_pipe():
-    """Crea la Named Pipe se non esiste."""
-    if os.path.exists(PIPE_PATH):
-        # Rimuovi pipe esistente (potrebbe essere rimasta da una sessione precedente)
-        try:
-            os.unlink(PIPE_PATH)
-        except Exception as e:
-            logger.warning(f"Impossibile rimuovere pipe esistente: {e}")
+# ===== LOGGING SETUP =====
+def setup_logging(config: Dict[str, Any]) -> None:
+    """
+    Configura il sistema di logging
     
-    try:
-        os.mkfifo(PIPE_PATH)
-        # Permessi di lettura/scrittura per tutti (così puoi scrivere anche come altro user)
-        os.chmod(PIPE_PATH, 0o666)
-        logger.info(f"Named Pipe creata: {PIPE_PATH}")
-    except Exception as e:
-        logger.error(f"Errore creazione Named Pipe: {e}")
-        raise
-
-def keyboard_thread(event_queue):
-    """Legge comandi dalla tastiera (stdin)."""
-    logger.info("Thread tastiera avviato")
-    print("Tu > ", end="", flush=True)
+    Args:
+        config: Configurazione completa di Buddy
+    """
+    log_config = config['logging']
+    buddy_home = Path(config['buddy_home'])
     
-    while True:
-        try:
-            text = input()
-            if text:
-                event = BuddyEvent(source="terminal", content=text, timestamp=time.time())
-                event_queue.put(event)
-                print("Tu > ", end="", flush=True)
-        except EOFError:
-            logger.info("EOF ricevuto, thread tastiera termina")
-            break
-        except Exception as e:
-            logger.error(f"Errore lettura tastiera: {e}")
-            break
-
-def pipe_thread(event_queue):
-    """Legge comandi dalla Named Pipe."""
-    logger.info(f"Thread Pipe avviato. In ascolto su {PIPE_PATH}")
+    log_file_path = log_config.get('log_file', 'buddy_system.log')
     
-    while True:
-        try:
-            # Apre la pipe in modalità lettura (blocca fino a quando qualcuno scrive)
-            with open(PIPE_PATH, 'r') as pipe:
-                for line in pipe:
-                    text = line.strip()
-                    if text:
-                        logger.info(f"Comando ricevuto da pipe: {text}")
-                        event = BuddyEvent(source="pipe", content=text, timestamp=time.time())
-                        event_queue.put(event)
-        except Exception as e:
-            logger.error(f"Errore lettura pipe: {e}")
-            time.sleep(1)  # Attendi prima di riprovare
-
-# --- MAIN ---
-def main():
-    # Silenzia ALSA (definito in io_buddy)
-    silence_alsa()
-
-    # Carica configurazione
-    load_dotenv("config.env")
-    load_dotenv(".env")
+    # Risolvi il path del log rispetto a BUDDY_HOME
+    log_file = buddy_home / log_file_path if not Path(log_file_path).is_absolute() else Path(log_file_path)
     
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        logger.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente")
-        print("Errore: GOOGLE_API_KEY non configurata. Controlla config.env o .env")
-        return
+    # Crea directory del log se non esiste
+    log_file.parent.mkdir(parents=True, exist_ok=True)
     
-    # Coda centrale eventi
-    event_queue = queue.Queue()
+    max_bytes = log_config.get('max_bytes', 10*1024*1024)
+    backup_count = log_config.get('backup_count', 3)
+    
+    handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    handler.setFormatter(formatter)
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    
+    # Root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    logger.addHandler(console_handler)
+    
+    # Silence noisy libraries
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("chromadb").setLevel(logging.INFO)
+    logging.getLogger("posthog").setLevel(logging.ERROR)
 
-    # Inizializzazione Sottosistemi
-    try:
-        db = BuddyDatabase()
-        buddy = BuddyBrain(api_key)
-        archivist = BuddyArchivist(api_key=api_key)
+
+# ===== MAIN ORCHESTRATOR =====
+class BuddyOrchestrator:
+    """
+    Orchestratore principale di Buddy.
+    
+    Responsabilità:
+    - Setup code e router
+    - Inizializzazione Brain
+    - Creazione e avvio adapters
+    - Main event loop
+    - Gestione shutdown
+    """
+    
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Args:
+            config: Configurazione già caricata e validata
+        """
+        self.logger = logging.getLogger(__name__)
+        self.running = False
         
-        # IO Systems
-        voice = BuddyVoice() # Gestisce TTS e LED Verde
-        # Ears ha bisogno della coda per inviare eventi e del flag 'speaking' della voce per non ascoltarsi
-        ears = BuddyEars(event_queue, voice.is_speaking_event) # Gestisce Mic e LED Blu
+        # Usa configurazione già caricata
+        self.config = config
+        self.buddy_home = Path(config['buddy_home'])
         
-        # Sensor Systems
-        sensor_config = {
-            'radar_enabled': os.getenv('RADAR_ENABLED', 'true').lower() == 'true',
-            'radar_port': os.getenv('RADAR_PORT', '/dev/ttyAMA0'),
-            'radar_baudrate': int(os.getenv('RADAR_BAUDRATE', '256000')),
-            'dht11_enabled': os.getenv('DHT11_ENABLED', 'true').lower() == 'true',
-            'dht11_pin': int(os.getenv('DHT11_PIN', '4')),
-            'radar_interval': float(os.getenv('RADAR_INTERVAL', '0.5')),
-            'dht11_interval': float(os.getenv('DHT11_INTERVAL', '30.0'))
-        }
-        senses = BuddySenses(event_queue, sensor_config)
+        # Setup coda di input centralizzata
+        queue_config = self.config['queues']
+        self.input_queue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
         
-        logger.info("Sottosistemi inizializzati correttamente")
-    except Exception as e:
-        print(f"Errore critico in avvio: {e}")
-        return
-
-    # Crea Named Pipe per input comandi
-    create_pipe()
+        # Event Router
+        self.router = EventRouter()
+        
+        # Brain
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment")
+        
+        self.brain = BuddyBrain(api_key, self.config['brain'])
+        
+        # Adapters - creati PRIMA del setup routes
+        self.input_adapters = []
+        self.output_adapters = []
+        self._create_adapters()
+        
+        # Setup routes DOPO aver creato gli adapters
+        self._setup_routes()
+        
+        self.logger.info("🚀 BuddyOrchestrator initialized")
     
-    # Avvio Threads Input
-    # Rileva se c'è un terminale interattivo (stdin connesso)
-    has_terminal = sys.stdin.isatty()
+    def _setup_routes(self) -> None:
+        """
+        Configura le route del router in modo DINAMICO interrogando gli adapter output.
+        Il routing viene costruito dai metodi handled_events() delle Port.
+        Ogni adapter si registra direttamente al router.
+        """
+        # Registra ogni adapter per gli eventi che gestisce
+        for adapter in self.output_adapters:
+            handled_events = adapter.__class__.handled_events()
+            for event_type in handled_events:
+                self.router.register_route(
+                    event_type,
+                    adapter,
+                    adapter.name
+                )
+        
+        # Count unique event types registered
+        event_type_count = len(set(
+            event_type 
+            for adapter in self.output_adapters 
+            for event_type in adapter.__class__.handled_events()
+        ))
+        
+        self.logger.info(
+            f"📍 Router configured dynamically with {event_type_count} event types "
+            f"across {len(self.output_adapters)} adapters"
+        )
     
-    if has_terminal:
-        # Modalità interattiva: tastiera + pipe
-        t_kbd = threading.Thread(target=keyboard_thread, args=(event_queue,), daemon=True, name="KbdThread")
-        t_kbd.start()
-        logger.info("Modalità INTERATTIVA: Tastiera + Pipe attivi")
-    else:
-        # Modalità servizio: solo pipe
-        logger.info("Modalità SERVIZIO: Solo Pipe attiva")
+    def _create_adapters(self) -> None:
+        """Crea adapters dalla configurazione usando Factory"""
+        # Input Adapters - passano input_queue nel costruttore
+        for adapter_cfg in self.config['adapters']['input']:
+            class_name = adapter_cfg.get('class')
+            config = adapter_cfg.get('config', {})
+            
+            adapter = AdapterFactory.create_input_adapter(
+                class_name, 
+                config,
+                self.input_queue
+            )
+            if adapter:
+                self.input_adapters.append(adapter)
+        
+        # Output Adapters - autocontenuti con code interne
+        for adapter_cfg in self.config['adapters']['output']:
+            class_name = adapter_cfg.get('class')
+            config = adapter_cfg.get('config', {})
+            
+            adapter = AdapterFactory.create_output_adapter(class_name, config)
+            if adapter:
+                self.output_adapters.append(adapter)
+        
+        self.logger.info(
+            f"✅ Adapters created: {len(self.input_adapters)} input, "
+            f"{len(self.output_adapters)} output"
+        )
     
-    # Thread Pipe sempre attivo
-    t_pipe = threading.Thread(target=pipe_thread, args=(event_queue,), daemon=True, name="PipeThread")
-    t_pipe.start()
+    def _start_adapters(self) -> None:
+        """Avvia tutti gli adapters"""
+        # Start input adapters (non ricevono più la coda - ce l'hanno già)
+        for adapter in self.input_adapters:
+            try:
+                adapter.start()
+                self.logger.info(f"▶️  Started input adapter: {adapter.name}")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
+        
+        # Start output adapters (non ricevono più la coda come parametro)
+        for adapter in self.output_adapters:
+            try:
+                adapter.start()
+                self.logger.info(f"▶️  Started output adapter: {adapter.name}")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
     
-    ears.start() # Avvia il thread di ascolto (Jabra)
-    senses.start() # Avvia il thread di lettura sensori
-
-    print("\n--- Buddy OS Online (Refactored) ---")
-    print(f"Audio Mode: STT={ears.mode.upper()} / TTS={voice.mode.upper()}")
-    print(f"Wake Word: {'ATTIVO ✅' if ears.enabled else 'DISABILITATO ⚠️'}")
-    print(f"Sensori: Radar={'✅' if senses.radar.enabled else '⚠️'} | DHT11={'✅' if senses.dht11.enabled else '⚠️'}")
+    def _stop_adapters(self) -> None:
+        """Ferma tutti gli adapters"""
+        self.logger.info("Stopping adapters...")
+        
+        for adapter in self.input_adapters:
+            try:
+                adapter.stop()
+            except Exception as e:
+                self.logger.error(f"Error stopping {adapter.name}: {e}")
+        
+        for adapter in self.output_adapters:
+            try:
+                adapter.stop()
+            except Exception as e:
+                self.logger.error(f"Error stopping {adapter.name}: {e}")
     
-    if has_terminal:
-        print(f"Input: TASTIERA + Pipe ({PIPE_PATH})")
-        print("Scrivi direttamente o usa: ./scripts/buddy_cmd.sh 'messaggio'\n")
-    else:
-        print(f"Input: Pipe ({PIPE_PATH})")
-        print("Comandi: echo 'messaggio' > /tmp/buddy_pipe\n")
-
-    last_archive_time = time.time()
-
-    try:
-        while True:
-            # 1. GESTIONE EVENTI
-            if not event_queue.empty():
-                event = event_queue.get()
-                
-                # Distingui tra eventi BuddyEvent (audio/pipe) e SensorEvent
-                if isinstance(event, SensorEvent):
-                    # Gestione eventi sensori
-                    logger.info(f"Evento sensore: {event.sensor_type} = {event.value}")
-                    
-                    # Logica proattiva basata sui sensori
-                    if event.sensor_type == "radar_presence":
-                        if event.value:  # Presenza rilevata
-                            logger.info("👋 Presenza rilevata dal radar!")
-                            # Qui potremmo implementare la logica proattiva
-                            # Es: "Presenza + Silenzio > 2 ore" -> Buddy saluta
-                        else:
-                            logger.info("👻 Nessuna presenza rilevata")
-                    
-                    elif event.sensor_type == "temperature":
-                        logger.info(f"🌡️  Temperatura aggiornata: {event.value:.1f}°C")
-                        # Buddy potrebbe commentare se la temperatura è anomala
-                    
-                    elif event.sensor_type == "humidity":
-                        logger.info(f"💧 Umidità aggiornata: {event.value:.1f}%")
-                    
-                    event_queue.task_done()
+    def run(self) -> None:
+        """Main event loop"""
+        self.running = True
+        
+        # Avvia adapters
+        self._start_adapters()
+        
+        # Banner
+        self._print_banner()
+        
+        self.logger.info("🧠 Entering main event loop")
+        
+        try:
+            while self.running:
+                # Preleva evento input (blocca se vuota, timeout 1s)
+                try:
+                    queue_item = self.input_queue.get(timeout=1.0)
+                    # PriorityQueue contiene (priority, event)
+                    if isinstance(queue_item, tuple):
+                        _, input_event = queue_item
+                    else:
+                        input_event = queue_item
+                except queue.Empty:
                     continue
                 
-                # Gestione uscita
-                if event.content.lower() in ["esci", "quit", "spegniti"]:
-                    logger.info("Ricevuto comando di spegnimento")
-                    print("\nBuddy: Shutdown...")
-                    # Se l'input era vocale, saluta
-                    if event.source == "jabra":
-                        voice.speak("Mi sto spegnendo.")
-                    break
-
-                # UI Feedback
-                if event.source == "jabra":
-                    print(f"\rTu (voce) > {event.content}")
-                elif event.source == "pipe":
-                    print(f"\rTu (pipe) > {event.content}")
-                # Se source == "terminal" il prompt è già gestito da keyboard_thread
+                # Check shutdown
+                if input_event.type == EventType.SHUTDOWN:
+                    self.logger.info("Shutdown event received")
+                    self.running = False
+                    # Processa comunque per salutare se necessario
                 
-                logger.info(f"Input processato ({event.source}): {event.content}")
-
-                # Processo Cognitivo
-                # Nota: Non accendiamo più i LED manualmente qui, lo fa voice.speak() o ears.listen() internamente
-                # Se volessimo un LED per il "pensiero", potremmo aggiungerlo a io_buddy o usare uno dei led esistenti.
+                # Brain processa evento
+                output_events = self.brain.process_event(input_event)
                 
-                db.add_history("user", event.content)
-                risposta = buddy.respond(event.content)
-                db.add_history("model", risposta)
-
-                # Output
-                print(f"Buddy > {risposta}")
-
-                # Parla solo se l'input era vocale (o configurabile diversamente in futuro)
-                if event.source == "jabra":
-                    voice.speak(risposta)
+                # Router smista output events
+                self.router.route_events(output_events)
                 
-                event_queue.task_done()
+                self.input_queue.task_done()
+        
+        except KeyboardInterrupt:
+            self.logger.info("KeyboardInterrupt received")
+        
+        finally:
+            self._shutdown()
+    
+    def _shutdown(self) -> None:
+        """Procedura di shutdown pulita"""
+        self.logger.info("🛑 Shutting down Buddy...")
+        
+        self._stop_adapters()
+        
+        # Statistiche router
+        stats = self.router.get_stats()
+        self.logger.info(f"📊 Router stats: {stats}")
+        
+        self.logger.info("👋 Buddy shutdown complete")
+    
+    def _print_banner(self) -> None:
+        """Stampa banner di avvio"""
+        print("\n" + "="*60)
+        print("🤖 BUDDY OS - Hexagonal Architecture")
+        print("="*60)
+        print(f"Brain Model: {self.config['brain']['model_id']}")
+        print(f"Input Adapters: {len(self.input_adapters)}")
+        print(f"Output Adapters: {len(self.output_adapters)}")
+        print("="*60 + "\n")
 
-            # 2. GESTIONE ARCHIVISTA
-            current_time = time.time()
-            if current_time - last_archive_time > 30:
-                unprocessed = db.get_unprocessed_history()
-                if len(unprocessed) > 0:
-                    logger.debug(f"Avvio archiviazione per {len(unprocessed)} messaggi")
-                    archivist.distill_and_save(db)
-                last_archive_time = current_time
-            
-            time.sleep(0.05)
 
-    except KeyboardInterrupt:
-        print("\nBuddy: Arresto forzato.")
-        logger.warning("Arresto forzato da tastiera")
-    finally:
-        # Cleanup sensori
-        senses.stop()
+# ===== ENTRY POINT =====
+def main():
+    """Entry point principale"""
+    
+    # Carica variabili d'ambiente
+    load_dotenv(".env")
+    
+    # Carica configurazione (gestisce BUDDY_HOME e BUDDY_CONFIG internamente)
+    try:
+        config = ConfigLoader.from_env()
+    except (ValueError, FileNotFoundError) as e:
+        print(f"❌ ERROR: {e}")
+        sys.exit(1)
+    
+    # Setup logging
+    setup_logging(config)
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"🏠 BUDDY_HOME: {config['buddy_home']}")
+    logger.info(f"🚀 Starting Buddy with config: {config.get('_config_file', 'unknown')}")
+    
+    try:
+        # Crea e avvia orchestrator
+        orchestrator = BuddyOrchestrator(config)
+        orchestrator.run()
+        
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}", exc_info=True)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
