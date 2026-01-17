@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Core imports
 from core import (
-    Event, EventType, EventPriority,
+    Event, EventType, EventPriority, OutputChannel,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )
@@ -128,11 +128,11 @@ class BuddyOrchestrator:
             if adapter:
                 self.input_adapters.append(adapter)
         
-        # Output Adapters
+        # Output Adapters - Mapping canali -> code
         output_queue_map = {
-            'voice': self.voice_queue,
-            'led': self.led_queue,
-            'database': self.database_queue
+            OutputChannel.VOICE.value: self.voice_queue,
+            OutputChannel.LED.value: self.led_queue,
+            OutputChannel.DATABASE.value: self.database_queue
         }
         
         for name, cfg in self.config['adapters']['output'].items():
