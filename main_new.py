@@ -79,14 +79,9 @@ class BuddyOrchestrator:
         # Carica configurazione
         self.config = ConfigLoader.load(config_path)
         
-        # Setup code con priorità
+        # Setup coda di input centralizzata
         queue_config = self.config['queues']
         self.input_queue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
-        
-        # Code output (una per canale)
-        self.voice_queue = queue.PriorityQueue(maxsize=queue_config['voice_maxsize'])
-        self.led_queue = queue.PriorityQueue(maxsize=queue_config['led_maxsize'])
-        self.database_queue = queue.PriorityQueue(maxsize=queue_config['database_maxsize'])
         
         # Event Router
         self.router = EventRouter()
@@ -111,72 +106,48 @@ class BuddyOrchestrator:
     def _setup_routes(self) -> None:
         """
         Configura le route del router in modo DINAMICO interrogando gli adapter output.
-        Il routing viene costruito dai metodi handled_events() e channel_type delle Port.
+        Il routing viene costruito dai metodi handled_events() delle Port.
+        Ogni adapter si registra direttamente al router.
         """
-        # Mappa canali -> code
-        queue_map = {
-            OutputChannel.VOICE: self.voice_queue,
-            OutputChannel.LED: self.led_queue,
-            OutputChannel.DATABASE: self.database_queue
-        }
-        
         # Costruisci routing dinamico dagli adapter configurati
         event_routing = build_event_routing_from_adapters(self.output_adapters)
         
-        # Registra tutte le route
+        # Registra ogni adapter per gli eventi che gestisce
         for event_type, channel in event_routing.items():
-            if channel in queue_map:
-                self.router.register_route(
-                    event_type,
-                    queue_map[channel],
-                    f"{channel.value}_output"
-                )
+            # Trova l'adapter che gestisce questo channel
+            for adapter in self.output_adapters:
+                if adapter.channel_type == channel:
+                    self.router.register_route(
+                        event_type,
+                        adapter,
+                        adapter.name
+                    )
         
         self.logger.info(
-            f"📍 Router configured dynamically with {len(event_routing)} routes "
+            f"📍 Router configured dynamically with {len(event_routing)} event types "
             f"across {len(self.output_adapters)} adapters"
         )
     
     def _create_adapters(self) -> None:
         """Crea adapters dalla configurazione usando Factory"""
+        # Estrai configurazioni dimensioni code
+        queue_config = self.config['queues']
+        
         # Input Adapters
         for name, cfg in self.config['adapters']['input'].items():
             adapter = AdapterFactory.create_input_adapter(name, cfg)
             if adapter:
                 self.input_adapters.append(adapter)
         
-        # Output Adapters - Mapping canali -> code
-        output_queue_map = {
-            OutputChannel.VOICE.value: self.voice_queue,
-            OutputChannel.LED.value: self.led_queue,
-            OutputChannel.DATABASE.value: self.database_queue
-        }
-        
+        # Output Adapters - autocontenuti con code interne
         for name, cfg in self.config['adapters']['output'].items():
+            # Passa la dimensione della coda specifica per questo canale
+            queue_size = queue_config.get(f'{name}_maxsize', 50)
+            cfg['queue_maxsize'] = queue_size
+            
             adapter = AdapterFactory.create_output_adapter(name, cfg)
-            if adapter and name in output_queue_map:
-                # Validazione: verifica che il channel_type dell'adapter
-                # corrisponda al canale configurato
-                expected_channel = None
-                for channel in OutputChannel:
-                    if channel.value == name:
-                        expected_channel = channel
-                        break
-                
-                if expected_channel and hasattr(adapter, 'channel_type'):
-                    if adapter.channel_type != expected_channel:
-                        self.logger.error(
-                            f"❌ CONFIGURATION ERROR: Adapter '{adapter.name}' "
-                            f"has channel_type={adapter.channel_type.value} "
-                            f"but is configured under channel '{name}'. "
-                            f"This is a dangerous mismatch!"
-                        )
-                        raise ValueError(
-                            f"Adapter channel mismatch: {adapter.name} "
-                            f"({adapter.channel_type.value}) configured as '{name}'"
-                        )
-                
-                self.output_adapters.append((adapter, output_queue_map[name]))
+            if adapter:
+                self.output_adapters.append(adapter)
         
         self.logger.info(
             f"✅ Adapters created: {len(self.input_adapters)} input, "
@@ -193,10 +164,10 @@ class BuddyOrchestrator:
             except Exception as e:
                 self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
         
-        # Start output adapters
-        for adapter, output_queue in self.output_adapters:
+        # Start output adapters (non ricevono più la coda come parametro)
+        for adapter in self.output_adapters:
             try:
-                adapter.start(output_queue)
+                adapter.start()
                 self.logger.info(f"▶️  Started output adapter: {adapter.name}")
             except Exception as e:
                 self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
@@ -211,7 +182,7 @@ class BuddyOrchestrator:
             except Exception as e:
                 self.logger.error(f"Error stopping {adapter.name}: {e}")
         
-        for adapter, _ in self.output_adapters:
+        for adapter in self.output_adapters:
             try:
                 adapter.stop()
             except Exception as e:
@@ -221,8 +192,7 @@ class BuddyOrchestrator:
         """Main event loop"""
         self.running = True
         
-        # Crea e avvia adapters
-        self._create_adapters()
+        # Avvia adapters
         self._start_adapters()
         
         # Banner

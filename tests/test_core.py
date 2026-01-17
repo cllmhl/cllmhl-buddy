@@ -14,6 +14,19 @@ from core import (
 )
 
 
+# Mock adapter per testing router
+class MockOutputAdapter:
+    """Mock adapter per testing EventRouter"""
+    def __init__(self, name):
+        self.name = name
+        self.events_received = []
+    
+    def send_event(self, event):
+        """Simula send_event() dell'adapter"""
+        self.events_received.append(event)
+        return True
+
+
 class TestEvents:
     """Test per il sistema di eventi"""
     
@@ -103,9 +116,9 @@ class TestEventRouter:
     def test_register_route(self):
         """Test registrazione route"""
         router = EventRouter()
-        test_queue = queue.PriorityQueue()
+        mock_adapter = MockOutputAdapter("test_adapter")
         
-        router.register_route(EventType.SPEAK, test_queue, "test_adapter")
+        router.register_route(EventType.SPEAK, mock_adapter, "test_adapter")
         
         routes = router.get_routes()
         assert EventType.SPEAK in routes
@@ -114,18 +127,16 @@ class TestEventRouter:
     def test_route_event_success(self):
         """Test routing evento con successo"""
         router = EventRouter()
-        test_queue = queue.PriorityQueue()
+        mock_adapter = MockOutputAdapter("voice")
         
-        router.register_route(EventType.SPEAK, test_queue, "voice")
+        router.register_route(EventType.SPEAK, mock_adapter, "voice")
         
         event = create_output_event(EventType.SPEAK, "test")
         routed = router.route_event(event)
         
         assert routed == 1
-        assert not test_queue.empty()
-        
-        received = test_queue.get()
-        assert received.content == "test"
+        assert len(mock_adapter.events_received) == 1
+        assert mock_adapter.events_received[0].content == "test"
     
     def test_route_event_no_route(self):
         """Test routing evento senza route registrate"""
@@ -141,27 +152,27 @@ class TestEventRouter:
     def test_route_multiple_destinations(self):
         """Test broadcast a multiple destinazioni"""
         router = EventRouter()
-        queue1 = queue.PriorityQueue()
-        queue2 = queue.PriorityQueue()
+        adapter1 = MockOutputAdapter("db1")
+        adapter2 = MockOutputAdapter("db2")
         
         # Registra due destinazioni per lo stesso evento
-        router.register_route(EventType.SAVE_HISTORY, queue1, "db1")
-        router.register_route(EventType.SAVE_HISTORY, queue2, "db2")
+        router.register_route(EventType.SAVE_HISTORY, adapter1, "db1")
+        router.register_route(EventType.SAVE_HISTORY, adapter2, "db2")
         
         event = create_output_event(EventType.SAVE_HISTORY, "save data")
         routed = router.route_event(event)
         
         assert routed == 2
-        assert not queue1.empty()
-        assert not queue2.empty()
+        assert len(adapter1.events_received) == 1
+        assert len(adapter2.events_received) == 1
     
     def test_route_events_batch(self):
         """Test routing batch di eventi"""
         router = EventRouter()
-        test_queue = queue.PriorityQueue()
+        mock_adapter = MockOutputAdapter("voice_db")
         
-        router.register_route(EventType.SPEAK, test_queue, "voice")
-        router.register_route(EventType.SAVE_HISTORY, test_queue, "db")
+        router.register_route(EventType.SPEAK, mock_adapter, "voice")
+        router.register_route(EventType.SAVE_HISTORY, mock_adapter, "db")
         
         events = [
             create_output_event(EventType.SPEAK, "speak1"),

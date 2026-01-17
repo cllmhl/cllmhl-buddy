@@ -20,7 +20,8 @@ class DatabaseOutput(DatabaseOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 50)
+        super().__init__(name, config, queue_maxsize)
         
         # Configurazione database
         sqlite_path = config.get('sqlite_path', 'buddy_system.db')
@@ -36,9 +37,8 @@ class DatabaseOutput(DatabaseOutputPort):
         
         self.worker_thread = None
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia worker"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia worker che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(
@@ -134,13 +134,13 @@ class MockDatabaseOutput(DatabaseOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 50)
+        super().__init__(name, config, queue_maxsize)
         self.worker_thread = None
         logger.info(f"💾 MockDatabaseOutput initialized")
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia worker"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia worker che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(

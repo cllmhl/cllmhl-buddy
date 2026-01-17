@@ -108,7 +108,8 @@ class OutputPort(ABC):
     Interfaccia BASE per adapter di OUTPUT (Secondary Adapters).
     
     Gli output adapter:
-    - Consumano eventi dalla loro coda dedicata
+    - Hanno una coda interna per ricevere eventi
+    - Consumano eventi dalla loro coda interna
     - Eseguono azioni nel mondo esterno (parlare, LED, DB, etc)
     
     NON usare direttamente, estendere le Port specifiche:
@@ -117,25 +118,42 @@ class OutputPort(ABC):
     - DatabaseOutputPort per persistenza dati
     """
     
-    def __init__(self, name: str, config: dict):
+    def __init__(self, name: str, config: dict, queue_maxsize: int = 50):
         """
         Args:
             name: Nome identificativo dell'adapter
             config: Configurazione specifica dell'adapter
+            queue_maxsize: Dimensione massima della coda interna
         """
         self.name = name
         self.config = config
         self.running = False
-        self.output_queue: Optional[PriorityQueue] = None
-        logger.info(f"🔌 OutputPort '{name}' initialized")
+        # Coda interna dell'adapter
+        self.output_queue = PriorityQueue(maxsize=queue_maxsize)
+        logger.info(f"🔌 OutputPort '{name}' initialized (queue_size={queue_maxsize})")
     
-    @abstractmethod
-    def start(self, output_queue: PriorityQueue) -> None:
+    def send_event(self, event) -> bool:
         """
-        Avvia l'adapter.
+        Invia un evento all'adapter (chiamato dal Router).
         
         Args:
-            output_queue: Coda da cui consumare gli eventi
+            event: Evento da processare
+            
+        Returns:
+            True se l'evento è stato accodato, False se la coda è piena
+        """
+        try:
+            self.output_queue.put(event, block=False)
+            return True
+        except Exception:
+            logger.error(f"❌ Queue FULL for {self.name}! Event dropped: {event}")
+            return False
+    
+    @abstractmethod
+    def start(self) -> None:
+        """
+        Avvia l'adapter.
+        L'adapter deve avviare il suo worker thread che consuma dalla coda interna.
         """
         pass
     

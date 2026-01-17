@@ -61,27 +61,24 @@ class TestEventRouterFailFast:
     """Test fail-fast behavior per EventRouter"""
     
     def test_router_logs_full_queue_with_exc_info(self):
-        """Router should log queue.Full with exc_info=True"""
-        import queue
+        """Router should log send_event failures with exc_info=True"""
         from core.events import create_output_event
         
         router = EventRouter()
         
-        # Create a queue with maxsize=1
-        small_queue = queue.PriorityQueue(maxsize=1)
+        # Create a mock adapter that fails on send_event
+        mock_adapter = Mock()
+        mock_adapter.name = "test_adapter"
+        mock_adapter.send_event.side_effect = Exception("Queue is full")
         
         # Register route
-        router.register_route(EventType.SPEAK, small_queue, "test_adapter")
+        router.register_route(EventType.SPEAK, mock_adapter, "test_adapter")
         
-        # Fill the queue
-        event1 = create_output_event(EventType.SPEAK, "test1", EventPriority.NORMAL)
-        small_queue.put(event1, block=False)
-        
-        # Try to route another event - should trigger queue.Full
-        event2 = create_output_event(EventType.SPEAK, "test2", EventPriority.NORMAL)
+        # Try to route event - should trigger exception
+        event = create_output_event(EventType.SPEAK, "test", EventPriority.NORMAL)
         
         with patch('core.event_router.logger') as mock_logger:
-            routed = router.route_event(event2)
+            routed = router.route_event(event)
             
             assert routed == 0  # Failed to route
             assert router._stats['dropped'] == 1

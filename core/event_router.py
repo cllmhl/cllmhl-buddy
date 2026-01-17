@@ -3,10 +3,9 @@ Event Router - Smista eventi agli adapter corretti
 Il Brain NON conosce gli output, il Router sì.
 """
 
-import queue
 import threading
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from collections import defaultdict
 
 from .events import Event, EventType
@@ -22,12 +21,12 @@ class EventRouter:
     - Un EventType può avere N destinazioni (broadcast)
     - Thread-safe
     - Statistiche di routing
-    - Gestione code piene
+    - Chiamata diretta su adapter.send_event()
     """
     
     def __init__(self):
-        # Mapping: EventType -> List[Queue]
-        self._routes: Dict[EventType, List[queue.PriorityQueue]] = defaultdict(list)
+        # Mapping: EventType -> List[OutputAdapter]
+        self._routes: Dict[EventType, List] = defaultdict(list)
         
         # Lock per operazioni thread-safe
         self._lock = threading.Lock()
@@ -44,7 +43,7 @@ class EventRouter:
     def register_route(
         self,
         event_type: EventType,
-        output_queue: queue.PriorityQueue,
+        output_adapter,
         adapter_name: str = "unknown"
     ) -> None:
         """
@@ -52,11 +51,11 @@ class EventRouter:
         
         Args:
             event_type: Tipo di evento da instradare
-            output_queue: Coda dell'adapter di destinazione
+            output_adapter: Adapter di destinazione (con metodo send_event)
             adapter_name: Nome adapter (per logging)
         """
         with self._lock:
-            self._routes[event_type].append(output_queue)
+            self._routes[event_type].append(output_adapter)
             
             route_count = len(self._routes[event_type])
             logger.info(
@@ -67,13 +66,13 @@ class EventRouter:
     def unregister_route(
         self,
         event_type: EventType,
-        output_queue: queue.PriorityQueue
+        output_adapter
     ) -> bool:
         """Rimuove una route registrata"""
         with self._lock:
             if event_type in self._routes:
                 try:
-                    self._routes[event_type].remove(output_queue)
+                    self._routes[event_type].remove(output_adapter)
                     logger.info(f"📍 Route unregistered: {event_type.value}")
                     return True
                 except ValueError:
@@ -96,18 +95,20 @@ class EventRouter:
             
             routed_count = 0
             
-            # Invia a tutte le destinazioni registrate
-            for output_queue in self._routes[event.type]:
+            # Invia a tutti gli adapter registrati
+            for output_adapter in self._routes[event.type]:
                 try:
-                    # Non bloccare se la coda è piena
-                    output_queue.put(event, block=False)
-                    routed_count += 1
-                    self._stats['routed'] += 1
+                    # Chiama send_event() sull'adapter
+                    if output_adapter.send_event(event):
+                        routed_count += 1
+                        self._stats['routed'] += 1
+                    else:
+                        # send_event() ha ritornato False (coda piena)
+                        self._stats['dropped'] += 1
                     
-                except queue.Full:
+                except Exception as e:
                     logger.error(
-                        f"❌ Queue FULL for {event.type.value}! "
-                        f"Event dropped: {event.content}",
+                        f"❌ Error routing to {output_adapter.name}: {e}",
                         exc_info=True
                     )
                     self._stats['dropped'] += 1
@@ -130,8 +131,8 @@ class EventRouter:
         """Ritorna il numero di destinazioni per ogni tipo di evento"""
         with self._lock:
             return {
-                event_type: len(queues)
-                for event_type, queues in self._routes.items()
+                event_type: len(adapters)
+                for event_type, adapters in self._routes.items()
             }
     
     def get_stats(self) -> dict:
@@ -141,7 +142,7 @@ class EventRouter:
                 **self._stats,
                 'routes_count': len(self._routes),
                 'total_destinations': sum(
-                    len(queues) for queues in self._routes.values()
+                    len(adapters) for adapters in self._routes.values()
                 )
             }
     

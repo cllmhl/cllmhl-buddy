@@ -76,15 +76,26 @@ class TestIntegration:
         """Test che il Router invii a più destinazioni"""
         router = EventRouter()
         
-        # Crea 3 code di output
-        queue1 = PriorityQueue()
-        queue2 = PriorityQueue()
-        queue3 = PriorityQueue()
+        # Crea 3 mock adapter
+        adapter1 = Mock()
+        adapter1.name = "adapter1"
+        adapter1.events_received = []
+        adapter1.send_event = lambda e: adapter1.events_received.append(e) or True
         
-        # Registra tutte e tre per SPEAK
-        router.register_route(EventType.SPEAK, queue1)
-        router.register_route(EventType.SPEAK, queue2)
-        router.register_route(EventType.SPEAK, queue3)
+        adapter2 = Mock()
+        adapter2.name = "adapter2"
+        adapter2.events_received = []
+        adapter2.send_event = lambda e: adapter2.events_received.append(e) or True
+        
+        adapter3 = Mock()
+        adapter3.name = "adapter3"
+        adapter3.events_received = []
+        adapter3.send_event = lambda e: adapter3.events_received.append(e) or True
+        
+        # Registra tutti e tre per SPEAK
+        router.register_route(EventType.SPEAK, adapter1)
+        router.register_route(EventType.SPEAK, adapter2)
+        router.register_route(EventType.SPEAK, adapter3)
         
         # Crea evento
         event = Event(
@@ -97,19 +108,15 @@ class TestIntegration:
         # Invia
         router.route_event(event)
         
-        # Verifica che sia arrivato a tutte e tre
-        assert queue1.qsize() == 1
-        assert queue2.qsize() == 1
-        assert queue3.qsize() == 1
+        # Verifica che sia arrivato a tutti e tre
+        assert len(adapter1.events_received) == 1
+        assert len(adapter2.events_received) == 1
+        assert len(adapter3.events_received) == 1
         
         # Verifica contenuto
-        e1 = queue1.get()
-        e2 = queue2.get()
-        e3 = queue3.get()
-        
-        assert e1.content == "test message"
-        assert e2.content == "test message"
-        assert e3.content == "test message"
+        assert adapter1.events_received[0].content == "test message"
+        assert adapter2.events_received[0].content == "test message"
+        assert adapter3.events_received[0].content == "test message"
     
     def test_adapter_factory_creation(self):
         """Test che il Factory crei gli adapter corretti"""

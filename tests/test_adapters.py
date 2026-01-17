@@ -23,8 +23,7 @@ class DummyInputAdapter(InputPort):
 class DummyOutputAdapter(OutputPort):
     """Adapter di test per output"""
     
-    def start(self, output_queue):
-        self.output_queue = output_queue
+    def start(self):
         self.running = True
     
     def stop(self):
@@ -58,17 +57,17 @@ class TestPorts:
         
         assert adapter.name == "test"
         assert adapter.running is False
-        assert adapter.output_queue is None
+        assert adapter.output_queue is not None  # Ora ha una coda interna
+        assert adapter.output_queue.empty()
     
     def test_output_port_start(self):
         """Test start di OutputPort"""
         adapter = DummyOutputAdapter("test", {})
-        test_queue = queue.PriorityQueue()
         
-        adapter.start(test_queue)
+        adapter.start()  # Non riceve più la coda esterna
         
         assert adapter.running is True
-        assert adapter.output_queue == test_queue
+        assert adapter.output_queue is not None  # Ha la sua coda interna
 
 
 class TestAdapterFactory:

@@ -33,7 +33,8 @@ class JabraVoiceOutput(VoiceOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 50)
+        super().__init__(name, config, queue_maxsize)
         
         # Configurazione TTS
         self.tts_mode = config.get('tts_mode', 'cloud').lower()  # 'cloud' o 'local'
@@ -81,9 +82,8 @@ class JabraVoiceOutput(VoiceOutputPort):
         self.piper_model = os.path.join(self.piper_base_path, selected_config["file"])
         self.piper_speed = selected_config["speed"]
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia il worker thread che consuma dalla queue"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia il worker thread che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(
@@ -240,13 +240,13 @@ class MockVoiceOutput(VoiceOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 50)
+        super().__init__(name, config, queue_maxsize)
         self.worker_thread = None
         logger.info(f"🔊 MockVoiceOutput initialized")
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia worker"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia worker che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(

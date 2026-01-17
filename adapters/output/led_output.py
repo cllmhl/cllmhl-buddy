@@ -26,7 +26,8 @@ class GPIOLEDOutput(LEDOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 100)
+        super().__init__(name, config, queue_maxsize)
         
         # Pin configuration
         self.led_ascolto_pin = config.get('led_ascolto_pin', 26)  # Blu
@@ -45,9 +46,8 @@ class GPIOLEDOutput(LEDOutputPort):
         
         self.worker_thread = None
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia worker"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia worker che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(
@@ -148,13 +148,13 @@ class MockLEDOutput(LEDOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        super().__init__(name, config)
+        queue_maxsize = config.get('queue_maxsize', 100)
+        super().__init__(name, config, queue_maxsize)
         self.worker_thread = None
         logger.info(f"💡 MockLEDOutput initialized")
     
-    def start(self, output_queue: PriorityQueue) -> None:
-        """Avvia worker"""
-        self.output_queue = output_queue
+    def start(self) -> None:
+        """Avvia worker che consuma dalla coda interna"""
         self.running = True
         
         self.worker_thread = threading.Thread(
