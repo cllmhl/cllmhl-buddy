@@ -216,6 +216,22 @@ class DatabaseOutputPort(OutputPort):
         return [EventType.SAVE_HISTORY, EventType.SAVE_MEMORY]
 
 
+class ArchivistOutputPort(OutputPort):
+    """
+    Port per output ARCHIVIST (distillazione memoria).
+    """
+    
+    @property
+    def channel_type(self):
+        """Tipo di canale: ARCHIVIST"""
+        return OutputChannel.ARCHIVIST
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questa Port"""
+        return [EventType.DISTILL_MEMORY]
+
+
 class AudioDevicePort(ABC):
     """
     Port speciale per device audio condivisi (es: Jabra).

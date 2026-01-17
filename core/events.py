@@ -16,6 +16,7 @@ class OutputChannel(Enum):
     VOICE = "voice"          # Output vocale (TTS)
     LED = "led"              # LED di stato/segnalazione
     DATABASE = "database"    # Persistenza dati
+    ARCHIVIST = "archivist"  # Distillazione memoria
 
 
 class EventType(Enum):
@@ -41,6 +42,7 @@ class EventType(Enum):
     # Storage
     SAVE_HISTORY = "save_history"         # Salva in history DB
     SAVE_MEMORY = "save_memory"           # Salva in memoria permanente
+    DISTILL_MEMORY = "distill_memory"     # Avvia distillazione memoria (Archivist)
     
     # Sistema
     SHUTDOWN = "shutdown"

@@ -4,6 +4,7 @@ Zero dipendenze da I/O, hardware, code.
 """
 
 import logging
+import time
 from typing import List, Optional
 from google import genai
 from google.genai import types
@@ -40,10 +41,14 @@ class BuddyBrain:
         self.client = genai.Client(api_key=api_key)
         self.model_id = config.get("model_id", "gemini-2.0-flash-exp")
         
+        # Polling per archivist (default: 30 secondi)
+        self.archivist_interval = config.get("archivist_interval", 30.0)
+        self.last_archivist_time = time.time()
+        
         # Inizializza sessione chat
         self._init_chat_session()
         
-        logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id})")
+        logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id}, archivist_interval: {self.archivist_interval}s)")
     
     def _init_chat_session(self):
         """Inizializza la sessione LLM"""
@@ -96,6 +101,9 @@ class BuddyBrain:
             
             else:
                 logger.warning(f"Unhandled event type: {input_event.type}")
+            
+            # Controllo polling archivist (dopo ogni evento)
+            output_events.extend(self._check_archivist_trigger())
         
         except KeyboardInterrupt:
             logger.info("Brain interrupted by user")
@@ -221,3 +229,27 @@ class BuddyBrain:
         """Reset della sessione chat (utile per testing)"""
         logger.info("Resetting chat session...")
         self._init_chat_session()
+    
+    def _check_archivist_trigger(self) -> List[Event]:
+        """
+        Controlla se è il momento di triggerare la distillazione memoria.
+        Chiamato dopo ogni evento processato.
+        
+        Returns:
+            Lista contenente evento DISTILL_MEMORY se necessario
+        """
+        current_time = time.time()
+        elapsed = current_time - self.last_archivist_time
+        
+        if elapsed >= self.archivist_interval:
+            logger.debug(f"⏰ Archivist trigger (elapsed: {elapsed:.1f}s)")
+            self.last_archivist_time = current_time
+            
+            return [create_output_event(
+                EventType.DISTILL_MEMORY,
+                None,
+                priority=EventPriority.LOW,
+                metadata={"elapsed_seconds": elapsed}
+            )]
+        
+        return []
