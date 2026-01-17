@@ -50,44 +50,6 @@ class EventType(Enum):
     RESTART = "restart"
 
 
-# ===== EVENT ROUTING MAP =====
-# Il routing è ora DINAMICO: viene costruito interrogando gli adapter configurati
-# tramite i loro metodi handled_events() e channel_type
-
-
-def build_event_routing_from_adapters(output_adapters: list) -> dict[EventType, OutputChannel]:
-    """
-    Costruisce dinamicamente il mapping EventType -> OutputChannel
-    interrogando gli adapter OUTPUT effettivamente configurati.
-    
-    Args:
-        output_adapters: Lista di adapter output configurati
-    
-    Returns:
-        Dict con mapping EventType -> OutputChannel
-        
-    Example:
-        >>> adapters = [voice_adapter, led_adapter, db_adapter]
-        >>> routing = build_event_routing_from_adapters(adapters)
-        >>> routing[EventType.SPEAK]  # OutputChannel.VOICE
-    """
-    mapping = {}
-    
-    for adapter in output_adapters:
-        channel = adapter.channel_type
-        # Ottieni gli eventi gestiti dalla classe Port dell'adapter
-        handled = adapter.__class__.handled_events()
-        
-        for event_type in handled:
-            if event_type in mapping:
-                # Log warning se due adapter gestiscono lo stesso evento
-                # (potrebbe essere intenzionale per broadcast)
-                pass
-            mapping[event_type] = channel
-    
-    return mapping
-
-
 class EventPriority(Enum):
     """
     Priorità eventi per PriorityQueue.

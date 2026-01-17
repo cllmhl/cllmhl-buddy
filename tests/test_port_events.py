@@ -7,7 +7,7 @@ from adapters.ports import (
     VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
     VoiceInputPort, RadarInputPort, TemperatureInputPort
 )
-from core.events import EventType, OutputChannel, build_event_routing_from_adapters
+from core.events import EventType, OutputChannel
 
 
 class TestOutputPortEvents:
@@ -66,16 +66,18 @@ class TestOutputPortEvents:
             MockDatabaseOutput("test_db", {})
         ]
         
-        # Costruisci il routing dinamico
-        routing = build_event_routing_from_adapters(adapters)
+        # Verifica che ogni adapter dichiari gli eventi corretti
+        voice_events = MockVoiceOutput.handled_events()
+        assert EventType.SPEAK in voice_events
         
-        # Verifica che tutti gli eventi siano mappati correttamente
-        assert routing[EventType.SPEAK] == OutputChannel.VOICE
-        assert routing[EventType.LED_ON] == OutputChannel.LED
-        assert routing[EventType.LED_OFF] == OutputChannel.LED
-        assert routing[EventType.LED_BLINK] == OutputChannel.LED
-        assert routing[EventType.SAVE_HISTORY] == OutputChannel.DATABASE
-        assert routing[EventType.SAVE_MEMORY] == OutputChannel.DATABASE
+        led_events = MockLEDOutput.handled_events()
+        assert EventType.LED_ON in led_events
+        assert EventType.LED_OFF in led_events
+        assert EventType.LED_BLINK in led_events
+        
+        db_events = MockDatabaseOutput.handled_events()
+        assert EventType.SAVE_HISTORY in db_events
+        assert EventType.SAVE_MEMORY in db_events
 
 
 class TestInputPortEvents:

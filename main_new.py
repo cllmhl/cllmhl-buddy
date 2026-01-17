@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 # Core imports
 from core import (
     Event, EventType, EventPriority, OutputChannel,
-    build_event_routing_from_adapters,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )
@@ -109,19 +108,15 @@ class BuddyOrchestrator:
         Il routing viene costruito dai metodi handled_events() delle Port.
         Ogni adapter si registra direttamente al router.
         """
-        # Costruisci routing dinamico dagli adapter configurati
-        event_routing = build_event_routing_from_adapters(self.output_adapters)
-        
         # Registra ogni adapter per gli eventi che gestisce
-        for event_type, channel in event_routing.items():
-            # Trova l'adapter che gestisce questo channel
-            for adapter in self.output_adapters:
-                if adapter.channel_type == channel:
-                    self.router.register_route(
-                        event_type,
-                        adapter,
-                        adapter.name
-                    )
+        for adapter in self.output_adapters:
+            handled_events = adapter.__class__.handled_events()
+            for event_type in handled_events:
+                self.router.register_route(
+                    event_type,
+                    adapter,
+                    adapter.name
+                )
         
         self.logger.info(
             f"📍 Router configured dynamically with {len(event_routing)} event types "
