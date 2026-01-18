@@ -39,10 +39,15 @@ class BuddyBrain:
         
         # Client Google AI
         self.client = genai.Client(api_key=api_key)
-        self.model_id = config.get("model_id", "gemini-2.0-flash-exp")
         
-        # Polling per archivist (default: 30 secondi)
-        self.archivist_interval = config.get("archivist_interval", 30.0)
+        # Config required - fail fast se mancano
+        if "model_id" not in config:
+            raise ValueError("Config 'model_id' is required")
+        self.model_id = config["model_id"]
+        
+        if "archivist_interval" not in config:
+            raise ValueError("Config 'archivist_interval' is required - controls memory distillation frequency")
+        self.archivist_interval = config["archivist_interval"]
         self.last_archivist_time = time.time()
         
         # Inizializza sessione chat
@@ -53,14 +58,17 @@ class BuddyBrain:
     def _init_chat_session(self):
         """Inizializza la sessione LLM"""
         try:
+            # Config critiche - fail fast se mancano
+            if "system_instruction" not in self.config:
+                raise ValueError("Config 'system_instruction' is required - defines Buddy's behavior")
+            if "temperature" not in self.config:
+                raise ValueError("Config 'temperature' is required - controls response creativity")
+            
             self.chat_session = self.client.chats.create(
                 model=self.model_id,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.config.get(
-                        "system_instruction",
-                        "Sei Buddy, un assistente AI amichevole."
-                    ),
-                    temperature=self.config.get("temperature", 0.7),
+                    system_instruction=self.config["system_instruction"],
+                    temperature=self.config["temperature"],
                     tools=[types.Tool(google_search=types.GoogleSearch())],
                     thinking_config=types.ThinkingConfig(include_thoughts=False)
                 )
@@ -155,8 +163,8 @@ class BuddyBrain:
             return [inner_event]
             
         except Exception as e:
-            logger.error(f"Error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
-            return []
+            logger.error(f"❌ Critical error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to unwrap DIRECT_OUTPUT event: {e}") from e
     
     def _handle_user_input(self, event: Event) -> List[Event]:
         """Gestisce input testuale/vocale dell'utente"""

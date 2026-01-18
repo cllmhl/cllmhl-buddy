@@ -20,6 +20,46 @@ Buddy is a Raspberry Pi-based AI assistant with physical sensors (radar, tempera
 ### Orchestration
 - **[main.py](main.py)**: `BuddyOrchestrator` - initializes components, runs main event loop, manages lifecycle
 
+## Code Quality: Fail-Fast Philosophy
+
+**ALWAYS generate fail-fast code**. Never tolerate errors silently:
+
+| Aspect | ❌ Avoid (Tollerante) | ✅ Required (Fail Fast) |
+|--------|----------------------|-------------------------|
+| **Configuration** | `get(key, default)` | `config.key` - Crash if missing |
+| **Types** | `Optional[str] = None` | `str` - No optionals without reason |
+| **Exceptions** | `except: pass` | `except SpecificError: log; raise` |
+| **Validation** | Auto-correct input | `raise ValueError` immediately |
+| **Return Values** | `None` or `False` on error | Raise explicit exception |
+
+**Examples**:
+```python
+# ❌ BAD - Silent failures
+def load_config(path):
+    try:
+        return yaml.safe_load(open(path))
+    except:
+        return {}  # Silent failure!
+
+# ✅ GOOD - Fail fast with context
+def load_config(path: Path) -> dict:
+    """Load configuration from YAML file.
+    
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        yaml.YAMLError: If config is malformed
+    """
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        logger.error(f"Config file not found: {path}")
+        raise
+    except yaml.YAMLError as e:
+        logger.error(f"Invalid YAML in {path}: {e}", exc_info=True)
+        raise
+```
+
 ## Critical Development Patterns
 
 ### 1. Event Flow Architecture

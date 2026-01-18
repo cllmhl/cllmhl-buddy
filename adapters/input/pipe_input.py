@@ -198,28 +198,28 @@ class PipeInputAdapter(InputPort):
         metadata opzionale può contenere dati extra (es: per led_control)
         """
         if not isinstance(content, dict):
-            logger.error(f"DIRECT_OUTPUT content deve essere dict, ricevuto: {type(content)}")
-            return None
+            logger.error(f"❌ DIRECT_OUTPUT content deve essere dict, ricevuto: {type(content)}")
+            raise TypeError(f"DIRECT_OUTPUT content must be dict, got {type(content)}")
             
         event_type_str = content.get("event_type")
+        if not event_type_str:
+            logger.error("❌ DIRECT_OUTPUT content manca 'event_type'")
+            raise ValueError("DIRECT_OUTPUT content missing required 'event_type' field")
+        
         event_content = content.get("content")
         event_priority_str = content.get("priority", priority.name).upper()
-        
-        if not event_type_str:
-            logger.error("DIRECT_OUTPUT content manca 'event_type'")
-            return None
         
         try:
             event_type = OutputEventType[event_type_str.upper()]
             event_priority = EventPriority[event_priority_str]
-            
-            return create_output_event(
-                event_type=event_type,
-                content=event_content,
-                priority=event_priority,
-                metadata=metadata or {}
-            )
-            
         except KeyError as e:
-            logger.error(f"Errore parsing DIRECT_OUTPUT: {e}")
-            return None
+            logger.error(f"❌ Invalid event_type or priority: {e}", exc_info=True)
+            valid_types = [et.name for et in OutputEventType]
+            raise ValueError(f"Invalid DIRECT_OUTPUT params. Valid types: {valid_types}") from e
+        
+        return create_output_event(
+            event_type=event_type,
+            content=event_content,
+            priority=event_priority,
+            metadata=metadata or {}
+        )

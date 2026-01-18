@@ -31,9 +31,9 @@ class BuddyArchivist:
                 model=self.model_id,
                 contents=f"Analizza questa conversazione:\n{formatted_logs}",
                 config=types.GenerateContentConfig(
-                    system_instruction=self.config["system_instruction"],
+                    system_instruction=self.config["system_instruction"],  # Required
                     response_mime_type="application/json",
-                    temperature=self.config.get("temperature", 0.1)
+                    temperature=self.config.get("temperature", 0.1)  # Default ok
                 )
             )
 
@@ -42,11 +42,15 @@ class BuddyArchivist:
             if nuovi_ricordi:
                 logger.info(f"Estratti {len(nuovi_ricordi)} nuovi ricordi")
                 for r in nuovi_ricordi:
+                    if 'fatto' not in r:
+                        logger.warning(f"❌ Ricordo senza 'fatto': {r}")
+                        continue
+                    
                     logger.debug(r)
                     # Uso del nuovo metodo per ChromaDB
                     db.add_permanent_memory(
-                        fact=r.get('fatto', ''),
-                        category=r.get('categoria', 'generale'),
+                        fact=r['fatto'],  # Required
+                        category=r.get('categoria', 'generale'),  # Default ok
                         notes="", # Note opzionali
                         importance=r.get('importanza', 1)
                     )

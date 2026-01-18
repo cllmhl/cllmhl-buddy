@@ -76,7 +76,9 @@ class EventRouter:
                     logger.info(f"📍 Route unregistered: {event_type.value}")
                     return True
                 except ValueError:
-                    pass
+                    logger.warning(f"📍 Adapter not found in routes for {event_type.value}")
+            else:
+                logger.warning(f"📍 No routes registered for {event_type.value}")
         return False
     
     def route_event(self, event: Event) -> int:

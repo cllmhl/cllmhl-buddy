@@ -196,7 +196,9 @@ class ConfigLoader:
         # Valida input adapters (ora sono liste con 'class')
         if isinstance(config['adapters']['input'], list):
             for adapter_config in config['adapters']['input']:
-                class_name = adapter_config.get('class', '')
+                if 'class' not in adapter_config:
+                    raise ValueError(f"Input adapter config missing required 'class' field: {adapter_config}")
+                class_name = adapter_config['class']
                 
                 if class_name not in available_classes['input']:
                     available = ', '.join(available_classes['input'])
@@ -208,9 +210,9 @@ class ConfigLoader:
         # Valida output adapters (ora sono liste con 'class')
         if isinstance(config['adapters']['output'], list):
             for adapter_config in config['adapters']['output']:
-                class_name = adapter_config.get('class', '')
-            
-            # Skip disabled adapters
+                if 'class' not in adapter_config:
+                    raise ValueError(f"Output adapter config missing required 'class' field: {adapter_config}")
+                class_name = adapter_config['class']
                 
                 if class_name not in available_classes['output']:
                     available = ', '.join(available_classes['output'])

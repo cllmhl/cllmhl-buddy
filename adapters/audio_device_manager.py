@@ -63,7 +63,7 @@ class AudioDeviceManager:
         with self._lock:
             # Se sta parlando, non possiamo ascoltare
             if self.state == AudioDeviceState.SPEAKING:
-                logger.debug(f"🎤 Device busy (SPEAKING), input denied")
+                logger.warning(f"🎤 Device BUSY: Cannot accept input while SPEAKING")
                 return False
             
             # Se già in listening o idle, ok
