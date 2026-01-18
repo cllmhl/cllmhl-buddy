@@ -57,8 +57,8 @@ class JabraVoiceInput(VoiceInputPort):
         super().__init__(name, config, input_queue)
         
         # Configurazione
-        self.stt_mode = config.get('stt_mode', 'cloud').lower()
-        self.wake_word_path = config.get('wake_word_path')
+        self.stt_mode = config['stt_mode']
+        self.wake_word_path = config['wake_word_path']
         
         # Device Manager per coordinamento
         self.device_manager = get_jabra_manager()
@@ -424,7 +424,7 @@ class MockVoiceInput(VoiceInputPort):
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
         
-        self.interval = config.get('interval', 10.0)
+        self.interval = config['interval']
         self.worker_thread: Optional[threading.Thread] = None
         
         # Frasi di test simulate

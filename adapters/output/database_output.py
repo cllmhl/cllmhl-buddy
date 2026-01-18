@@ -21,13 +21,12 @@ class DatabaseOutput(DatabaseOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 50)
-            queue_maxsize = config['queue_maxsize']
-            super().__init__(name, config, queue_maxsize)
+        queue_maxsize = config.get('queue_maxsize')
+        super().__init__(name, config, queue_maxsize)
         
         # Configurazione database
-            sqlite_path = config['sqlite_path']
-            chroma_path = config['chroma_path']
+        sqlite_path = config['sqlite_path']
+        chroma_path = config['chroma_path']
         
         # Inizializza database
         self.db: Optional[MemoryStore]
@@ -147,9 +146,8 @@ class MockDatabaseOutput(DatabaseOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 50)
-            queue_maxsize = config['queue_maxsize']
-            super().__init__(name, config, queue_maxsize)
+        queue_maxsize = config['queue_maxsize']
+        super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💾 MockDatabaseOutput initialized")
     

@@ -38,7 +38,7 @@ class DirectOutputInput(InputPort):
         super().__init__(name, config, input_queue)
         
         # Modalità operativa
-        self.mode = config.get('mode', 'interactive')  # sequence, interactive, loop
+        self.mode = config.get('mode')  # sequence, interactive, loop
         
         # Sequenza eventi (per mode=sequence o loop)
         self.sequence = config.get('sequence', [])

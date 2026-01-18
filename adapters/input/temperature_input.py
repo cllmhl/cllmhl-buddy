@@ -38,8 +38,8 @@ class TemperatureInput(TemperatureInputPort):
         super().__init__(name, config, input_queue)
         
         # Configurazione DHT11
-        self.pin = config.get('pin', 4)
-        self.interval = config.get('interval', 30.0)
+        self.pin = config['pin']
+        self.interval = config['interval']
         
         # Hardware
         self.dht11 = None
@@ -215,7 +215,7 @@ class MockTemperatureInput(TemperatureInputPort):
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
         
-        self.interval = config.get('interval', 10.0)
+        self.interval = config['interval']
         self.worker_thread: Optional[threading.Thread] = None
         
         logger.info(f"🌡️  MockTemperatureInput initialized")

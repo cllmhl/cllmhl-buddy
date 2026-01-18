@@ -45,7 +45,7 @@ class PipeInputAdapter(InputPort):
             input_queue: Queue per pubblicare eventi
         """
         super().__init__(name, config, input_queue)
-        self.pipe_path = Path(config.get('pipe_path', 'data/buddy.in'))
+        self.pipe_path = Path(config['pipe_path'])
         self._thread: Optional[threading.Thread] = None
         
     def start(self):

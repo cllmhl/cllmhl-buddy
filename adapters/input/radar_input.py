@@ -25,9 +25,9 @@ class RadarInput(RadarInputPort):
         super().__init__(name, config, input_queue)
         
         # Configurazione radar
-        self.port = config.get('port', '/dev/ttyAMA0')
-        self.baudrate = config.get('baudrate', 256000)
-        self.interval = config.get('interval', 0.5)
+        self.port = config['port']
+        self.baudrate = config['baudrate']
+        self.interval = config['interval']
         
         # Hardware
         self.radar = None
@@ -212,7 +212,7 @@ class MockRadarInput(RadarInputPort):
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
         
-        self.interval = config.get('interval', 5.0)
+        self.interval = config['interval']
         self.worker_thread: Optional[threading.Thread] = None
         
         logger.info(f"📡 MockRadarInput initialized")

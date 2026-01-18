@@ -37,9 +37,9 @@ class JabraVoiceOutput(VoiceOutputPort):
         super().__init__(name, config, queue_maxsize)
         
         # Configurazione TTS
-            self.tts_mode = config['tts_mode'].lower()  # 'cloud' o 'local'
-            self.voice_name = config['voice_name'].lower()
-            self.audio_device = config['audio_device']  # Device ALSA per output
+        self.tts_mode = config['tts_mode']  # 'cloud' o 'local'
+        self.voice_name = config['voice_name']
+        self.audio_device = config['audio_device']  # Device ALSA per output
         
         # NOTA: LED status rimosso - gestito da GPIOLEDOutput via eventi LED_CONTROL
         # Il VoiceOutput non controlla direttamente GPIO, solo eventi
