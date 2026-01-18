@@ -14,10 +14,46 @@ Invece di test scollegati, questo approccio:
 
 ## 🚀 Esecuzione
 
+**Metodo 1: Script Wrapper (RACCOMANDATO - gestisce venv automaticamente)**
+```bash
+# Dalla root del progetto
+bash scripts/run_hw_test.sh                    # Test hardware completo
+
+# Test specifici
+bash scripts/run_hw_test.sh led                # LED interattivo
+bash scripts/run_hw_test.sh run_led_test_auto  # LED automatico (sequenza)
+bash scripts/run_hw_test.sh radar              # Radar
+bash scripts/run_hw_test.sh temperature        # Temperatura/Umidità
+bash scripts/run_hw_test.sh voice              # Voce (completo)
+
+# Shortcut veloce (stesso risultato)
+bash scripts/hwtest led
+```
+
+**Metodo 2: Diretto (solo in devspaces o dopo aver attivato venv manualmente)**
 ```bash
 cd tests/hardware
 python3 run_hardware_test.py
 ```
+
+### Test LED - Modalità Interattiva
+
+Il test LED mostra un **menu interattivo** per testare manualmente i LED GPIO:
+
+```
+Comandi disponibili:
+  1) LED ascolto ON         ← GPIO 26 (BLU) acceso
+  2) LED ascolto OFF        ← GPIO 26 spento
+  3) LED stato ON           ← GPIO 21 (VERDE) acceso
+  4) LED stato OFF          ← GPIO 21 spento
+  5) LED blink ascolto (3x) ← GPIO 26 lampeggia 3 volte
+  6) LED blink stato (5x)   ← GPIO 21 lampeggia 5 volte
+  7) TTS test               ← Test sintesi vocale
+  8) TTS custom             ← TTS personalizzato
+  q) Quit
+```
+
+Digita il numero del comando e premi Invio per testare ciascun LED.
 
 Il sistema si avvierà con:
 - **Console Output** che mostra tutti gli eventi in tempo reale

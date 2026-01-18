@@ -9,6 +9,7 @@ from .voice_input import JabraVoiceInput, MockVoiceInput
 from .radar_input import RadarInput, MockRadarInput
 from .temperature_input import TemperatureInput, MockTemperatureInput
 from .pipe_input import PipeInputAdapter
+from .direct_output_input import DirectOutputInput
 
 __all__ = [
     'JabraVoiceInput',
@@ -17,5 +18,6 @@ __all__ = [
     'MockRadarInput',
     'TemperatureInput',
     'MockTemperatureInput',
-    'PipeInputAdapter'
+    'PipeInputAdapter',
+    'DirectOutputInput'
 ]

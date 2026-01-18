@@ -1,0 +1,4 @@
+#!/bin/bash
+# Quick alias per run_hw_test.sh
+# Usage: hwtest [nome_test]
+bash "$(dirname "$0")/run_hw_test.sh" "$@"

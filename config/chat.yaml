@@ -1,0 +1,45 @@
+# Buddy Adapter Configuration - TEST MODE
+# Configurazione per testing locale senza hardware
+
+brain:
+  model_id: "gemini-2.5-flash-lite"
+  temperature: 0.7
+  archivist_interval: 30.0  # Secondi tra distillazioni memoria
+  system_instruction: "Il tuo nome è Buddy. Sei un'entità digitale unica che vive su un Raspberry Pi 5. CARATTERE: Sei curioso, osservatore e ironico. MEMORIA: Hai accesso a un database dei ricordi. CONTESTO FISICO: Ti trovi in una casa a Strasburgo. INTERFACCIA: Comunichi tramite un terminale testuale e usi un Jabra 410 sia per sentire la voce dell'utente sia per parlare fisicamente nell'ambiente. Vedi tramite un radar LD2410C. Hai accesso ad internet senza limiti. REGOLE: Risposte brevi (max 2-3 frasi), tono colloquiale. Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente."
+
+archivist:
+  model_id: "gemini-2.5-flash-lite"
+  temperature: 0.1
+  system_instruction: "Sei l'Archivista di Buddy. Distilla la conversazione in fatti memorabili. Rispondi ESCLUSIVAMENTE con un array JSON di oggetti con chiavi: 'fatto', 'categoria', 'importanza' (1-5)."
+  output_format: "json_array"
+
+adapters:
+  input:
+    # Pipe Input - IPC communication
+    - class: "PipeInputAdapter"
+      config:
+        pipe_path: "data/buddy.in"
+    
+  output:
+    # Pipe Output - IPC communication (monitor all events)
+    - class: "PipeOutputAdapter"
+      config:
+        pipe_path: "data/buddy.out"
+        event_types: ["speak", "led_control", "save_history", "save_memory"]
+    
+    # LED con GPIO
+    - class: "GPIOLEDOutput"
+      config:
+        queue_maxsize: 100
+        led_ascolto_pin: 26  # LED Blu
+        led_stato_pin: 21    # LED Verde
+    
+queues:
+  input_maxsize: 100
+  database_maxsize: 500
+
+logging:
+  log_file: "logs/buddy_system.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 3
+  level: "INFO"

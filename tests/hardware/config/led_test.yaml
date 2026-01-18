@@ -6,9 +6,8 @@ buddy_home: ${BUDDY_HOME:-.}
 # Brain - configurazione minima
 brain:
   model_id: "gemini-2.0-flash-exp"
-  generation_config:
-    temperature: 0.7
-    max_tokens: 150
+  system_instruction: "Sei Buddy in modalità test LED. Non devi rispondere, il Brain passa solo gli eventi DIRECT_OUTPUT."
+  temperature: 0.7
   archivist_interval: 300.0
 
 # Queues

@@ -32,12 +32,27 @@ cllmhl-buddy/
 bash scripts/setup_buddy.sh
 ```
 
-### Esecuzione
-```bash
-# Modalità interattiva
-python3 main.py
+> **Nota**: Lo script rileva automaticamente l'ambiente:
+> - **Raspberry Pi**: Crea e usa `venv` (ambiente virtuale Python)
+> - **Devspaces/Container**: Usa Python di sistema
 
-# Come servizio systemd (solo su Raspberry Pi)
+### Esecuzione
+
+**Buddy principale:**
+```bash
+bash scripts/run_buddy.sh
+```
+
+**Test hardware (solo Raspberry Pi):**
+```bash
+bash scripts/run_hw_test.sh              # Test completo
+bash scripts/run_hw_test.sh led          # Test LED
+bash scripts/run_hw_test.sh radar        # Test radar
+bash scripts/run_hw_test.sh temperature  # Test temperatura
+```
+
+**Come servizio systemd (solo Raspberry Pi):**
+```bash
 sudo bash scripts/install_service.sh
 sudo systemctl start buddy
 ```
@@ -55,6 +70,7 @@ echo "ciao Buddy" > /tmp/buddy_pipe
 
 ## 📚 Documentazione
 
+- [Gestione Ambienti Python (venv)](docs/VENV_MANAGEMENT.md) - **Raspberry Pi vs Devspaces**
 - [Guida Servizio Systemd](docs/SETUP_SERVICE.md)
 - [Guida Named Pipe](docs/PIPE_USAGE.md)
 - [TODO e Roadmap](TODO.md)

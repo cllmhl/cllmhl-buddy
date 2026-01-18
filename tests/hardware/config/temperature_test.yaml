@@ -7,9 +7,8 @@ buddy_home: ${BUDDY_HOME:-.}
 # Brain - configurazione minima
 brain:
   model_id: "gemini-2.5-flash-lite"
-  generation_config:
-    temperature: 0.7
-    max_tokens: 150
+  system_instruction: "Sei Buddy in modalità test sensore temperatura/umidità. Commenta brevemente i dati ambientali."
+  temperature: 0.7
   archivist_interval: 300.0
 
 # Code
