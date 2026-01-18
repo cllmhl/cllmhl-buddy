@@ -37,30 +37,23 @@ def setup_logging(config: Dict[str, Any]) -> None:
     log_config = config['logging']
     buddy_home = Path(config['buddy_home'])
     
-    log_file_path = log_config.get('log_file', 'buddy_system.log')
+    log_file_path = log_config.get('log_file')
     
     # Risolvi il path del log rispetto a BUDDY_HOME
-    log_file = buddy_home / log_file_path if not Path(log_file_path).is_absolute() else Path(log_file_path)
-    
-    # Crea directory del log se non esiste
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    max_bytes = log_config.get('max_bytes', 10*1024*1024)
-    backup_count = log_config.get('backup_count', 3)
-    
-    handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
+    log_file = buddy_home / log_file_path
+    handler = RotatingFileHandler(log_file, maxBytes=log_config.get('max_bytes'), backupCount=log_config.get('backup_count'))
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     handler.setFormatter(formatter)
     
     # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
+    # console_handler = logging.StreamHandler(sys.stdout)
+    # console_handler.setFormatter(formatter)
     
     # Root logger
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
-    logger.addHandler(console_handler)
+    # logger.addHandler(console_handler)
     
     # Silence noisy libraries
     logging.getLogger("urllib3").setLevel(logging.WARNING)
