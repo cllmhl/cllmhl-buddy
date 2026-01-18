@@ -217,25 +217,6 @@ class BuddyOrchestrator:
         # Banner
         self._print_banner()
         
-        # Check per adapter interattivi
-        interactive_adapter = None
-        for adapter in self.input_adapters:
-            if hasattr(adapter, 'mode') and adapter.mode == 'interactive':
-                interactive_adapter = adapter
-                break
-        
-        # Se c'è un adapter interattivo, cedere il controllo a lui
-        if interactive_adapter:
-            self.logger.info(f"🎮 Interactive mode detected: {interactive_adapter.name}")
-            try:
-                interactive_adapter.run_interactive()
-            except KeyboardInterrupt:
-                self.logger.info("KeyboardInterrupt received")
-            finally:
-                self._shutdown()
-            return
-        
-        # Altrimenti esegui il normale event loop
         self.logger.info("🧠 Entering main event loop")
         
         try:

@@ -57,13 +57,6 @@ class DirectOutputInput(InputPort):
     
     def start(self):
         self.running = True
-        
-        # Interactive mode NON usa thread - esegue nel main thread
-        if self.mode == 'interactive':
-            logger.info(f"▶️  {self.name} started (interactive - main thread)")
-            return
-        
-        # Altri mode usano worker thread daemon
         self.worker_thread = threading.Thread(
             target=self._worker_loop,
             daemon=True,
@@ -77,17 +70,6 @@ class DirectOutputInput(InputPort):
         if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join(timeout=2.0)
         logger.info(f"⏹️  {self.name} stopped")
-    
-    def run_interactive(self):
-        """
-        Esegue la modalità interattiva nel thread corrente (main thread).
-        Da chiamare DOPO start() quando mode='interactive'.
-        """
-        if self.mode != 'interactive':
-            logger.warning(f"run_interactive called but mode is '{self.mode}'")
-            return
-        
-        self._run_interactive_mode()
     
     def _worker_loop(self):
         """Loop principale basato su mode"""
