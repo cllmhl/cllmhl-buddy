@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""
+Buddy Chat - CLI interattivo per comunicare con Buddy via named pipes
+
+Permette di:
+- Inviare eventi a Buddy (DIRECT_OUTPUT, USER_SPEECH, etc.)
+- Monitorare eventi di output da Buddy in real-time
+- Testare LED, voce e altri output rapidamente
+"""
+
+import os
+import sys
+import json
+import select
+import threading
+from pathlib import Path
+from datetime import datetime
+
+
+# ===== CONFIG =====
+PIPE_IN = Path("data/buddy.in")   # Scriviamo qui → Buddy
+PIPE_OUT = Path("data/buddy.out") # Leggiamo da qui ← Buddy
+
+
+# ===== COLORS =====
+class Colors:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    
+    # Text colors
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    
+    # Background
+    BG_BLACK = '\033[40m'
+    BG_RED = '\033[41m'
+    BG_GREEN = '\033[42m'
+
+
+def color(text, color_code):
+    """Applica colore al testo"""
+    return f"{color_code}{text}{Colors.RESET}"
+
+
+# ===== OUTPUT MONITOR =====
+class OutputMonitor:
+    """Thread che monitora la pipe di output e stampa eventi"""
+    
+    def __init__(self, pipe_path: Path):
+        self.pipe_path = pipe_path
+        self.running = False
+        self.thread = None
+        
+    def start(self):
+        """Avvia il monitor"""
+        if self.running:
+            return
+            
+        self.running = True
+        self.thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.thread.start()
+        
+    def stop(self):
+        """Ferma il monitor"""
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=1)
+            
+    def _monitor_loop(self):
+        """Loop di lettura dalla pipe output"""
+        while self.running:
+            try:
+                # Apri in lettura (blocca finché Buddy scrive)
+                with open(self.pipe_path, 'r') as pipe:
+                    while self.running:
+                        line = pipe.readline()
+                        if not line:  # EOF
+                            break
+                            
+                        line = line.strip()
+                        if not line:
+                            continue
+                            
+                        try:
+                            self._display_event(json.loads(line))
+                        except json.JSONDecodeError as e:
+                            print(color(f"\n⚠️  JSON invalido: {e}", Colors.RED))
+                            
+            except Exception as e:
+                if self.running:
+                    print(color(f"\n⚠️  Errore monitor: {e}", Colors.RED))
+                    
+    def _display_event(self, event_data: dict):
+        """Mostra un evento ricevuto"""
+        event_type = event_data.get('type', 'unknown')
+        content = event_data.get('content', '')
+        timestamp = event_data.get('timestamp', 0)
+        priority = event_data.get('priority', 'NORMAL')
+        
+        time_str = datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
+        
+        # Colore per tipo evento
+        if event_type == 'speak':
+            icon = '🔊'
+            color_code = Colors.GREEN
+        elif event_type.startswith('led_'):
+            icon = '💡'
+            color_code = Colors.YELLOW
+        elif event_type.startswith('save_'):
+            icon = '💾'
+            color_code = Colors.BLUE
+        else:
+            icon = '📤'
+            color_code = Colors.CYAN
+            
+        # Priorità badge
+        if priority == 'CRITICAL':
+            priority_badge = color('[CRITICAL]', Colors.BG_RED + Colors.WHITE)
+        elif priority == 'HIGH':
+            priority_badge = color('[HIGH]', Colors.YELLOW)
+        else:
+            priority_badge = ''
+            
+        msg = f"\n{icon} {color(time_str, Colors.MAGENTA)} "
+        msg += f"{color(event_type.upper(), color_code + Colors.BOLD)} "
+        if priority_badge:
+            msg += f"{priority_badge} "
+        msg += f"→ {content}"
+        
+        print(msg)
+        print(color("\n> ", Colors.CYAN), end='', flush=True)
+
+
+# ===== SENDER =====
+def send_event(event_data: dict):
+    """Invia un evento a Buddy via pipe"""
+    json_line = json.dumps(event_data) + '\n'
+    
+    try:
+        with open(PIPE_IN, 'w') as pipe:
+            pipe.write(json_line)
+            pipe.flush()
+        return True
+    except Exception as e:
+        print(color(f"❌ Errore invio: {e}", Colors.RED))
+        return False
+
+
+# ===== EVENT BUILDERS =====
+def build_direct_output(event_type: str, content, priority: str = "normal"):
+    """Costruisce un DIRECT_OUTPUT event"""
+    return {
+        "type": "direct_output",
+        "priority": priority,
+        "content": {
+            "event_type": event_type,
+            "content": content,
+            "priority": priority
+        }
+    }
+
+
+def build_user_speech(text: str):
+    """Costruisce un USER_SPEECH event"""
+    return {
+        "type": "user_speech",
+        "priority": "high",
+        "content": text
+    }
+
+
+# ===== MENU =====
+def print_menu():
+    """Stampa il menu principale"""
+    print("\n" + "="*60)
+    print(color("🤖  BUDDY CHAT - Menu Interattivo", Colors.CYAN + Colors.BOLD))
+    print("="*60)
+    
+    print(f"\n{color('COMANDI RAPIDI:', Colors.YELLOW + Colors.BOLD)}")
+    print(f"  {color('s', Colors.GREEN)} <testo>    → Speak (emetti voce)")
+    print(f"  {color('t', Colors.GREEN)} <testo>    → Talk (invia speech utente)")
+    print(f"  {color('lon', Colors.YELLOW)}          → LED ON")
+    print(f"  {color('loff', Colors.YELLOW)}         → LED OFF")
+    print(f"  {color('lb', Colors.YELLOW)} <n>       → LED BLINK (n volte, default=3)")
+    
+    print(f"\n{color('MENU AVANZATO:', Colors.YELLOW + Colors.BOLD)}")
+    print(f"  {color('menu', Colors.BLUE)}         → Mostra questo menu")
+    print(f"  {color('json', Colors.BLUE)}         → Invia JSON custom")
+    print(f"  {color('test', Colors.BLUE)}         → Test sequenza LED+Voce")
+    print(f"  {color('help', Colors.BLUE)}         → Guida completa")
+    print(f"  {color('quit', Colors.RED)}         → Esci")
+    
+    print("\n" + "="*60)
+
+
+def print_help():
+    """Stampa l'help dettagliato"""
+    print("\n" + color("📖  GUIDA COMPLETA", Colors.CYAN + Colors.BOLD))
+    print("\n" + color("Eventi DIRECT_OUTPUT supportati:", Colors.YELLOW))
+    print("  • speak          - Emetti audio vocale")
+    print("  • led_on         - Accendi LED")
+    print("  • led_off        - Spegni LED")
+    print("  • led_blink      - Lampeggia LED (content = numero lampeggi)")
+    
+    print("\n" + color("Formato JSON custom:", Colors.YELLOW))
+    print("""
+  {
+    "type": "direct_output",
+    "priority": "high",
+    "content": {
+      "event_type": "speak",
+      "content": "Ciao!"
+    }
+  }
+    """)
+    
+    print(color("Esempi:", Colors.YELLOW))
+    print("  s Ciao come stai?")
+    print("  t Hey Buddy, accendi la luce")
+    print("  lb 5")
+    print("  json")
+
+
+def interactive_loop():
+    """Loop interattivo principale"""
+    print(color("\n🚀 Buddy Chat avviato!", Colors.GREEN + Colors.BOLD))
+    print(color(f"   Input pipe:  {PIPE_IN}", Colors.CYAN))
+    print(color(f"   Output pipe: {PIPE_OUT}", Colors.CYAN))
+    print("\nDigita 'menu' per vedere i comandi disponibili")
+    
+    # Avvia monitor output
+    monitor = OutputMonitor(PIPE_OUT)
+    monitor.start()
+    
+    try:
+        while True:
+            try:
+                cmd = input(color("\n> ", Colors.CYAN)).strip()
+                
+                if not cmd:
+                    continue
+                    
+                # Parse comando
+                parts = cmd.split(maxsplit=1)
+                action = parts[0].lower()
+                args = parts[1] if len(parts) > 1 else ""
+                
+                # ===== COMANDI =====
+                if action in ['quit', 'exit', 'q']:
+                    print(color("\n👋 Ciao!", Colors.GREEN))
+                    break
+                    
+                elif action == 'menu':
+                    print_menu()
+                    
+                elif action == 'help':
+                    print_help()
+                    
+                elif action == 's':  # Speak
+                    if not args:
+                        print(color("⚠️  Uso: s <testo da dire>", Colors.RED))
+                        continue
+                    event = build_direct_output("speak", args, "high")
+                    if send_event(event):
+                        print(color(f"✅ Inviato: SPEAK '{args}'", Colors.GREEN))
+                        
+                elif action == 't':  # Talk (user speech)
+                    if not args:
+                        print(color("⚠️  Uso: t <testo>", Colors.RED))
+                        continue
+                    event = build_user_speech(args)
+                    if send_event(event):
+                        print(color(f"✅ Inviato: USER_SPEECH '{args}'", Colors.GREEN))
+                        
+                elif action == 'lon':  # LED ON
+                    event = build_direct_output("led_on", True, "normal")
+                    if send_event(event):
+                        print(color("✅ Inviato: LED ON", Colors.YELLOW))
+                        
+                elif action == 'loff':  # LED OFF
+                    event = build_direct_output("led_off", True, "normal")
+                    if send_event(event):
+                        print(color("✅ Inviato: LED OFF", Colors.YELLOW))
+                        
+                elif action == 'lb':  # LED BLINK
+                    blinks = int(args) if args else 3
+                    event = build_direct_output("led_blink", blinks, "normal")
+                    if send_event(event):
+                        print(color(f"✅ Inviato: LED BLINK x{blinks}", Colors.YELLOW))
+                        
+                elif action == 'json':  # JSON custom
+                    print(color("\nInserisci JSON (linea singola):", Colors.CYAN))
+                    json_input = input(color("> ", Colors.CYAN))
+                    try:
+                        event = json.loads(json_input)
+                        if send_event(event):
+                            print(color("✅ JSON inviato", Colors.GREEN))
+                    except json.JSONDecodeError as e:
+                        print(color(f"❌ JSON invalido: {e}", Colors.RED))
+                        
+                elif action == 'test':  # Test sequence
+                    print(color("\n🧪 Avvio test sequence...", Colors.MAGENTA))
+                    tests = [
+                        (build_direct_output("led_on", True), "LED ON"),
+                        (build_direct_output("speak", "LED acceso"), "SPEAK"),
+                        (build_direct_output("led_blink", 2), "LED BLINK x2"),
+                        (build_direct_output("speak", "Test completato"), "SPEAK"),
+                        (build_direct_output("led_off", True), "LED OFF"),
+                    ]
+                    for event, desc in tests:
+                        print(color(f"  → {desc}...", Colors.CYAN))
+                        send_event(event)
+                        import time
+                        time.sleep(1)
+                    print(color("✅ Test completato!", Colors.GREEN))
+                    
+                else:
+                    print(color(f"❌ Comando sconosciuto: {action}", Colors.RED))
+                    print(color("   Digita 'menu' per vedere i comandi", Colors.YELLOW))
+                    
+            except KeyboardInterrupt:
+                print(color("\n\n👋 Interrotto, usa 'quit' per uscire", Colors.YELLOW))
+                
+            except Exception as e:
+                print(color(f"\n❌ Errore: {e}", Colors.RED))
+                
+    finally:
+        monitor.stop()
+
+
+# ===== MAIN =====
+def main():
+    """Entry point"""
+    
+    # Verifica che le pipe esistano
+    if not PIPE_IN.exists():
+        print(color(f"⚠️  Pipe input non trovata: {PIPE_IN}", Colors.RED))
+        print(color("   Buddy deve essere avviato prima!", Colors.YELLOW))
+        print(color("   Le named pipe vengono create automaticamente da Buddy", Colors.YELLOW))
+        sys.exit(1)
+        
+    if not PIPE_OUT.exists():
+        print(color(f"⚠️  Pipe output non trovata: {PIPE_OUT}", Colors.RED))
+        print(color("   Buddy deve essere avviato prima!", Colors.YELLOW))
+        sys.exit(1)
+        
+    # Avvia loop interattivo
+    try:
+        interactive_loop()
+    except Exception as e:
+        print(color(f"\n❌ Errore fatale: {e}", Colors.RED))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

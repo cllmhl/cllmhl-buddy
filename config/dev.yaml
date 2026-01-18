@@ -15,6 +15,11 @@ archivist:
 
 adapters:
   input:
+    # Pipe Input - IPC communication
+    - class: "PipeInputAdapter"
+      config:
+        pipe_path: "data/buddy.in"
+    
     # Voice input MOCK in test mode
     - class: "MockVoiceInput"
       config:
@@ -31,6 +36,12 @@ adapters:
         interval: 10.0
   
   output:
+    # Pipe Output - IPC communication (monitor all events)
+    - class: "PipeOutputAdapter"
+      config:
+        pipe_path: "data/buddy.out"
+        event_types: ["speak", "led_on", "led_off", "led_blink", "save_history", "save_memory"]
+    
     # Voice output -> MOCK (log instead of audio)
     - class: "MockVoiceOutput"
       config:

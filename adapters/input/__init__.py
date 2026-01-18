@@ -8,7 +8,7 @@ Le classi vengono automaticamente rese disponibili al factory tramite __all__.
 from .voice_input import JabraVoiceInput, MockVoiceInput
 from .radar_input import RadarInput, MockRadarInput
 from .temperature_input import TemperatureInput, MockTemperatureInput
-from .direct_output_input import DirectOutputInput
+from .pipe_input import PipeInputAdapter
 
 __all__ = [
     'JabraVoiceInput',
@@ -17,5 +17,5 @@ __all__ = [
     'MockRadarInput',
     'TemperatureInput',
     'MockTemperatureInput',
-    'DirectOutputInput'
+    'PipeInputAdapter'
 ]

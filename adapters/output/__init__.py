@@ -10,6 +10,7 @@ from .led_output import GPIOLEDOutput, MockLEDOutput
 from .database_output import DatabaseOutput, MockDatabaseOutput
 from .archivist_output import ArchivistOutput, MockArchivistOutput
 from .console_output import ConsoleOutput, MockConsoleOutput
+from .pipe_output import PipeOutputAdapter
 
 __all__ = [
     'JabraVoiceOutput',
@@ -21,5 +22,6 @@ __all__ = [
     'ArchivistOutput',
     'MockArchivistOutput',
     'ConsoleOutput',
-    'MockConsoleOutput'
+    'MockConsoleOutput',
+    'PipeOutputAdapter'
 ]
