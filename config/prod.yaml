@@ -33,22 +33,36 @@ adapters:
       config:
         pin: 18
         interval: 1.0
+
+    # Pipe Input - IPC communication
+    - class: "PipeInputAdapter"
+      config:
+        pipe_path: "data/buddy.in"
   
   output:
+    # Pipe Output - IPC communication (monitor all events)
+    - class: "PipeOutputAdapter"
+      config:
+        pipe_path: "data/buddy.out"
+        event_types: ["speak"]
+    
     # Voice output con Jabra
     - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 50
         tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
         voice_name: "paola"  # "paola" o "riccardo"
-    
+        audio_device: "plughw:2,0"  # Jabra SPEAK 410 USB (card 2). Coontrolla con `aplay -l`
+
     # LED con GPIO
     - class: "GPIOLEDOutput"
       config:
         queue_maxsize: 100
         led_ascolto_pin: 26  # LED Blu
-        led_stato_pin: 21    # LED Verde
-    
+        led_parlo_pin: 21    # LED Verde
+        blink_on_time: 1.0
+        blink_off_time: 1.0
+            
     # Database
     - class: "DatabaseOutput"
       config:
@@ -69,6 +83,7 @@ adapters:
 
 queues:
   input_maxsize: 100
+  database_maxsize: 500
 
 logging:
   log_file: "logs/prod.log"
