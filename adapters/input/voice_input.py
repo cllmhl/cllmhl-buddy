@@ -28,7 +28,7 @@ from gpiozero import LED
 
 from adapters.ports import VoiceInputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import create_input_event, InputEventType, EventPriority
+from core.events import create_input_event, create_output_event, InputEventType, OutputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,36 @@ class JabraVoiceInput(VoiceInputPort):
             logger.info(f"🎤 JabraVoiceInput initialized (wake word enabled)")
         else:
             logger.warning(f"⚠️ JabraVoiceInput initialized (wake word DISABLED)")
+    
+    def _emit_led_control(self, led: str, command: str, **kwargs) -> None:
+        """
+        Helper per emettere eventi LED_CONTROL.
+        
+        Args:
+            led: 'ascolto' | 'parlo'
+            command: 'on' | 'off' | 'blink'
+            **kwargs: continuous, on_time, off_time, times
+        """
+        metadata = {
+            'led': led,
+            'command': command,
+            **kwargs
+        }
+        event = create_output_event(
+            OutputEventType.LED_CONTROL,
+            None,
+            EventPriority.HIGH,
+            metadata=metadata
+        )
+        # Pubblica direttamente come InputEvent DIRECT_OUTPUT
+        wrapper_event = create_input_event(
+            InputEventType.DIRECT_OUTPUT,
+            event,
+            source=self.name,
+            priority=EventPriority.HIGH
+        )
+        self.input_queue.put(wrapper_event)
+        logger.debug(f"LED_CONTROL emesso: {led} → {command}")
     
     def _setup_hardware(self) -> None:
         """Setup Porcupine + PvRecorder"""
@@ -249,9 +279,8 @@ class JabraVoiceInput(VoiceInputPort):
                         continue
                     
                     try:
-                        # LED on
-                        if self.led_ascolto:
-                            self.led_ascolto.on()
+                        # LED ascolto ON (fisso)
+                        self._emit_led_control('ascolto', 'on')
                         
                         # Stop Porcupine recorder
                         self.recorder.stop()
@@ -259,9 +288,8 @@ class JabraVoiceInput(VoiceInputPort):
                         # Avvia conversation session
                         self._run_conversation_session()
                         
-                        # LED off
-                        if self.led_ascolto:
-                            self.led_ascolto.off()
+                        # Torna IDLE (lampeggia)
+                        self._emit_led_control('ascolto', 'blink', continuous=True, on_time=1.0, off_time=1.0)
                         
                         # Resume wake word detection
                         logger.info("💤 Returning to wake word detection...")

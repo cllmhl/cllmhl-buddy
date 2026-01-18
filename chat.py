@@ -152,7 +152,7 @@ def send_event(event_data: dict):
 
 
 # ===== EVENT BUILDERS =====
-def build_direct_output(event_type: str, content, priority: str = "normal"):
+def build_direct_output(event_type: str, content, priority: str = "normal", metadata: dict = None):
     """Costruisce un DIRECT_OUTPUT event"""
     return {
         "type": "direct_output",
@@ -161,8 +161,26 @@ def build_direct_output(event_type: str, content, priority: str = "normal"):
             "event_type": event_type,
             "content": content,
             "priority": priority
-        }
+        },
+        "metadata": metadata or {}
     }
+
+
+def build_led_control(led: str, command: str, **kwargs):
+    """
+    Costruisce un evento LED_CONTROL.
+    
+    Args:
+        led: 'ascolto' | 'parlo'
+        command: 'on' | 'off' | 'blink'
+        **kwargs: continuous, on_time, off_time, times
+    """
+    metadata = {
+        'led': led,
+        'command': command,
+        **kwargs
+    }
+    return build_direct_output("led_control", None, "normal", metadata)
 
 
 def build_user_speech(text: str):
@@ -184,9 +202,17 @@ def print_menu():
     print(f"\n{color('COMANDI RAPIDI:', Colors.YELLOW + Colors.BOLD)}")
     print(f"  {color('s', Colors.GREEN)} <testo>    → Speak (emetti voce)")
     print(f"  {color('t', Colors.GREEN)} <testo>    → Talk (invia speech utente)")
-    print(f"  {color('lon', Colors.YELLOW)}          → LED ON")
-    print(f"  {color('loff', Colors.YELLOW)}         → LED OFF")
-    print(f"  {color('lb', Colors.YELLOW)} <n>       → LED BLINK (n volte, default=3)")
+    
+    print(f"\n{color('LED ASCOLTO (Blu):', Colors.BLUE + Colors.BOLD)}")
+    print(f"  {color('lona', Colors.BLUE)}         → LED Ascolto ON")
+    print(f"  {color('loffa', Colors.BLUE)}        → LED Ascolto OFF")
+    print(f"  {color('lba', Colors.BLUE)} <n>      → LED Ascolto BLINK (n volte)")
+    print(f"  {color('lidlea', Colors.BLUE)}       → LED Ascolto IDLE (lampeggia continuo)")
+    
+    print(f"\n{color('LED PARLO (Verde):', Colors.GREEN + Colors.BOLD)}")
+    print(f"  {color('lonp', Colors.GREEN)}         → LED Parlo ON")
+    print(f"  {color('loffp', Colors.GREEN)}        → LED Parlo OFF")
+    print(f"  {color('lbp', Colors.GREEN)} <n>      → LED Parlo BLINK (n volte)")
     
     print(f"\n{color('MENU AVANZATO:', Colors.YELLOW + Colors.BOLD)}")
     print(f"  {color('menu', Colors.BLUE)}         → Mostra questo menu")
@@ -276,22 +302,62 @@ def interactive_loop():
                     event = build_user_speech(args)
                     if send_event(event):
                         print(color(f"✅ Inviato: USER_SPEECH '{args}'", Colors.GREEN))
-                        
-                elif action == 'lon':  # LED ON
-                    event = build_direct_output("led_on", True, "normal")
+                
+                # ===== LED ASCOLTO (Blu) =====
+                elif action == 'lona':  # LED Ascolto ON
+                    event = build_led_control('ascolto', 'on')
                     if send_event(event):
-                        print(color("✅ Inviato: LED ON", Colors.YELLOW))
+                        print(color("✅ Inviato: LED ASCOLTO ON", Colors.BLUE))
                         
-                elif action == 'loff':  # LED OFF
-                    event = build_direct_output("led_off", True, "normal")
+                elif action == 'loffa':  # LED Ascolto OFF
+                    event = build_led_control('ascolto', 'off')
                     if send_event(event):
-                        print(color("✅ Inviato: LED OFF", Colors.YELLOW))
+                        print(color("✅ Inviato: LED ASCOLTO OFF", Colors.BLUE))
                         
-                elif action == 'lb':  # LED BLINK
-                    blinks = int(args) if args else 3
-                    event = build_direct_output("led_blink", blinks, "normal")
+                elif action == 'lba':  # LED Ascolto BLINK
+                    times = int(args) if args else 3
+                    event = build_led_control('ascolto', 'blink', times=times)
                     if send_event(event):
-                        print(color(f"✅ Inviato: LED BLINK x{blinks}", Colors.YELLOW))
+                        print(color(f"✅ Inviato: LED ASCOLTO BLINK x{times}", Colors.BLUE))
+                        
+                elif action == 'lidlea':  # LED Ascolto IDLE (continuous blink)
+                    event = build_led_control('ascolto', 'blink', continuous=True, on_time=1.0, off_time=1.0)
+                    if send_event(event):
+                        print(color("✅ Inviato: LED ASCOLTO IDLE (lampeggia continuo)", Colors.BLUE))
+                
+                # ===== LED PARLO (Verde) =====
+                elif action == 'lonp':  # LED Parlo ON
+                    event = build_led_control('parlo', 'on')
+                    if send_event(event):
+                        print(color("✅ Inviato: LED PARLO ON", Colors.GREEN))
+                        
+                elif action == 'loffp':  # LED Parlo OFF
+                    event = build_led_control('parlo', 'off')
+                    if send_event(event):
+                        print(color("✅ Inviato: LED PARLO OFF", Colors.GREEN))
+                        
+                elif action == 'lbp':  # LED Parlo BLINK
+                    times = int(args) if args else 3
+                    event = build_led_control('parlo', 'blink', times=times)
+                    if send_event(event):
+                        print(color(f"✅ Inviato: LED PARLO BLINK x{times}", Colors.GREEN))
+                
+                # ===== LEGACY LED COMANDI (backward compat) =====
+                elif action == 'lon':  # LED ON (default parlo)
+                    event = build_led_control('parlo', 'on')
+                    if send_event(event):
+                        print(color("✅ Inviato: LED ON (parlo)", Colors.YELLOW))
+                        
+                elif action == 'loff':  # LED OFF (default parlo)
+                    event = build_led_control('parlo', 'off')
+                    if send_event(event):
+                        print(color("✅ Inviato: LED OFF (parlo)", Colors.YELLOW))
+                        
+                elif action == 'lb':  # LED BLINK (default parlo)
+                    times = int(args) if args else 3
+                    event = build_led_control('parlo', 'blink', times=times)
+                    if send_event(event):
+                        print(color(f"✅ Inviato: LED BLINK x{times} (parlo)", Colors.YELLOW))
                         
                 elif action == 'json':  # JSON custom
                     print(color("\nInserisci JSON (linea singola):", Colors.CYAN))
@@ -304,19 +370,22 @@ def interactive_loop():
                         print(color(f"❌ JSON invalido: {e}", Colors.RED))
                         
                 elif action == 'test':  # Test sequence
-                    print(color("\n🧪 Avvio test sequence...", Colors.MAGENTA))
+                    print(color("\n🧪 Avvio test sequence LED...", Colors.MAGENTA))
                     tests = [
-                        (build_direct_output("led_on", True), "LED ON"),
-                        (build_direct_output("speak", "LED acceso"), "SPEAK"),
-                        (build_direct_output("led_blink", 2), "LED BLINK x2"),
+                        (build_led_control('ascolto', 'blink', continuous=True), "LED ASCOLTO → IDLE (lampeggia)"),
+                        (build_direct_output("speak", "Test LED in corso"), "SPEAK"),
+                        (build_led_control('ascolto', 'on'), "LED ASCOLTO → ON (fisso)"),
+                        (build_led_control('parlo', 'on'), "LED PARLO → ON"),
+                        (build_direct_output("speak", "Sto parlando"), "SPEAK"),
+                        (build_led_control('parlo', 'off'), "LED PARLO → OFF"),
+                        (build_led_control('ascolto', 'off'), "LED ASCOLTO → OFF"),
                         (build_direct_output("speak", "Test completato"), "SPEAK"),
-                        (build_direct_output("led_off", True), "LED OFF"),
                     ]
                     for event, desc in tests:
                         print(color(f"  → {desc}...", Colors.CYAN))
                         send_event(event)
                         import time
-                        time.sleep(1)
+                        time.sleep(1.5)
                     print(color("✅ Test completato!", Colors.GREEN))
                     
                 else:

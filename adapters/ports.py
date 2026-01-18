@@ -187,7 +187,12 @@ class LEDOutputPort(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questa Port"""
-        return [OutputEventType.LED_ON, OutputEventType.LED_OFF, OutputEventType.LED_BLINK]
+        return [
+            OutputEventType.LED_CONTROL,  # Unified control (preferred)
+            OutputEventType.LED_ON,       # Legacy
+            OutputEventType.LED_OFF,      # Legacy
+            OutputEventType.LED_BLINK     # Legacy
+        ]
 
 
 class DatabaseOutputPort(OutputPort):

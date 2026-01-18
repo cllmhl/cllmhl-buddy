@@ -152,7 +152,9 @@ class PipeInputAdapter(InputPort):
             
         # Gestisci DIRECT_OUTPUT in modo speciale
         if event_type_str == "direct_output":
-            output_event = self._parse_direct_output(content, priority)
+            # metadata può essere sia nel top-level che nel content
+            output_metadata = data.get("metadata", {})
+            output_event = self._parse_direct_output(content, priority, output_metadata)
             if output_event:
                 # Crea un InputEvent wrapper
                 event = Event(
@@ -182,16 +184,18 @@ class PipeInputAdapter(InputPort):
         except KeyError:
             logger.error(f"Tipo evento sconosciuto: {event_type_str}")
             
-    def _parse_direct_output(self, content: dict, priority: EventPriority) -> Optional[Event]:
+    def _parse_direct_output(self, content: dict, priority: EventPriority, metadata: dict = None) -> Optional[Event]:
         """
         Parsa il content di un DIRECT_OUTPUT event
         
         Formato:
         {
-            "event_type": "speak" | "led_on" | ...,
+            "event_type": "speak" | "led_control" | ...,
             "content": <any>,
             "priority": "normal" (opzionale, override)
         }
+        
+        metadata opzionale può contenere dati extra (es: per led_control)
         """
         if not isinstance(content, dict):
             logger.error(f"DIRECT_OUTPUT content deve essere dict, ricevuto: {type(content)}")
@@ -212,7 +216,8 @@ class PipeInputAdapter(InputPort):
             return create_output_event(
                 event_type=event_type,
                 content=event_content,
-                priority=event_priority
+                priority=event_priority,
+                metadata=metadata or {}
             )
             
         except KeyError as e:
