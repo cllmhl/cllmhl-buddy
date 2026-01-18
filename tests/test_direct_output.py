@@ -25,11 +25,11 @@ def test_direct_output():
     }
     
     # Crea eventi output reali (quelli che andrebbero agli adapter)
-    led_on_event = create_output_event(
-        event_type=EventType.LED_ON,
+    led_control_event = create_output_event(
+        event_type=EventType.LED_CONTROL,
         content=None,
         priority=EventPriority.HIGH,
-        metadata={'led': 'ascolto'}
+        metadata={'led': 'ascolto', 'command': 'on'}
     )
     
     speak_event = create_output_event(
@@ -41,7 +41,7 @@ def test_direct_output():
     # Wrappa in DIRECT_OUTPUT (questo viene dall'input)
     direct_led = create_input_event(
         event_type=EventType.DIRECT_OUTPUT,
-        content=led_on_event,  # <- Evento output wrappato
+        content=led_control_event,  # <- Evento output wrappato
         source="test",
         priority=EventPriority.HIGH
     )
@@ -54,7 +54,7 @@ def test_direct_output():
     )
     
     print("✅ Eventi creati:")
-    print(f"   1. LED_ON wrappato in DIRECT_OUTPUT")
+    print(f"   1. LED_CONTROL wrappato in DIRECT_OUTPUT")
     print(f"   2. SPEAK wrappato in DIRECT_OUTPUT\n")
     
     # Simula processing (senza inizializzare il client LLM)
@@ -65,7 +65,7 @@ def test_direct_output():
         brain.archivist_interval = 300.0
         brain.last_archivist_time = 0
         
-        print("🧠 Processando DIRECT_OUTPUT (LED_ON)...")
+        print("🧠 Processando DIRECT_OUTPUT (LED_CONTROL)...")
         result_led = brain._handle_direct_output(direct_led)
         
         print(f"   → Risultato: {len(result_led)} evento/i")
@@ -87,7 +87,7 @@ def test_direct_output():
         
         print("📝 Note:")
         print("   - L'evento wrapper (DIRECT_OUTPUT) è di tipo INPUT")
-        print("   - L'evento interno (LED_ON, SPEAK) è di tipo OUTPUT")
+        print("   - L'evento interno (LED_CONTROL, SPEAK) è di tipo OUTPUT")
         print("   - Il Brain li unwrappa e inoltra direttamente")
         print("   - Nessuna chiamata LLM = perfetto per test hardware\n")
         

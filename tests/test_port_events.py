@@ -22,10 +22,8 @@ class TestOutputPortEvents:
     def test_led_output_port_declares_events(self):
         """LEDOutputPort dichiara quali eventi gestisce"""
         events = LEDOutputPort.handled_events()
-        assert EventType.LED_ON in events
-        assert EventType.LED_OFF in events
-        assert EventType.LED_BLINK in events
-        assert len(events) == 3
+        assert EventType.LED_CONTROL in events
+        assert len(events) == 1
     
     def test_database_output_port_declares_events(self):
         """DatabaseOutputPort dichiara quali eventi gestisce"""
@@ -52,9 +50,7 @@ class TestOutputPortEvents:
         assert EventType.SPEAK in voice_events
         
         led_events = MockLEDOutput.handled_events()
-        assert EventType.LED_ON in led_events
-        assert EventType.LED_OFF in led_events
-        assert EventType.LED_BLINK in led_events
+        assert EventType.LED_CONTROL in led_events
         
         db_events = MockDatabaseOutput.handled_events()
         assert EventType.SAVE_HISTORY in db_events

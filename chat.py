@@ -229,9 +229,7 @@ def print_help():
     print("\n" + color("📖  GUIDA COMPLETA", Colors.CYAN + Colors.BOLD))
     print("\n" + color("Eventi DIRECT_OUTPUT supportati:", Colors.YELLOW))
     print("  • speak          - Emetti audio vocale")
-    print("  • led_on         - Accendi LED")
-    print("  • led_off        - Spegni LED")
-    print("  • led_blink      - Lampeggia LED (content = numero lampeggi)")
+    print("  • led_control    - Controllo unificato LED (con metadata)")
     
     print("\n" + color("Formato JSON custom:", Colors.YELLOW))
     print("""

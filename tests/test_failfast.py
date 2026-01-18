@@ -46,33 +46,33 @@ class TestFailFast:
             VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
             VoiceInputPort, RadarInputPort, TemperatureInputPort
         )
-        from core.events import EventType
+        from core.events import EventType, InputEventType, OutputEventType
         
-        # Output ports
+        # Output ports - ritornano OutputEventType
         voice_events = VoiceOutputPort.handled_events()
         assert len(voice_events) > 0
-        assert all(isinstance(e, EventType) for e in voice_events)
+        assert all(isinstance(e, OutputEventType) for e in voice_events)
         
         led_events = LEDOutputPort.handled_events()
         assert len(led_events) > 0
-        assert all(isinstance(e, EventType) for e in led_events)
+        assert all(isinstance(e, OutputEventType) for e in led_events)
         
         db_events = DatabaseOutputPort.handled_events()
         assert len(db_events) > 0
-        assert all(isinstance(e, EventType) for e in db_events)
+        assert all(isinstance(e, OutputEventType) for e in db_events)
         
-        # Input ports
+        # Input ports - ritornano InputEventType
         voice_input_events = VoiceInputPort.emitted_events()
         assert len(voice_input_events) > 0
-        assert all(isinstance(e, EventType) for e in voice_input_events)
+        assert all(isinstance(e, InputEventType) for e in voice_input_events)
         
         radar_events = RadarInputPort.emitted_events()
         assert len(radar_events) > 0
-        assert all(isinstance(e, EventType) for e in radar_events)
+        assert all(isinstance(e, InputEventType) for e in radar_events)
         
         temp_events = TemperatureInputPort.emitted_events()
         assert len(temp_events) > 0
-        assert all(isinstance(e, EventType) for e in temp_events)
+        assert all(isinstance(e, InputEventType) for e in temp_events)
     
     def test_build_event_routing_fails_without_adapters(self):
         """build_event_routing_from_ports fallisce se adapters non disponibili"""

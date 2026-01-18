@@ -31,31 +31,31 @@ adapters:
         mode: "sequence"  # Esegue sequenza e termina
         sequence:
           # Test LED Ascolto
-          - type: "LED_ON"
-            metadata: {led: "ascolto"}
+          - type: "LED_CONTROL"
+            metadata: {led: "ascolto", command: "on"}
             delay: 2.0
           
-          - type: "LED_OFF"
-            metadata: {led: "ascolto"}
+          - type: "LED_CONTROL"
+            metadata: {led: "ascolto", command: "off"}
             delay: 1.0
           
-          # Test LED Stato
-          - type: "LED_ON"
-            metadata: {led: "stato"}
+          # Test LED Parlo
+          - type: "LED_CONTROL"
+            metadata: {led: "parlo", command: "on"}
             delay: 2.0
           
-          - type: "LED_OFF"
-            metadata: {led: "stato"}
+          - type: "LED_CONTROL"
+            metadata: {led: "parlo", command: "off"}
             delay: 1.0
           
           # Test Blink Ascolto
-          - type: "LED_BLINK"
-            metadata: {led: "ascolto", times: 3}
+          - type: "LED_CONTROL"
+            metadata: {led: "ascolto", command: "blink", times: 3}
             delay: 2.0
           
-          # Test Blink Stato
-          - type: "LED_BLINK"
-            metadata: {led: "stato", times: 5}
+          # Test Blink Parlo
+          - type: "LED_CONTROL"
+            metadata: {led: "parlo", command: "blink", times: 5}
             delay: 2.0
   
   # Output: LED reali + console

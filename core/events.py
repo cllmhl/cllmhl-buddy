@@ -39,13 +39,8 @@ class OutputEventType(Enum):
     # Audio
     SPEAK = "speak"                       # Emetti audio vocale
     
-    # LED - Unified control
-    LED_CONTROL = "led_control"           # Controllo LED unificato (usa metadata)
-    
-    # LED - Legacy (backward compatibility, deprecated)
-    LED_ON = "led_on"
-    LED_OFF = "led_off"
-    LED_BLINK = "led_blink"
+    # LED
+    LED_CONTROL = "led_control"           # Controllo LED (usa metadata: led, command, continuous, on_time, off_time, times)
     
     # Storage
     SAVE_HISTORY = "save_history"         # Salva in history DB
@@ -72,9 +67,6 @@ class EventType:
     # Output events
     SPEAK = OutputEventType.SPEAK
     LED_CONTROL = OutputEventType.LED_CONTROL
-    LED_ON = OutputEventType.LED_ON  # Legacy
-    LED_OFF = OutputEventType.LED_OFF  # Legacy
-    LED_BLINK = OutputEventType.LED_BLINK  # Legacy
     SAVE_HISTORY = OutputEventType.SAVE_HISTORY
     SAVE_MEMORY = OutputEventType.SAVE_MEMORY
     DISTILL_MEMORY = OutputEventType.DISTILL_MEMORY

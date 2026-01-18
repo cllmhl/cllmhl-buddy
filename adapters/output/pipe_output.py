@@ -53,7 +53,7 @@ class PipeOutputAdapter(OutputPort):
             config: Configurazione con:
                 - pipe_path: Path alla named pipe (default: data/buddy.out)
                 - event_types: Lista di OutputEventType da monitorare (default: tutti)
-                             Es: ["speak", "led_on", "led_blink"]
+                             Es: ["speak", "led_control"]
             queue_maxsize: Dimensione coda interna
         """
         super().__init__(name, config, queue_maxsize)

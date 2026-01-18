@@ -80,7 +80,7 @@ class TestAdapterFactory:
         # Verifica che siano presenti le classi principali
         assert 'MockVoiceInput' in classes['input']
         assert 'MockVoiceOutput' in classes['output']
-        assert 'DirectOutputInput' in classes['input']
+        assert 'PipeInputAdapter' in classes['input']
     
     def test_create_input_adapter_success(self):
         """Test creazione adapter input con successo"""

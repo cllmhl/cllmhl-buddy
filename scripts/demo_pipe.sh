@@ -22,17 +22,17 @@ send_event() {
     sleep 1
 }
 
-# Test 1: LED ON
-send_event '{"type":"direct_output","content":{"event_type":"led_on","content":true}}' "LED ON"
+# Test 1: LED ASCOLTO ON
+send_event '{"type":"direct_output","content":{"event_type":"led_control","content":"","metadata":{"led":"ascolto","command":"on"}}}' "LED ASCOLTO ON"
 
 # Test 2: Speak
 send_event '{"type":"direct_output","content":{"event_type":"speak","content":"Script demo in esecuzione"}}' "SPEAK"
 
-# Test 3: LED BLINK
-send_event '{"type":"direct_output","content":{"event_type":"led_blink","content":3}}' "LED BLINK x3"
+# Test 3: LED PARLO BLINK x3
+send_event '{"type":"direct_output","content":{"event_type":"led_control","content":"","metadata":{"led":"parlo","command":"blink","times":3}}}' "LED PARLO BLINK x3"
 
-# Test 4: LED OFF
-send_event '{"type":"direct_output","content":{"event_type":"led_off","content":true}}' "LED OFF"
+# Test 4: LED ASCOLTO OFF
+send_event '{"type":"direct_output","content":{"event_type":"led_control","content":"","metadata":{"led":"ascolto","command":"off"}}}' "LED ASCOLTO OFF"
 
 # Test 5: USER_SPEECH (passa dal Brain)
 send_event '{"type":"user_speech","priority":"high","content":"Che ore sono?"}' "USER_SPEECH"

@@ -40,7 +40,7 @@ adapters:
     - class: "PipeOutputAdapter"
       config:
         pipe_path: "data/buddy.out"
-        event_types: ["speak", "led_control", "led_on", "led_off", "led_blink", "save_history", "save_memory"]
+        event_types: ["speak", "led_control", "save_history", "save_memory"]
     
     # Voice output -> MOCK (log instead of audio)
     - class: "MockVoiceOutput"

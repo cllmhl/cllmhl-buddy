@@ -85,12 +85,8 @@ class GPIOLEDOutput(LEDOutputPort):
                 
                 if event.type == OutputEventType.LED_CONTROL:
                     self._handle_led_control(event)
-                elif event.type == OutputEventType.LED_ON:
-                    self._handle_led_on(event)
-                elif event.type == OutputEventType.LED_OFF:
-                    self._handle_led_off(event)
-                elif event.type == OutputEventType.LED_BLINK:
-                    self._handle_led_blink(event)
+                else:
+                    logger.warning(f"Unknown LED event type: {event.type}")
                 
                 self.output_queue.task_done()
                 
@@ -110,7 +106,7 @@ class GPIOLEDOutput(LEDOutputPort):
         """Helper per ottenere l'oggetto LED dal nome"""
         if led_name == 'ascolto':
             return self.led_ascolto
-        elif led_name in ['parlo', 'stato']:  # 'stato' per backward compatibility
+        elif led_name == 'parlo':
             return self.led_parlo
         return None
     
@@ -180,35 +176,7 @@ class GPIOLEDOutput(LEDOutputPort):
     
     # ===== LEGACY HANDLERS (backward compatibility) =====
     
-    def _handle_led_on(self, event: Event) -> None:
-        """Accendi LED (legacy)"""
-        led_name = event.metadata.get('led', 'parlo') if event.metadata else 'parlo'
-        led = self._get_led(led_name)
-        if led:
-            led.on()
-            logger.debug(f"💡 LED {led_name.upper()} ON (legacy)")
-    
-    def _handle_led_off(self, event: Event) -> None:
-        """Spegni LED (legacy)"""
-        led_name = event.metadata.get('led', 'parlo') if event.metadata else 'parlo'
-        led = self._get_led(led_name)
-        if led:
-            led.off()
-            logger.debug(f"🌑 LED {led_name.upper()} OFF (legacy)")
-    
-    def _handle_led_blink(self, event: Event) -> None:
-        """Blink LED (legacy)"""
-        led_name = event.metadata.get('led', 'parlo') if event.metadata else 'parlo'
-        times = event.metadata.get('times', 3) if event.metadata else 3
-        
-        led = self._get_led(led_name)
-        if led:
-            for _ in range(times):
-                led.on()
-                time.sleep(0.2)
-                led.off()
-                time.sleep(0.2)
-            logger.debug(f"💫 LED {led_name.upper()} BLINK x{times} (legacy)")
+
 
 
 class MockLEDOutput(LEDOutputPort):
@@ -252,12 +220,8 @@ class MockLEDOutput(LEDOutputPort):
                 
                 if event.type == OutputEventType.LED_CONTROL:
                     self._handle_mock_led_control(event)
-                elif event.type == OutputEventType.LED_ON:
-                    self._handle_mock_led(event, "ON")
-                elif event.type == OutputEventType.LED_OFF:
-                    self._handle_mock_led(event, "OFF")
-                elif event.type == OutputEventType.LED_BLINK:
-                    self._handle_mock_led(event, "BLINK")
+                else:
+                    logger.warning(f"Unknown LED event type: {event.type}")
                 
                 self.output_queue.task_done()
                 
@@ -292,19 +256,4 @@ class MockLEDOutput(LEDOutputPort):
         
         logger.info(f"💡 [MOCK LED] {led_name.upper()} -> {command}{details}")
     
-    def _handle_mock_led(self, event: Event, action: str) -> None:
-        """Simula LED action"""
-        led_name = event.metadata.get('led', 'parlo') if event.metadata else 'parlo'
-        
-        # Dettagli extra per blink
-        details = ""
-        if action == "BLINK" and event.metadata:
-            if event.metadata.get('continuous'):
-                on_time = event.metadata.get('on_time', 1.0)
-                off_time = event.metadata.get('off_time', 1.0)
-                details = f" CONTINUOUS ({on_time}s/{off_time}s)"
-            else:
-                times = event.metadata.get('times', 3)
-                details = f" x{times}"
-        
-        logger.info(f"💡 [MOCK LED] {led_name.upper()} -> {action}{details}")
+
