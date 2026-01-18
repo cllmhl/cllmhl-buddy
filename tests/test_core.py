@@ -193,7 +193,8 @@ class TestBuddyBrain:
         return {
             'model_id': 'test-model',
             'temperature': 0.7,
-            'system_instruction': 'Test instruction'
+            'system_instruction': 'Test instruction',
+            'archivist_interval': 300.0
         }
     
     @patch('core.brain.genai.Client')

@@ -184,7 +184,7 @@ class PipeInputAdapter(InputPort):
         except KeyError:
             logger.error(f"Tipo evento sconosciuto: {event_type_str}")
             
-    def _parse_direct_output(self, content: dict, priority: EventPriority, metadata: dict = None) -> Optional[Event]:
+    def _parse_direct_output(self, content: dict, priority: EventPriority, metadata: Optional[dict] = None) -> Optional[Event]:
         """
         Parsa il content di un DIRECT_OUTPUT event
         

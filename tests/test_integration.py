@@ -50,7 +50,9 @@ class TestIntegration:
         with patch.dict(os.environ, {'GOOGLE_API_KEY': 'fake_key'}):
             brain = BuddyBrain('test_brain', {
                 'model_id': 'gemini-2.0-flash-exp',
-                'temperature': 0.7
+                'temperature': 0.7,
+                'system_instruction': 'Test',
+                'archivist_interval': 300.0
             })
         
         # Mock della risposta LLM

@@ -7,6 +7,7 @@ import logging
 import threading
 import time
 from queue import PriorityQueue
+from typing import Optional
 
 # Mock GPIO per testing
 if not os.path.exists('/proc/device-tree/model'):
@@ -210,7 +211,7 @@ class MockTemperatureInput(TemperatureInputPort):
         super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 10.0)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         
         logger.info(f"🌡️  MockTemperatureInput initialized")
     

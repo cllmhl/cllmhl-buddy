@@ -90,6 +90,10 @@ class EventRouter:
         """
         with self._lock:
             # Controlla se esiste una route
+            if not isinstance(event.type, OutputEventType):
+                logger.warning(f"Cannot route non-output event: {event.type}")
+                return 0
+            
             if event.type not in self._routes or not self._routes[event.type]:
                 logger.debug(f"⚠️ No route for event: {event.type.value}")
                 self._stats['no_route'] += 1

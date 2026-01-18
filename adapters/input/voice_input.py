@@ -79,7 +79,7 @@ class JabraVoiceInput(VoiceInputPort):
         self.enabled = False
         
         # Thread worker
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         
         # Setup hardware
         self._setup_hardware()
@@ -160,6 +160,10 @@ class JabraVoiceInput(VoiceInputPort):
                 target_index = 0
             
             self.device_index = target_index
+            
+            # Porcupine MUST be initialized at this point
+            if not self.porcupine:
+                raise RuntimeError("Porcupine not initialized")
             
             # Init Recorder
             self.recorder = PvRecorder(
@@ -407,7 +411,7 @@ class MockVoiceInput(VoiceInputPort):
         super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 10.0)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         
         # Frasi di test simulate
         self.test_phrases = [

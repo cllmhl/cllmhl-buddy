@@ -130,8 +130,7 @@ class AudioDeviceManager:
                     return True
             
             # Check timeout
-            if timeout is not None:
-                import time
+            if timeout is not None and start_time is not None:
                 if time.time() - start_time > timeout:
                     return False
             

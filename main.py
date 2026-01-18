@@ -8,7 +8,7 @@ import sys
 import queue
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
@@ -20,6 +20,7 @@ from core import (
 
 # Adapters imports
 from adapters import AdapterFactory
+from adapters.ports import InputPort, OutputPort
 
 # Config imports
 from config.config_loader import ConfigLoader
@@ -94,7 +95,7 @@ class BuddyOrchestrator:
         
         # Setup coda di input centralizzata
         queue_config = self.config['queues']
-        self.input_queue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
+        self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
         
         # Event Router
         self.router = EventRouter()
@@ -107,8 +108,8 @@ class BuddyOrchestrator:
         self.brain = BuddyBrain(api_key, self.config['brain'])
         
         # Adapters - creati PRIMA del setup routes
-        self.input_adapters = []
-        self.output_adapters = []
+        self.input_adapters: List[InputPort] = []
+        self.output_adapters: List[OutputPort] = []
         self._create_adapters()
         
         # Setup routes DOPO aver creato gli adapters
@@ -124,7 +125,7 @@ class BuddyOrchestrator:
         """
         # Registra ogni adapter per gli eventi che gestisce
         for adapter in self.output_adapters:
-            handled_events = adapter.__class__.handled_events()
+            handled_events = type(adapter).handled_events()
             for event_type in handled_events:
                 self.router.register_route(
                     event_type,
@@ -136,7 +137,7 @@ class BuddyOrchestrator:
         event_type_count = len(set(
             event_type 
             for adapter in self.output_adapters 
-            for event_type in adapter.__class__.handled_events()
+            for event_type in type(adapter).handled_events()
         ))
         
         self.logger.info(
@@ -164,9 +165,9 @@ class BuddyOrchestrator:
             class_name = adapter_cfg.get('class')
             config = adapter_cfg.get('config', {})
             
-            adapter = AdapterFactory.create_output_adapter(class_name, config)
-            if adapter:
-                self.output_adapters.append(adapter)
+            output_adapter = AdapterFactory.create_output_adapter(class_name, config)
+            if output_adapter:
+                self.output_adapters.append(output_adapter)
         
         self.logger.info(
             f"✅ Adapters created: {len(self.input_adapters)} input, "
@@ -176,36 +177,36 @@ class BuddyOrchestrator:
     def _start_adapters(self) -> None:
         """Avvia tutti gli adapters"""
         # Start input adapters (non ricevono più la coda - ce l'hanno già)
-        for adapter in self.input_adapters:
+        for in_adapter in self.input_adapters:
             try:
-                adapter.start()
-                self.logger.info(f"▶️  Started input adapter: {adapter.name}")
+                in_adapter.start()
+                self.logger.info(f"▶️  Started input adapter: {in_adapter.name}")
             except Exception as e:
-                self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
+                self.logger.error(f"❌ Failed to start {in_adapter.name}: {e}")
         
         # Start output adapters (non ricevono più la coda come parametro)
-        for adapter in self.output_adapters:
+        for out_adapter in self.output_adapters:
             try:
-                adapter.start()
-                self.logger.info(f"▶️  Started output adapter: {adapter.name}")
+                out_adapter.start()
+                self.logger.info(f"▶️  Started output adapter: {out_adapter.name}")
             except Exception as e:
-                self.logger.error(f"❌ Failed to start {adapter.name}: {e}")
+                self.logger.error(f"❌ Failed to start {out_adapter.name}: {e}")
     
     def _stop_adapters(self) -> None:
         """Ferma tutti gli adapters"""
         self.logger.info("Stopping adapters...")
         
-        for adapter in self.input_adapters:
+        for in_adapter in self.input_adapters:
             try:
-                adapter.stop()
+                in_adapter.stop()
             except Exception as e:
-                self.logger.error(f"Error stopping {adapter.name}: {e}")
+                self.logger.error(f"Error stopping {in_adapter.name}: {e}")
         
-        for adapter in self.output_adapters:
+        for out_adapter in self.output_adapters:
             try:
-                adapter.stop()
+                out_adapter.stop()
             except Exception as e:
-                self.logger.error(f"Error stopping {adapter.name}: {e}")
+                self.logger.error(f"Error stopping {out_adapter.name}: {e}")
     
     def run(self) -> None:
         """Main event loop"""

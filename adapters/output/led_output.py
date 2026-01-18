@@ -7,6 +7,7 @@ import logging
 import threading
 import time
 from queue import PriorityQueue, Empty
+from typing import Optional
 
 # Mock GPIO per testing
 if not os.path.exists('/proc/device-tree/model'):
@@ -48,7 +49,7 @@ class GPIOLEDOutput(LEDOutputPort):
             logger.error("LEDOutputPort requires working LEDs - cannot continue")
             raise RuntimeError(f"LED initialization failed: {e}") from e
         
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -188,7 +189,7 @@ class MockLEDOutput(LEDOutputPort):
     def __init__(self, name: str, config: dict):
         queue_maxsize = config.get('queue_maxsize', 100)
         super().__init__(name, config, queue_maxsize)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💡 MockLEDOutput initialized")
     
     def start(self) -> None:

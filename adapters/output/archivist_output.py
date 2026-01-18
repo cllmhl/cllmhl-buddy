@@ -5,6 +5,7 @@ Archivist Output Adapter - Distillazione della memoria
 import logging
 import threading
 from queue import PriorityQueue, Empty
+from typing import Optional
 
 from core.events import Event, OutputEventType
 from adapters.ports import ArchivistOutputPort
@@ -31,6 +32,7 @@ class ArchivistOutput(ArchivistOutputPort):
         chroma_path = config.get('chroma_path', 'data/memory')
         
         # Inizializza database
+        self.db: Optional[MemoryStore]
         try:
             self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
             logger.info(f"✅ Archivist database initialized")
@@ -43,6 +45,7 @@ class ArchivistOutput(ArchivistOutputPort):
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found for Archivist")
         
+        self.archivist: Optional[BuddyArchivist]
         try:
             self.archivist = BuddyArchivist(api_key, self.archivist_config)
             logger.info(f"✅ BuddyArchivist initialized (model: {self.archivist_config.get('model_id')})")
@@ -50,7 +53,7 @@ class ArchivistOutput(ArchivistOutputPort):
             logger.error(f"❌ BuddyArchivist initialization failed: {e}")
             self.archivist = None
         
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -129,7 +132,7 @@ class MockArchivistOutput(ArchivistOutputPort):
     def __init__(self, name: str, config: dict):
         queue_maxsize = config.get('queue_maxsize', 50)
         super().__init__(name, config, queue_maxsize)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"📚 MockArchivistOutput initialized")
     
     def start(self) -> None:

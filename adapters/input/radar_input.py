@@ -208,7 +208,7 @@ class MockRadarInput(RadarInputPort):
         super().__init__(name, config, input_queue)
         
         self.interval = config.get('interval', 5.0)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         
         logger.info(f"📡 MockRadarInput initialized")
     

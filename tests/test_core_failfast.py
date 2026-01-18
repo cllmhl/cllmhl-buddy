@@ -34,7 +34,8 @@ class TestBrainFailFast:
         config = {
             "model_id": "test-model",
             "temperature": 0.7,
-            "system_instruction": "Test"
+            "system_instruction": "Test",
+            "archivist_interval": 300.0
         }
         
         with patch('core.brain.genai.Client') as mock_client:
@@ -123,7 +124,12 @@ class TestNoSilentReturns:
     
     def test_brain_no_none_session_creates_fallback(self):
         """Brain with None session should return graceful message, not fail silently"""
-        config = {"model_id": "test", "temperature": 0.7}
+        config = {
+            "model_id": "test",
+            "temperature": 0.7,
+            "system_instruction": "Test",
+            "archivist_interval": 300.0
+        }
         
         with patch('core.brain.genai.Client') as mock_client:
             mock_client.return_value.chats.create.side_effect = Exception("API Down")

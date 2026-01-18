@@ -128,7 +128,7 @@ class OutputPort(ABC):
         self.config = config
         self.running = False
         # Coda interna dell'adapter
-        self.output_queue = PriorityQueue(maxsize=queue_maxsize)
+        self.output_queue: PriorityQueue = PriorityQueue(maxsize=queue_maxsize)
         logger.info(f"🔌 OutputPort '{name}' initialized (queue_size={queue_maxsize})")
     
     def send_event(self, event) -> bool:
@@ -159,6 +159,20 @@ class OutputPort(ABC):
     @abstractmethod
     def stop(self) -> None:
         """Ferma l'adapter in modo pulito"""
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def handled_events(cls):
+        """
+        Restituisce la lista di OutputEventType gestiti da questa Port.
+        
+        Deve essere implementato da tutte le sottoclassi per dichiarare
+        quali tipi di eventi sono in grado di processare.
+        
+        Returns:
+            List[OutputEventType]: Eventi gestiti
+        """
         pass
     
     def is_running(self) -> bool:

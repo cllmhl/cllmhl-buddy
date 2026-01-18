@@ -196,9 +196,11 @@ class DirectOutputInput(InputPort):
                 self._generate_event({'type': 'SPEAK', 'content': text})
                 print(f"✅ TTS: {text}")
         elif choice in commands:
-            self._generate_event(commands[choice])
-            event_type = commands[choice]['type']
-            print(f"✅ Evento generato: {event_type}")
+            cmd = commands[choice]
+            if isinstance(cmd, dict):
+                self._generate_event(cmd)
+                event_type = cmd['type']
+                print(f"✅ Evento generato: {event_type}")
         else:
             print("❌ Comando non valido")
     

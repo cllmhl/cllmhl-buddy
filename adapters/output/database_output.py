@@ -5,6 +5,7 @@ Database Output Adapter - Gestione persistenza
 import logging
 import threading
 from queue import PriorityQueue, Empty
+from typing import Optional
 
 from adapters.ports import DatabaseOutputPort
 from core.events import Event, OutputEventType
@@ -28,6 +29,7 @@ class DatabaseOutput(DatabaseOutputPort):
         chroma_path = config.get('chroma_path', 'data/memory')
         
         # Inizializza database
+        self.db: Optional[MemoryStore]
         try:
             self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
             logger.info(f"✅ Database initialized (SQLite: {sqlite_path}, Chroma: {chroma_path})")
@@ -35,7 +37,7 @@ class DatabaseOutput(DatabaseOutputPort):
             logger.error(f"❌ Database initialization failed: {e}")
             self.db = None
         
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -136,7 +138,7 @@ class MockDatabaseOutput(DatabaseOutputPort):
     def __init__(self, name: str, config: dict):
         queue_maxsize = config.get('queue_maxsize', 50)
         super().__init__(name, config, queue_maxsize)
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💾 MockDatabaseOutput initialized")
     
     def start(self) -> None:

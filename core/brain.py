@@ -201,7 +201,7 @@ class BuddyBrain:
     
     def _handle_sensor_input(self, event: Event) -> List[Event]:
         """Gestisce eventi dai sensori"""
-        output_events = []
+        output_events: List[Event] = []
         
         # Logica proattiva (esempio)
         if event.type == InputEventType.SENSOR_PRESENCE:
