@@ -27,7 +27,23 @@ cllmhl-buddy/
 
 ## 🚀 Quick Start
 
-### Installazione
+### 1. Setup Ambiente
+
+**Prima esecuzione** - Imposta le variabili d'ambiente obbligatorie:
+
+```bash
+# Aggiungi al tuo ~/.bashrc o ~/.profile
+export BUDDY_HOME=/home/cllmhl/cllmhl-buddy  # Path assoluto al progetto
+export BUDDY_CONFIG=config/dev.yaml          # Config da usare
+
+# Ricarica
+source ~/.bashrc
+```
+
+> **IMPORTANTE**: `BUDDY_HOME` e `BUDDY_CONFIG` sono **OBBLIGATORI**. Gli script falliscono se non sono settati. Vedi [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) per dettagli.
+
+### 2. Installazione Dipendenze
+
 ```bash
 bash scripts/setup_buddy.sh
 ```
@@ -36,7 +52,7 @@ bash scripts/setup_buddy.sh
 > - **Raspberry Pi**: Crea e usa `venv` (ambiente virtuale Python)
 > - **Devspaces/Container**: Usa Python di sistema
 
-### Esecuzione
+### 3. Esecuzione
 
 **Buddy principale:**
 ```bash
@@ -70,7 +86,8 @@ echo "ciao Buddy" > /tmp/buddy_pipe
 
 ## 📚 Documentazione
 
-- [Gestione Ambienti Python (venv)](docs/VENV_MANAGEMENT.md) - **Raspberry Pi vs Devspaces**
+- **[Setup Ambiente](docs/ENVIRONMENT_SETUP.md)** - Come settare BUDDY_HOME e BUDDY_CONFIG
+- [Gestione Ambienti Python (venv)](docs/VENV_MANAGEMENT.md) - Raspberry Pi vs Devspaces
 - [Guida Servizio Systemd](docs/SETUP_SERVICE.md)
 - [Guida Named Pipe](docs/PIPE_USAGE.md)
 - [TODO e Roadmap](TODO.md)

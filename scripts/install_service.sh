@@ -3,8 +3,17 @@
 
 set -e  # Exit on error
 
-# Ottieni la directory del progetto (parent della cartella scripts)
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Valida BUDDY_HOME (deve essere settato esternamente)
+if [ -z "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non settato"
+    echo "   Esegui: export BUDDY_HOME=/path/to/cllmhl-buddy"
+    exit 1
+fi
+
+if [ ! -d "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non esiste: $BUDDY_HOME"
+    exit 1
+fi
 
 echo "🤖 Installazione Buddy Service..."
 
@@ -17,7 +26,7 @@ fi
 
 # Copia il file service nella directory systemd
 echo "📦 Copiando buddy.service in /etc/systemd/system/..."
-cp "$PROJECT_DIR/config/buddy.service" /etc/systemd/system/buddy.service
+cp "$BUDDY_HOME/config/buddy.service" /etc/systemd/system/buddy.service
 
 # Ricarica i daemon di systemd
 echo "🔄 Ricaricando systemd daemon..."

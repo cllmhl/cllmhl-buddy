@@ -3,11 +3,21 @@
 # Uscire immediatamente in caso di errore
 set -e
 
-# Ottieni la directory del progetto (parent della cartella scripts)
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$PROJECT_DIR"
+# Valida BUDDY_HOME (deve essere settato esternamente)
+if [ -z "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non settato"
+    echo "   Esegui: export BUDDY_HOME=/path/to/cllmhl-buddy"
+    exit 1
+fi
 
-echo "🤖 Setup Buddy - Directory Progetto: $PROJECT_DIR"
+if [ ! -d "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non esiste: $BUDDY_HOME"
+    exit 1
+fi
+
+cd "$BUDDY_HOME"
+
+echo "🤖 Setup Buddy - BUDDY_HOME: $BUDDY_HOME"
 echo ""
 
 echo "--- 1. Aggiornamento Sistema Operativo ---"
@@ -41,22 +51,22 @@ if [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
     echo "(Sono gestiti da devcontainer.json o Codespaces)"
 else
     # Esegui solo in ambiente fisico (es. Raspberry Pi)
-    if [ ! -d "$PROJECT_DIR/venv" ]; then
+    if [ ! -d "$BUDDY_HOME/venv" ]; then
         echo "Creazione ambiente virtuale..."
-        python3 -m venv "$PROJECT_DIR/venv"
+        python3 -m venv "$BUDDY_HOME/venv"
     else
         echo "Ambiente virtuale già esistente."
     fi
 
     # Attivazione venv
-    source "$PROJECT_DIR/venv/bin/activate"
+    source "$BUDDY_HOME/venv/bin/activate"
 
     echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
     # Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
     pip install --upgrade pip setuptools wheel
 
     # Installazione dei requisiti
-    pip install -r "$PROJECT_DIR/requirements.txt"
+    pip install -r "$BUDDY_HOME/requirements.txt"
 fi
 
 echo "--- 5. Verifica Dispositivi Audio (Jabra) ---"

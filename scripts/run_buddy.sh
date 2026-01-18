@@ -1,16 +1,27 @@
 #!/bin/bash
 
 # ============================================================================
-# Buddy Launcher con BUDDY_HOME
-# Gestisce path assoluti evitando problemi di working directory
+# Buddy Launcher
+# RICHIEDE: BUDDY_HOME e BUDDY_CONFIG devono essere settati esternamente
 # ============================================================================
 
-# Ottieni la directory del progetto (parent della cartella scripts)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BUDDY_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Valida variabili d'ambiente OBBLIGATORIE
+if [ -z "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non settato"
+    echo "   Esegui: export BUDDY_HOME=/path/to/cllmhl-buddy"
+    exit 1
+fi
 
-# Configura path del config (può essere sovrascritto da .env)
-export BUDDY_CONFIG="${BUDDY_CONFIG:-config/adapter_config_dev.yaml}"
+if [ -z "$BUDDY_CONFIG" ]; then
+    echo "❌ ERROR: BUDDY_CONFIG non settato"
+    echo "   Esegui: export BUDDY_CONFIG=config/dev.yaml"
+    exit 1
+fi
+
+if [ ! -d "$BUDDY_HOME" ]; then
+    echo "❌ ERROR: BUDDY_HOME non esiste: $BUDDY_HOME"
+    exit 1
+fi
 
 echo "--- Buddy OS Startup ---"
 echo "🏠 BUDDY_HOME: $BUDDY_HOME"
