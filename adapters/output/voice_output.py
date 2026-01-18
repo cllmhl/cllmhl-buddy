@@ -41,8 +41,15 @@ class JabraVoiceOutput(VoiceOutputPort):
         self.voice_name = config['voice_name']
         self.audio_device = config['audio_device']  # Device ALSA per output
         
-        # NOTA: LED status rimosso - gestito da GPIOLEDOutput via eventi LED_CONTROL
-        # Il VoiceOutput non controlla direttamente GPIO, solo eventi
+        # LED di stato (GPIO 21)
+        self.led_pin = config.get('led_stato_pin', 21)
+        self.led_stato = None
+        try:
+            self.led_stato = LED(self.led_pin)
+            logger.info(f"✅ LED status on GPIO {self.led_pin}")
+        except Exception as e:
+            logger.warning(f"⚠️  LED status initialization failed: {e}")
+            logger.warning("Continuing without LED status indicator (non-critical)")
         
         # Device Manager per coordinamento Jabra
         self.device_manager = get_jabra_manager()
@@ -120,8 +127,10 @@ class JabraVoiceOutput(VoiceOutputPort):
             self.worker_thread.join(timeout=3.0)
             if self.worker_thread.is_alive():
                 logger.warning(f"⚠️  {self.name} thread did not terminate")
-        
-        # LED cleanup rimosso - gestito da GPIOLEDOutput
+
+        # LED off
+        if self.led_stato:
+            self.led_stato.off()
         
         logger.info(f"⏹️  {self.name} stopped")
     
@@ -164,8 +173,10 @@ class JabraVoiceOutput(VoiceOutputPort):
                 logger.warning("⚠️ Could not acquire audio device for output")
                 return
             
-            # LED gestito via eventi LED_CONTROL, non direttamente
-            
+            # LED on
+            if self.led_stato:
+                self.led_stato.on()
+
             # TTS
             if self.tts_mode == "local":
                 self._speak_piper(text)
@@ -176,7 +187,9 @@ class JabraVoiceOutput(VoiceOutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            # LED gestito via eventi LED_CONTROL, non direttamente
+            # LED off
+            if self.led_stato:
+                self.led_stato.off()
             
             # Rilascia device (sblocca input)
             self.device_manager.release()

@@ -143,31 +143,55 @@ class JabraVoiceInput(VoiceInputPort):
                 keyword_paths=[self.wake_word_path]
             )
             logger.info("✅ Porcupine initialized")
-            
-            # Find Jabra device
+
+            # List all PvRecorder devices
             available_devices = PvRecorder.get_available_devices()
-            logger.info(f"Audio devices: {available_devices}")
-            
-            target_index = -1
+            logger.info(f"Available PvRecorder audio devices:")
+            for i, device in enumerate(available_devices):
+                logger.info(f"  PvRecorder Index {i}: {device}")
+
+            # List all PyAudio input devices
+            import pyaudio
+            pa = pyaudio.PyAudio()
+            pyaudio_indices = []
+            jabra_pyaudio_index = None
+            logger.info("Available PyAudio input devices:")
+            for i in range(pa.get_device_count()):
+                info = pa.get_device_info_by_index(i)
+                if info.get('maxInputChannels', 0) > 0:
+                    logger.info(f"  PyAudio Index {i}: {info['name']} (channels={info['maxInputChannels']})")
+                    pyaudio_indices.append((i, info['name']))
+                    if 'Jabra' in info['name']:
+                        jabra_pyaudio_index = i
+            pa.terminate()
+
+            # Find Jabra in PvRecorder
+            jabra_pv_index = None
             for i, device in enumerate(available_devices):
                 if "Jabra" in device:
-                    target_index = i
-                    logger.info(f"✅ Jabra found at index {i}: {device}")
+                    jabra_pv_index = i
+                    logger.info(f"✅ Jabra found in PvRecorder at index {i}: {device}")
                     break
-            
-            if target_index == -1:
-                logger.warning("⚠️ Jabra not found, using default (0)")
-                target_index = 0
-            
-            self.device_index = target_index
-            
+            if jabra_pv_index is None:
+                logger.error("❌ Jabra device not found in PvRecorder device list. Please check connection.")
+                raise RuntimeError("Jabra device not found for Porcupine.")
+
+            # Find Jabra in PyAudio
+            if jabra_pyaudio_index is None:
+                logger.error("❌ Jabra device not found in PyAudio device list. Please check connection.")
+                raise RuntimeError("Jabra device not found for speech_recognition.")
+
+            self.device_index = jabra_pyaudio_index  # For sr.Microphone
+            self.porcupine_device_index = jabra_pv_index  # For PvRecorder
+            logger.info(f"✅ Jabra indices: PvRecorder={jabra_pv_index}, PyAudio={jabra_pyaudio_index}")
+
             # Porcupine MUST be initialized at this point
             if not self.porcupine:
                 raise RuntimeError("Porcupine not initialized")
-            
-            # Init Recorder
+
+            # Init Recorder (Porcupine)
             self.recorder = PvRecorder(
-                device_index=target_index,
+                device_index=jabra_pv_index,
                 frame_length=self.porcupine.frame_length
             )
             
@@ -302,7 +326,12 @@ class JabraVoiceInput(VoiceInputPort):
                         
                         # Stop Porcupine recorder
                         self.recorder.stop()
-                        
+                        self.recorder.delete()
+                        self.recorder = None
+
+                        # Pausa tattica per rilascio driver
+                        time.sleep(0.5)
+
                         # Avvia conversation session
                         self._run_conversation_session()
                         
@@ -383,8 +412,9 @@ class JabraVoiceInput(VoiceInputPort):
                         # Nessun audio, continua loop
                         pass
                     except Exception as e:
-                        logger.warning(f"Error in conversation session: {e}")
-        
+                        logger.error(f"Error in conversation session: {e}")
+                        break
+
         except Exception as e:
             logger.error(f"Error opening microphone: {e}")
         
