@@ -40,16 +40,8 @@ class JabraVoiceOutput(VoiceOutputPort):
         self.tts_mode = config.get('tts_mode', 'cloud').lower()  # 'cloud' o 'local'
         self.voice_name = config.get('voice_name', 'paola').lower()
         
-        # LED di stato (GPIO 21)
-        self.led_pin = config.get('led_stato_pin', 21)
-        # LED di stato è OPZIONALE (solo per visual feedback)
-        self.led_stato = None
-        try:
-            self.led_stato = LED(self.led_pin)
-            logger.info(f"✅ LED status on GPIO {self.led_pin}")
-        except Exception as e:
-            logger.warning(f"⚠️  LED status initialization failed: {e}")
-            logger.warning("Continuing without LED status indicator (non-critical)")
+        # NOTA: LED status rimosso - gestito da GPIOLEDOutput via eventi LED_CONTROL
+        # Il VoiceOutput non controlla direttamente GPIO, solo eventi
         
         # Device Manager per coordinamento Jabra
         self.device_manager = get_jabra_manager()
@@ -119,12 +111,16 @@ class JabraVoiceOutput(VoiceOutputPort):
     
     def stop(self) -> None:
         """Ferma il worker thread"""
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
-        if self.worker_thread:
-            self.worker_thread.join(timeout=2.0)
         
-        if self.led_stato:
-            self.led_stato.off()
+        # Aspetta thread con timeout
+        if self.worker_thread and self.worker_thread.is_alive():
+            self.worker_thread.join(timeout=3.0)
+            if self.worker_thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
+        
+        # LED cleanup rimosso - gestito da GPIOLEDOutput
         
         logger.info(f"⏹️  {self.name} stopped")
     
@@ -167,9 +163,7 @@ class JabraVoiceOutput(VoiceOutputPort):
                 logger.warning("⚠️ Could not acquire audio device for output")
                 return
             
-            # LED on
-            if self.led_stato:
-                self.led_stato.on()
+            # LED gestito via eventi LED_CONTROL, non direttamente
             
             # TTS
             if self.tts_mode == "local":
@@ -181,9 +175,7 @@ class JabraVoiceOutput(VoiceOutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            # LED off
-            if self.led_stato:
-                self.led_stato.off()
+            # LED gestito via eventi LED_CONTROL, non direttamente
             
             # Rilascia device (sblocca input)
             self.device_manager.release()

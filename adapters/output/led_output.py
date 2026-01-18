@@ -66,15 +66,26 @@ class GPIOLEDOutput(LEDOutputPort):
     
     def stop(self) -> None:
         """Ferma worker e spegne LED"""
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
-        if self.worker_thread:
-            self.worker_thread.join(timeout=2.0)
+        
+        # Aspetta thread con timeout
+        if self.worker_thread and self.worker_thread.is_alive():
+            self.worker_thread.join(timeout=3.0)
+            if self.worker_thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
         
         # Spegni tutti i LED
         if self.led_ascolto:
-            self.led_ascolto.off()
+            try:
+                self.led_ascolto.off()
+            except Exception as e:
+                logger.debug(f"LED ascolto cleanup error: {e}")
         if self.led_parlo:
-            self.led_parlo.off()
+            try:
+                self.led_parlo.off()
+            except Exception as e:
+                logger.debug(f"LED parlo cleanup error: {e}")
         
         logger.info(f"⏹️  {self.name} stopped")
     

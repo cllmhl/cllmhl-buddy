@@ -103,15 +103,20 @@ class TemperatureInput(TemperatureInputPort):
     
     def stop(self) -> None:
         """Ferma worker thread"""
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
         
-        if self.worker_thread:
-            self.worker_thread.join(timeout=2.0)
+        # Aspetta thread con timeout
+        if self.worker_thread and self.worker_thread.is_alive():
+            self.worker_thread.join(timeout=3.0)
+            if self.worker_thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
         
         # Cleanup hardware
         if self.dht11:
             try:
                 self.dht11.exit()
+                logger.debug("DHT11 cleanup done")
             except (AttributeError, RuntimeError) as e:
                 # DHT11 già chiuso o non inizializzato
                 logger.debug(f"DHT11 exit: {e}")

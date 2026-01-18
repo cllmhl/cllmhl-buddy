@@ -112,13 +112,17 @@ class PipeOutputAdapter(OutputPort):
         """Ferma l'adapter"""
         if not self.running:
             return
-            
+        
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
         
-        if self._worker_thread:
-            self._worker_thread.join(timeout=2)
+        # Aspetta thread con timeout
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=3.0)
+            if self._worker_thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
             
-        logger.info("PipeOutput fermato")
+        logger.info(f"⏹️  {self.name} stopped")
         
     def _worker_loop(self):
         """Loop di consumazione eventi dalla coda interna"""

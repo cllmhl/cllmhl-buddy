@@ -6,6 +6,7 @@ Entry point con Event-Driven Architecture e Router Pattern.
 import os
 import sys
 import queue
+import signal
 import logging
 from pathlib import Path
 from typing import Dict, Any, List
@@ -82,6 +83,10 @@ class BuddyOrchestrator:
         self.logger = logging.getLogger(__name__)
         self.running = False
         
+        # Setup signal handlers per shutdown pulito
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        
         # Usa configurazione già caricata
         self.config = config
         self.buddy_home = Path(config['buddy_home'])
@@ -109,6 +114,12 @@ class BuddyOrchestrator:
         self._setup_routes()
         
         self.logger.info("🚀 BuddyOrchestrator initialized")
+    
+    def _signal_handler(self, signum, frame):
+        """Handler per SIGINT (CTRL-C) e SIGTERM"""
+        sig_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
+        self.logger.info(f"⚠️  {sig_name} received, shutting down...")
+        self.running = False
     
     def _setup_routes(self) -> None:
         """
@@ -240,8 +251,8 @@ class BuddyOrchestrator:
                 
                 self.input_queue.task_done()
         
-        except KeyboardInterrupt:
-            self.logger.info("KeyboardInterrupt received")
+        except Exception as e:
+            self.logger.error(f"Error in main loop: {e}", exc_info=True)
         
         finally:
             self._shutdown()
@@ -250,11 +261,17 @@ class BuddyOrchestrator:
         """Procedura di shutdown pulita"""
         self.logger.info("🛑 Shutting down Buddy...")
         
+        # Disabilita flag running prima di stop
+        self.running = False
+        
         self._stop_adapters()
         
         # Statistiche router
-        stats = self.router.get_stats()
-        self.logger.info(f"📊 Router stats: {stats}")
+        try:
+            stats = self.router.get_stats()
+            self.logger.info(f"📊 Router stats: {stats}")
+        except Exception as e:
+            self.logger.warning(f"Could not get router stats: {e}")
         
         self.logger.info("👋 Buddy shutdown complete")
     

@@ -78,7 +78,8 @@ class PipeInputAdapter(InputPort):
         """Ferma il reader thread"""
         if not self.running:
             return
-            
+        
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
         
         # Sblocca la read aprendo la pipe in scrittura
@@ -87,11 +88,14 @@ class PipeInputAdapter(InputPort):
                 f.write('\n')
         except:
             pass
+        
+        # Aspetta thread con timeout
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=3.0)
+            if self._thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
             
-        if self._thread:
-            self._thread.join(timeout=2)
-            
-        logger.info("PipeInput fermato")
+        logger.info(f"⏹️  {self.name} stopped")
         
     def _is_fifo(self, path: Path) -> bool:
         """Verifica se il path è una named pipe"""

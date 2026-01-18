@@ -66,9 +66,15 @@ class DirectOutputInput(InputPort):
         logger.info(f"▶️  {self.name} started")
     
     def stop(self):
+        logger.info(f"⏸️  Stopping {self.name}...")
         self.running = False
+        
+        # Aspetta thread con timeout
         if self.worker_thread and self.worker_thread.is_alive():
-            self.worker_thread.join(timeout=2.0)
+            self.worker_thread.join(timeout=3.0)
+            if self.worker_thread.is_alive():
+                logger.warning(f"⚠️  {self.name} thread did not terminate")
+        
         logger.info(f"⏹️  {self.name} stopped")
     
     def _worker_loop(self):
