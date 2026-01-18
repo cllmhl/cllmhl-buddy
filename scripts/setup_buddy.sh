@@ -3,17 +3,8 @@
 # Uscire immediatamente in caso di errore
 set -e
 
-# Valida BUDDY_HOME (deve essere settato esternamente)
-if [ -z "$BUDDY_HOME" ]; then
-    echo "❌ ERROR: BUDDY_HOME non settato"
-    echo "   Esegui: export BUDDY_HOME=/path/to/cllmhl-buddy"
-    exit 1
-fi
-
-if [ ! -d "$BUDDY_HOME" ]; then
-    echo "❌ ERROR: BUDDY_HOME non esiste: $BUDDY_HOME"
-    exit 1
-fi
+source "$(dirname "$0")/common.sh"
+validate_buddy_home
 
 cd "$BUDDY_HOME"
 
@@ -42,38 +33,20 @@ sudo apt-get install -y \
     wget \
     sox \
     libsox-fmt-all \
-    libgpiod2
+    libgpiod3
 
-echo "--- 3. Gestione Ambiente Virtuale Python ---"
-# Controlla sia Dev Containers (REMOTE_CONTAINERS) che Codespaces (CODESPACES)
-if [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
-    echo "Ambiente containerizzato rilevato. Salto la gestione di venv e requirements.txt."
-    echo "(Sono gestiti da devcontainer.json o Codespaces)"
-else
-    # Esegui solo in ambiente fisico (es. Raspberry Pi)
-    if [ ! -d "$BUDDY_HOME/venv" ]; then
-        echo "Creazione ambiente virtuale..."
-        python3 -m venv "$BUDDY_HOME/venv"
-    else
-        echo "Ambiente virtuale già esistente."
-    fi
+echo "--- 3. Installazione pacchetti Python da requirements.txt ---"
+# Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
+pip install --upgrade pip setuptools wheel
 
-    # Attivazione venv
-    source "$BUDDY_HOME/venv/bin/activate"
+# Installazione dei requisiti
+pip install -r "$BUDDY_HOME/requirements.txt"
 
-    echo "--- 4. Installazione pacchetti Python da requirements.txt ---"
-    # Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari
-    pip install --upgrade pip setuptools wheel
-
-    # Installazione dei requisiti
-    pip install -r "$BUDDY_HOME/requirements.txt"
-fi
-
-echo "--- 5. Verifica Dispositivi Audio (Jabra) ---"
+echo "--- 4. Verifica Dispositivi Audio (Jabra) ---"
 echo "Ecco la lista dei dispositivi di registrazione rilevati:"
 arecord -l || echo "Nessun dispositivo di registrazione trovato."
 
-echo "--- 6. Installazione Piper TTS (Fuori dal progetto) ---"
+echo "--- 5. Installazione Piper TTS (Fuori dal progetto) ---"
 # Definiamo la cartella esterna
 PIPER_DEST="$HOME/buddy_tools/piper"
 mkdir -p "$PIPER_DEST"

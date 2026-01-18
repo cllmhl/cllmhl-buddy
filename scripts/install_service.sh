@@ -3,17 +3,8 @@
 
 set -e  # Exit on error
 
-# Valida BUDDY_HOME (deve essere settato esternamente)
-if [ -z "$BUDDY_HOME" ]; then
-    echo "❌ ERROR: BUDDY_HOME non settato"
-    echo "   Esegui: export BUDDY_HOME=/path/to/cllmhl-buddy"
-    exit 1
-fi
-
-if [ ! -d "$BUDDY_HOME" ]; then
-    echo "❌ ERROR: BUDDY_HOME non esiste: $BUDDY_HOME"
-    exit 1
-fi
+source "$(dirname "$0")/common.sh"
+validate_buddy_home
 
 echo "🤖 Installazione Buddy Service..."
 

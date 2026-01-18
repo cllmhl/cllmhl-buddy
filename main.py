@@ -280,17 +280,19 @@ class BuddyOrchestrator:
 def main():
     """Entry point principale"""
     
-    # Carica variabili d'ambiente
-    load_dotenv(".env")
+    # 1. PRIMA COSA: Carica .env per API keys
+    # Usa path assoluto basato su BUDDY_HOME se settato, altrimenti prova path relativo
+    env_path = Path(os.getenv('BUDDY_HOME', '.')).resolve() / '.env'
+    load_dotenv(env_path)
     
-    # Carica configurazione (gestisce BUDDY_HOME e BUDDY_CONFIG internamente)
+    # 2. Carica configurazione (gestisce BUDDY_HOME e BUDDY_CONFIG internamente)
     try:
         config = ConfigLoader.from_env()
     except (ValueError, FileNotFoundError) as e:
         print(f"❌ ERROR: {e}")
         sys.exit(1)
     
-    # Setup logging
+    # 3. Setup logging
     setup_logging(config)
     
     logger = logging.getLogger(__name__)

@@ -1,25 +1,22 @@
 #!/bin/bash
 
-# Definiamo il percorso della cartella
-BUDDY_DIR="/home/cllmhl/cllmhl-buddy"
+# ============================================================================
+# Buddy Updater - Git Pull
+# RICHIEDE: BUDDY_HOME deve essere settato esternamente
+# ============================================================================
 
-echo "--- 🔄 Aggiornamento Buddy OS ---"
+source "$(dirname "$0")/common.sh"
+validate_buddy_home
 
-# Entriamo nella cartella
-cd "$BUDDY_DIR" || { echo "❌ Errore: Cartella non trovata"; exit 1; }
+echo "--- 🔄 Aggiornamento Buddy ---"
+echo "🏠 BUDDY_HOME: $BUDDY_HOME"
+echo ""
 
-# 1. Git Pull
-echo "[1/2] Recupero sorgenti da Git..."
+cd "$BUDDY_HOME" || exit 1
+
+echo "Recupero aggiornamenti da Git..."
 git fetch --all
-git reset --hard origin/main  # Forza la sovrascrittura
+git reset --hard origin/main
 
-# 2. Esecuzione Setup
-if [ -f "scripts/setup_buddy.sh" ]; then
-    echo "[2/2] Esecuzione setup_buddy.sh..."
-    chmod +x scripts/setup_buddy.sh
-    bash scripts/setup_buddy.sh
-else
-    echo "⚠️ Avviso: scripts/setup_buddy.sh non trovato in $BUDDY_DIR"
-fi
-
-echo "--- ✅ Operazione completata ---"
+echo ""
+echo "✅ Aggiornamento completato"
