@@ -8,7 +8,7 @@ import time
 from unittest.mock import Mock, patch
 
 from core import (
-    Event, EventType, InputEventType, OutputEventType, EventPriority,
+    Event, InputEventType, OutputEventType, EventPriority,
     create_input_event, create_output_event,
     EventRouter, BuddyBrain
 )
@@ -34,20 +34,20 @@ class TestEvents:
         """Test creazione evento base"""
         event = Event(
             priority=EventPriority.NORMAL,
-            type=EventType.USER_SPEECH,
+            type=InputEventType.USER_SPEECH,
             content="Ciao Buddy"
         )
         
-        assert event.type == EventType.USER_SPEECH
+        assert event.type == InputEventType.USER_SPEECH
         assert event.priority == EventPriority.NORMAL
         assert event.content == "Ciao Buddy"
         assert event.timestamp > 0
     
     def test_event_priority_ordering(self):
         """Test che eventi con priorità più alta vengano prima"""
-        critical = Event(EventPriority.CRITICAL, EventType.SHUTDOWN, "stop")
-        normal = Event(EventPriority.NORMAL, EventType.USER_SPEECH, "ciao")
-        low = Event(EventPriority.LOW, EventType.SPEAK, "speak")
+        critical = Event(EventPriority.CRITICAL, InputEventType.SHUTDOWN, "stop")
+        normal = Event(EventPriority.NORMAL, InputEventType.USER_SPEECH, "ciao")
+        low = Event(EventPriority.LOW, OutputEventType.SPEAK, "speak")
         
         # In una PriorityQueue, il minore viene prima
         assert critical < normal
@@ -59,9 +59,9 @@ class TestEvents:
         q = queue.PriorityQueue()
         
         # Inserisci in ordine casuale
-        q.put(Event(EventPriority.LOW, EventType.SPEAK, "low"))
-        q.put(Event(EventPriority.CRITICAL, EventType.SHUTDOWN, "critical"))
-        q.put(Event(EventPriority.NORMAL, EventType.USER_SPEECH, "normal"))
+        q.put(Event(EventPriority.LOW, OutputEventType.SPEAK, "low"))
+        q.put(Event(EventPriority.CRITICAL, InputEventType.SHUTDOWN, "critical"))
+        q.put(Event(EventPriority.NORMAL, InputEventType.USER_SPEECH, "normal"))
         
         # Estrai: dovrebbero uscire per priorità
         first = q.get()
@@ -75,13 +75,13 @@ class TestEvents:
     def test_create_input_event_helper(self):
         """Test helper per creare eventi di input"""
         event = create_input_event(
-            EventType.USER_SPEECH,
+            InputEventType.USER_SPEECH,
             "test message",
             source="voice",
             priority=EventPriority.HIGH
         )
         
-        assert event.type == EventType.USER_SPEECH
+        assert event.type == InputEventType.USER_SPEECH
         assert event.content == "test message"
         assert event.source == "voice"
         assert event.priority == EventPriority.HIGH
@@ -89,13 +89,13 @@ class TestEvents:
     def test_create_output_event_helper(self):
         """Test helper per creare eventi di output"""
         event = create_output_event(
-            EventType.SPEAK,
+            OutputEventType.SPEAK,
             "Hello world",
             priority=EventPriority.HIGH,
             metadata={"triggered_by": "user"}
         )
         
-        assert event.type == EventType.SPEAK
+        assert event.type == OutputEventType.SPEAK
         assert event.content == "Hello world"
         assert event.priority == EventPriority.HIGH
         assert event.metadata["triggered_by"] == "user"
@@ -118,20 +118,20 @@ class TestEventRouter:
         router = EventRouter()
         mock_adapter = MockOutputAdapter("test_adapter")
         
-        router.register_route(EventType.SPEAK, mock_adapter, "test_adapter")
+        router.register_route(OutputEventType.SPEAK, mock_adapter, "test_adapter")
         
         routes = router.get_routes()
-        assert EventType.SPEAK in routes
-        assert routes[EventType.SPEAK] == 1
+        assert OutputEventType.SPEAK in routes
+        assert routes[OutputEventType.SPEAK] == 1
     
     def test_route_event_success(self):
         """Test routing evento con successo"""
         router = EventRouter()
         mock_adapter = MockOutputAdapter("voice")
         
-        router.register_route(EventType.SPEAK, mock_adapter, "voice")
+        router.register_route(OutputEventType.SPEAK, mock_adapter, "voice")
         
-        event = create_output_event(EventType.SPEAK, "test")
+        event = create_output_event(OutputEventType.SPEAK, "test")
         routed = router.route_event(event)
         
         assert routed == 1
@@ -142,7 +142,7 @@ class TestEventRouter:
         """Test routing evento senza route registrate"""
         router = EventRouter()
         
-        event = create_output_event(EventType.SPEAK, "test")
+        event = create_output_event(OutputEventType.SPEAK, "test")
         routed = router.route_event(event)
         
         assert routed == 0
@@ -156,10 +156,10 @@ class TestEventRouter:
         adapter2 = MockOutputAdapter("db2")
         
         # Registra due destinazioni per lo stesso evento
-        router.register_route(EventType.SAVE_HISTORY, adapter1, "db1")
-        router.register_route(EventType.SAVE_HISTORY, adapter2, "db2")
+        router.register_route(OutputEventType.SAVE_HISTORY, adapter1, "db1")
+        router.register_route(OutputEventType.SAVE_HISTORY, adapter2, "db2")
         
-        event = create_output_event(EventType.SAVE_HISTORY, "save data")
+        event = create_output_event(OutputEventType.SAVE_HISTORY, "save data")
         routed = router.route_event(event)
         
         assert routed == 2
@@ -171,13 +171,13 @@ class TestEventRouter:
         router = EventRouter()
         mock_adapter = MockOutputAdapter("voice_db")
         
-        router.register_route(EventType.SPEAK, mock_adapter, "voice")
-        router.register_route(EventType.SAVE_HISTORY, mock_adapter, "db")
+        router.register_route(OutputEventType.SPEAK, mock_adapter, "voice")
+        router.register_route(OutputEventType.SAVE_HISTORY, mock_adapter, "db")
         
         events = [
-            create_output_event(EventType.SPEAK, "speak1"),
-            create_output_event(EventType.SAVE_HISTORY, "save1"),
-            create_output_event(EventType.SPEAK, "speak2")
+            create_output_event(OutputEventType.SPEAK, "speak1"),
+            create_output_event(OutputEventType.SAVE_HISTORY, "save1"),
+            create_output_event(OutputEventType.SPEAK, "speak2")
         ]
         
         total_routed = router.route_events(events)
@@ -222,7 +222,7 @@ class TestBuddyBrain:
         
         # Crea evento input
         input_event = create_input_event(
-            EventType.USER_SPEECH,
+            InputEventType.USER_SPEECH,
             "Ciao",
             source="voice"
         )
@@ -234,7 +234,7 @@ class TestBuddyBrain:
         assert len(output_events) > 0
         
         # Verifica che ci sia un evento SPEAK
-        speak_events = [e for e in output_events if e.type == EventType.SPEAK]
+        speak_events = [e for e in output_events if e.type == OutputEventType.SPEAK]
         assert len(speak_events) == 1
         assert "Ciao" in speak_events[0].content
 

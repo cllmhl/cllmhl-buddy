@@ -7,7 +7,7 @@ from adapters.ports import (
     VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
     VoiceInputPort, RadarInputPort, TemperatureInputPort
 )
-from core.events import EventType
+from core.events import InputEventType, OutputEventType
 
 
 class TestOutputPortEvents:
@@ -16,20 +16,20 @@ class TestOutputPortEvents:
     def test_voice_output_port_declares_events(self):
         """VoiceOutputPort dichiara quali eventi gestisce"""
         events = VoiceOutputPort.handled_events()
-        assert EventType.SPEAK in events
+        assert OutputEventType.SPEAK in events
         assert len(events) == 1
     
     def test_led_output_port_declares_events(self):
         """LEDOutputPort dichiara quali eventi gestisce"""
         events = LEDOutputPort.handled_events()
-        assert EventType.LED_CONTROL in events
+        assert OutputEventType.LED_CONTROL in events
         assert len(events) == 1
     
     def test_database_output_port_declares_events(self):
         """DatabaseOutputPort dichiara quali eventi gestisce"""
         events = DatabaseOutputPort.handled_events()
-        assert EventType.SAVE_HISTORY in events
-        assert EventType.SAVE_MEMORY in events
+        assert OutputEventType.SAVE_HISTORY in events
+        assert OutputEventType.SAVE_MEMORY in events
         assert len(events) == 2
     
     def test_event_routing_built_from_port_declarations(self):
@@ -47,14 +47,14 @@ class TestOutputPortEvents:
         
         # Verifica che ogni adapter dichiari gli eventi corretti
         voice_events = MockVoiceOutput.handled_events()
-        assert EventType.SPEAK in voice_events
+        assert OutputEventType.SPEAK in voice_events
         
         led_events = MockLEDOutput.handled_events()
-        assert EventType.LED_CONTROL in led_events
+        assert OutputEventType.LED_CONTROL in led_events
         
         db_events = MockDatabaseOutput.handled_events()
-        assert EventType.SAVE_HISTORY in db_events
-        assert EventType.SAVE_MEMORY in db_events
+        assert OutputEventType.SAVE_HISTORY in db_events
+        assert OutputEventType.SAVE_MEMORY in db_events
 
 
 class TestInputPortEvents:
@@ -63,21 +63,21 @@ class TestInputPortEvents:
     def test_voice_input_port_declares_events(self):
         """VoiceInputPort dichiara quali eventi emette"""
         events = VoiceInputPort.emitted_events()
-        assert EventType.USER_SPEECH in events
+        assert InputEventType.USER_SPEECH in events
         assert len(events) == 1
     
     def test_radar_input_port_declares_events(self):
         """RadarInputPort dichiara quali eventi emette"""
         events = RadarInputPort.emitted_events()
-        assert EventType.SENSOR_PRESENCE in events
-        assert EventType.SENSOR_MOVEMENT in events
+        assert InputEventType.SENSOR_PRESENCE in events
+        assert InputEventType.SENSOR_MOVEMENT in events
         assert len(events) == 2
     
     def test_temperature_input_port_declares_events(self):
         """TemperatureInputPort dichiara quali eventi emette"""
         events = TemperatureInputPort.emitted_events()
-        assert EventType.SENSOR_TEMPERATURE in events
-        assert EventType.SENSOR_HUMIDITY in events
+        assert InputEventType.SENSOR_TEMPERATURE in events
+        assert InputEventType.SENSOR_HUMIDITY in events
         assert len(events) == 2
     
     def test_input_events_are_distinct(self):

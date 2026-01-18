@@ -48,30 +48,6 @@ class OutputEventType(Enum):
     DISTILL_MEMORY = "distill_memory"     # Avvia distillazione memoria (Archivist)
 
 
-# Compatibility layer: EventType with all events accessible
-class EventType:
-    """
-    Backward compatibility wrapper for tests and legacy code.
-    Provides access to both Input and Output event types.
-    """
-    # Input events
-    USER_SPEECH = InputEventType.USER_SPEECH
-    SENSOR_PRESENCE = InputEventType.SENSOR_PRESENCE
-    SENSOR_TEMPERATURE = InputEventType.SENSOR_TEMPERATURE
-    SENSOR_HUMIDITY = InputEventType.SENSOR_HUMIDITY
-    SENSOR_MOVEMENT = InputEventType.SENSOR_MOVEMENT
-    DIRECT_OUTPUT = InputEventType.DIRECT_OUTPUT
-    SHUTDOWN = InputEventType.SHUTDOWN
-    RESTART = InputEventType.RESTART
-    
-    # Output events
-    SPEAK = OutputEventType.SPEAK
-    LED_CONTROL = OutputEventType.LED_CONTROL
-    SAVE_HISTORY = OutputEventType.SAVE_HISTORY
-    SAVE_MEMORY = OutputEventType.SAVE_MEMORY
-    DISTILL_MEMORY = OutputEventType.DISTILL_MEMORY
-
-
 class EventPriority(Enum):
     """
     Priorità eventi per PriorityQueue.

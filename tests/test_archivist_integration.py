@@ -18,7 +18,7 @@ load_dotenv(".env")
 os.environ.setdefault("GOOGLE_API_KEY", "dummy_key_for_testing")
 
 from core.brain import BuddyBrain
-from core.events import Event, EventType, EventPriority, create_output_event
+from core.events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
 
 
 def test_archivist_trigger():
@@ -45,7 +45,7 @@ def test_archivist_trigger():
     # Simula eventi sensoriali (non dovrebbero triggerare archivist immediatamente)
     print("\n📡 Invio evento SENSOR_PRESENCE (t=0s)...")
     sensor_event = Event(
-        type=EventType.SENSOR_PRESENCE,
+        type=InputEventType.SENSOR_PRESENCE,
         content=True,
         source="radar",
         timestamp=time.time(),
@@ -53,7 +53,7 @@ def test_archivist_trigger():
     )
     
     output_events = brain.process_event(sensor_event)
-    distill_events = [e for e in output_events if e.type == EventType.DISTILL_MEMORY]
+    distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")
     print(f"   DISTILL_MEMORY events: {len(distill_events)}")
@@ -66,7 +66,7 @@ def test_archivist_trigger():
     
     print("📡 Invio altro evento SENSOR_TEMPERATURE...")
     temp_event = Event(
-        type=EventType.SENSOR_TEMPERATURE,
+        type=InputEventType.SENSOR_TEMPERATURE,
         content=25.5,
         source="dht11",
         timestamp=time.time(),
@@ -74,7 +74,7 @@ def test_archivist_trigger():
     )
     
     output_events = brain.process_event(temp_event)
-    distill_events = [e for e in output_events if e.type == EventType.DISTILL_MEMORY]
+    distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")
     print(f"   DISTILL_MEMORY events: {len(distill_events)}")
@@ -87,7 +87,7 @@ def test_archivist_trigger():
     
     print("📡 Invio evento SENSOR_PRESENCE...")
     sensor_event2 = Event(
-        type=EventType.SENSOR_PRESENCE,
+        type=InputEventType.SENSOR_PRESENCE,
         content=False,
         source="radar",
         timestamp=time.time(),
@@ -95,7 +95,7 @@ def test_archivist_trigger():
     )
     
     output_events = brain.process_event(sensor_event2)
-    distill_events = [e for e in output_events if e.type == EventType.DISTILL_MEMORY]
+    distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")
     print(f"   DISTILL_MEMORY events: {len(distill_events)}")

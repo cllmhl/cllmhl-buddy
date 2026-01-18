@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 from core.brain import BuddyBrain
 from core.event_router import EventRouter
-from core.events import Event, EventType, EventPriority
+from core.events import Event, InputEventType, OutputEventType, EventPriority
 from config.config_loader import ConfigLoader
 
 
@@ -72,10 +72,10 @@ class TestEventRouterFailFast:
         mock_adapter.send_event.side_effect = Exception("Queue is full")
         
         # Register route
-        router.register_route(EventType.SPEAK, mock_adapter, "test_adapter")
+        router.register_route(OutputEventType.SPEAK, mock_adapter, "test_adapter")
         
         # Try to route event - should trigger exception
-        event = create_output_event(EventType.SPEAK, "test", EventPriority.NORMAL)
+        event = create_output_event(OutputEventType.SPEAK, "test", EventPriority.NORMAL)
         
         with patch('core.event_router.logger') as mock_logger:
             routed = router.route_event(event)

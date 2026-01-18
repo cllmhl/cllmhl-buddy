@@ -8,7 +8,7 @@ import logging
 from typing import Dict, List
 from collections import defaultdict
 
-from .events import Event, EventType
+from .events import Event, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,15 @@ class EventRouter:
     Router intelligente che smista eventi output agli adapter registrati.
     
     Caratteristiche:
-    - Un EventType può avere N destinazioni (broadcast)
+    - Un OutputEventType può avere N destinazioni (broadcast)
     - Thread-safe
     - Statistiche di routing
     - Chiamata diretta su adapter.send_event()
     """
     
     def __init__(self):
-        # Mapping: EventType -> List[OutputAdapter]
-        self._routes: Dict[EventType, List] = defaultdict(list)
+        # Mapping: OutputEventType -> List[OutputAdapter]
+        self._routes: Dict[OutputEventType, List] = defaultdict(list)
         
         # Lock per operazioni thread-safe
         self._lock = threading.Lock()
@@ -42,7 +42,7 @@ class EventRouter:
     
     def register_route(
         self,
-        event_type: EventType,
+        event_type: OutputEventType,
         output_adapter,
         adapter_name: str = "unknown"
     ) -> None:
@@ -65,7 +65,7 @@ class EventRouter:
     
     def unregister_route(
         self,
-        event_type: EventType,
+        event_type: OutputEventType,
         output_adapter
     ) -> bool:
         """Rimuove una route registrata"""
@@ -127,7 +127,7 @@ class EventRouter:
             total_routed += self.route_event(event)
         return total_routed
     
-    def get_routes(self) -> Dict[EventType, int]:
+    def get_routes(self) -> Dict[OutputEventType, int]:
         """Ritorna il numero di destinazioni per ogni tipo di evento"""
         with self._lock:
             return {

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 # Core imports
 from core import (
-    Event, EventType, EventPriority,
+    Event, InputEventType, OutputEventType, EventPriority,
     EventRouter, BuddyBrain
 )
 
@@ -233,7 +233,7 @@ class BuddyOrchestrator:
                     continue
                 
                 # Check shutdown
-                if input_event.type == EventType.SHUTDOWN:
+                if input_event.type == InputEventType.SHUTDOWN:
                     self.logger.info("Shutdown event received")
                     self.running = False
                     # Processa comunque per salutare se necessario

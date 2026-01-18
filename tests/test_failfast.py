@@ -46,7 +46,7 @@ class TestFailFast:
             VoiceOutputPort, LEDOutputPort, DatabaseOutputPort,
             VoiceInputPort, RadarInputPort, TemperatureInputPort
         )
-        from core.events import EventType, InputEventType, OutputEventType
+        from core.events import InputEventType, OutputEventType
         
         # Output ports - ritornano OutputEventType
         voice_events = VoiceOutputPort.handled_events()

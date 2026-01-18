@@ -9,7 +9,7 @@ import os
 from queue import PriorityQueue
 from unittest.mock import Mock, patch
 
-from core import Event, EventType, EventPriority, create_input_event, create_output_event, EventRouter, BuddyBrain
+from core import Event, InputEventType, OutputEventType, EventPriority, create_input_event, create_output_event, EventRouter, BuddyBrain
 from adapters.factory import AdapterFactory
 
 
@@ -22,10 +22,10 @@ class TestIntegration:
         
         # Inserisci eventi in ordine casuale
         events = [
-            create_input_event(EventType.USER_SPEECH, "low priority", "test", priority=EventPriority.LOW),
-            create_input_event(EventType.USER_SPEECH, "critical!", "test", priority=EventPriority.CRITICAL),
-            create_input_event(EventType.USER_SPEECH, "high priority", "test", priority=EventPriority.HIGH),
-            create_input_event(EventType.USER_SPEECH, "normal", "test", priority=EventPriority.NORMAL),
+            create_input_event(InputEventType.USER_SPEECH, "low priority", "test", priority=EventPriority.LOW),
+            create_input_event(InputEventType.USER_SPEECH, "critical!", "test", priority=EventPriority.CRITICAL),
+            create_input_event(InputEventType.USER_SPEECH, "high priority", "test", priority=EventPriority.HIGH),
+            create_input_event(InputEventType.USER_SPEECH, "normal", "test", priority=EventPriority.NORMAL),
         ]
         
         for e in events:
@@ -56,7 +56,7 @@ class TestIntegration:
         # Mock della risposta LLM
         with patch.object(brain, '_generate_response', return_value="Ciao!"):
             input_event = create_input_event(
-                EventType.USER_SPEECH,
+                InputEventType.USER_SPEECH,
                 "test",
                 source="test"
             )
@@ -67,8 +67,8 @@ class TestIntegration:
             assert len(output_events) >= 2
             
             event_types = [e.type for e in output_events]
-            assert EventType.SPEAK in event_types
-            assert EventType.SAVE_HISTORY in event_types
+            assert OutputEventType.SPEAK in event_types
+            assert OutputEventType.SAVE_HISTORY in event_types
     
     def test_router_multi_destination(self):
         """Test che il Router invii a più destinazioni"""
@@ -91,14 +91,14 @@ class TestIntegration:
         adapter3.send_event = lambda e: adapter3.events_received.append(e) or True
         
         # Registra tutti e tre per SPEAK
-        router.register_route(EventType.SPEAK, adapter1)
-        router.register_route(EventType.SPEAK, adapter2)
-        router.register_route(EventType.SPEAK, adapter3)
+        router.register_route(OutputEventType.SPEAK, adapter1)
+        router.register_route(OutputEventType.SPEAK, adapter2)
+        router.register_route(OutputEventType.SPEAK, adapter3)
         
-        # Crea evento
+        # Crea evento SPEAK
         event = Event(
             priority=EventPriority.NORMAL,
-            type=EventType.SPEAK,
+            type=OutputEventType.SPEAK,
             content="test message",
             source="test"
         )

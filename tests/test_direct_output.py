@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.events import Event, EventType, EventPriority, create_input_event, create_output_event
+from core.events import Event, InputEventType, OutputEventType, EventPriority, create_input_event, create_output_event
 from core.brain import BuddyBrain
 
 def test_direct_output():
@@ -26,28 +26,28 @@ def test_direct_output():
     
     # Crea eventi output reali (quelli che andrebbero agli adapter)
     led_control_event = create_output_event(
-        event_type=EventType.LED_CONTROL,
+        event_type=OutputEventType.LED_CONTROL,
         content=None,
         priority=EventPriority.HIGH,
         metadata={'led': 'ascolto', 'command': 'on'}
     )
     
     speak_event = create_output_event(
-        event_type=EventType.SPEAK,
+        event_type=OutputEventType.SPEAK,
         content="Ciao, questo è un test",
         priority=EventPriority.HIGH
     )
     
     # Wrappa in DIRECT_OUTPUT (questo viene dall'input)
     direct_led = create_input_event(
-        event_type=EventType.DIRECT_OUTPUT,
+        event_type=InputEventType.DIRECT_OUTPUT,
         content=led_control_event,  # <- Evento output wrappato
         source="test",
         priority=EventPriority.HIGH
     )
     
     direct_speak = create_input_event(
-        event_type=EventType.DIRECT_OUTPUT,
+        event_type=InputEventType.DIRECT_OUTPUT,
         content=speak_event,
         source="test",
         priority=EventPriority.HIGH
