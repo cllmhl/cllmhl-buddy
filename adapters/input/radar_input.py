@@ -259,7 +259,7 @@ class MockRadarInput(RadarInputPort):
                     )
                     
                     event = create_input_event(
-                        EventType.SENSOR_PRESENCE,
+                        InputEventType.SENSOR_PRESENCE,
                         presence,
                         source="mock_radar",
                         priority=EventPriority.LOW,

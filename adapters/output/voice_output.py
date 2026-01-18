@@ -64,23 +64,45 @@ class JabraVoiceOutput(VoiceOutputPort):
         logger.info(f"🔊 JabraVoiceOutput initialized (mode: {self.tts_mode}, voice: {self.voice_name})")
     
     def _setup_piper(self):
-        """Setup Piper TTS locale"""
+        """Setup Piper TTS locale
+        
+        Raises:
+            ValueError: If voice not supported
+            FileNotFoundError: If piper binary or model not found
+        """
         home = os.path.expanduser("~")
         self.piper_base_path = os.path.join(home, "buddy_tools/piper")
         self.piper_binary = os.path.join(self.piper_base_path, "piper/piper")
+        
+        # Fail fast: binary deve esistere
+        if not os.path.isfile(self.piper_binary):
+            raise FileNotFoundError(
+                f"Piper binary not found: {self.piper_binary}. "
+                f"Install with: bash scripts/install_piper.sh"
+            )
         
         voice_map = {
             "paola": {"file": "it_IT-paola-medium.onnx", "speed": "1.0"},
             "riccardo": {"file": "it_IT-riccardo-x_low.onnx", "speed": "1.1"}
         }
         
+        # Fail fast: voice deve essere supportata
         if self.voice_name not in voice_map:
-            logger.warning(f"Voice '{self.voice_name}' not found, using paola")
-            self.voice_name = "paola"
+            raise ValueError(
+                f"Voice '{self.voice_name}' not supported. "
+                f"Available: {list(voice_map.keys())}"
+            )
         
         selected_config = voice_map[self.voice_name]
         self.piper_model = os.path.join(self.piper_base_path, selected_config["file"])
         self.piper_speed = selected_config["speed"]
+        
+        # Fail fast: model deve esistere
+        if not os.path.isfile(self.piper_model):
+            raise FileNotFoundError(
+                f"Piper model not found: {self.piper_model}. "
+                f"Download models from Piper releases."
+            )
     
     def start(self) -> None:
         """Avvia il worker thread che consuma dalla coda interna"""
@@ -220,8 +242,11 @@ class JabraVoiceOutput(VoiceOutputPort):
                 stderr=subprocess.DEVNULL
             )
             
-            p_piper.stdout.close()
-            p_sox.stdout.close()
+            # Close stdout per consentire pipe chain di chiudersi correttamente
+            if p_piper.stdout:
+                p_piper.stdout.close()
+            if p_sox.stdout:
+                p_sox.stdout.close()
             
             _, stderr = p_piper.communicate(input=text.encode('utf-8'))
             p_aplay.wait()
