@@ -379,7 +379,7 @@ class JabraVoiceInput(VoiceInputPort):
     def _process_audio(self, recognizer: sr.Recognizer, audio) -> None:
         """Processa audio e crea evento"""
         try:
-            text = recognizer.recognize_google(audio, language="it-IT")
+            text = recognizer.recognize_google(audio, language="it-IT")  # type: ignore[attr-defined]
             
             if text:
                 logger.info(f"🗣️  Recognized: {text}")

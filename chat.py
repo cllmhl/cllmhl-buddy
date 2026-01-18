@@ -152,7 +152,7 @@ def send_event(event_data: dict):
 
 
 # ===== EVENT BUILDERS =====
-def build_direct_output(event_type: str, content, priority: str = "normal", metadata: dict = None):
+def build_direct_output(event_type: str, content, priority: str = "normal", metadata: dict | None = None):
     """Costruisce un DIRECT_OUTPUT event"""
     return {
         "type": "direct_output",

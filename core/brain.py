@@ -262,9 +262,17 @@ class BuddyBrain:
         try:
             response = self.chat_session.send_message(user_text)
             
+            # Fail fast: response deve esistere
+            if not response:
+                raise RuntimeError("LLM returned None response")
+            
+            if not response.text:
+                raise RuntimeError("LLM returned empty response text")
+            
             # Log grounding metadata se disponibile
-            if response.candidates[0].grounding_metadata:
-                logger.debug("Google Search utilizzata per questa risposta")
+            if response.candidates and len(response.candidates) > 0:
+                if response.candidates[0].grounding_metadata:
+                    logger.debug("Google Search utilizzata per questa risposta")
             
             return response.text
             

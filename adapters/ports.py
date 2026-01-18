@@ -5,7 +5,7 @@ Implementazione del Port Pattern per l'architettura esagonale.
 
 from abc import ABC, abstractmethod
 from queue import PriorityQueue
-from typing import Optional
+from typing import Optional, List
 import logging
 
 # Import required - fail fast if not available
@@ -163,7 +163,7 @@ class OutputPort(ABC):
     
     @classmethod
     @abstractmethod
-    def handled_events(cls):
+    def handled_events(cls) -> List[OutputEventType]:
         """
         Restituisce la lista di OutputEventType gestiti da questa Port.
         
