@@ -17,7 +17,7 @@ fi
 
 # Copia il file service nella directory systemd
 echo "📦 Copiando buddy.service in /etc/systemd/system/..."
-cp "$BUDDY_HOME/config/buddy.service" /etc/systemd/system/buddy.service
+cp "$BUDDY_HOME/scripts/buddy.service" /etc/systemd/system/buddy.service
 
 # Ricarica i daemon di systemd
 echo "🔄 Ricaricando systemd daemon..."

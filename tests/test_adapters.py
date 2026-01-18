@@ -22,6 +22,9 @@ class DummyInputAdapter(InputPort):
 class DummyOutputAdapter(OutputPort):
     """Adapter di test per output"""
     
+    def handled_events(self):
+        return ["test_event"]
+    
     def start(self):
         self.running = True
     
