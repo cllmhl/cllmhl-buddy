@@ -43,7 +43,7 @@ def setup_logging(config: Dict[str, Any]) -> None:
     # Risolvi il path del log rispetto a BUDDY_HOME
     log_file = buddy_home / log_file_path
     handler = RotatingFileHandler(log_file, maxBytes=log_config.get('max_bytes'), backupCount=log_config.get('backup_count'))
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
     handler.setFormatter(formatter)
     
     # Console handler
