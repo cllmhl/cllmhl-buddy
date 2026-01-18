@@ -57,25 +57,21 @@ class PipeOutputAdapter(OutputPort):
             queue_maxsize: Dimensione coda interna
         """
         super().__init__(name, config, queue_maxsize)
-        self.pipe_path = Path(config.get('pipe_path', 'data/buddy.out'))
+        self.pipe_path = Path(config['pipe_path'])
         self._worker_thread: Optional[threading.Thread] = None
-        
-        # Parse event types filter
-        event_types = config.get('event_types')
-        if event_types:
-            self.event_types: Set[OutputEventType] = set()
-            for et in event_types:
-                try:
-                    if isinstance(et, str):
-                        self.event_types.add(OutputEventType[et.upper()])
-                    else:
-                        self.event_types.add(et)
-                except KeyError:
-                    logger.warning(f"Tipo evento sconosciuto: {et}")
-        else:
-            # Tutti gli eventi
-            self.event_types = set(OutputEventType)
-            
+        # Parse event types filter (fail-fast)
+        if 'event_types' not in config:
+            raise KeyError("Missing required config key: 'event_types' for PipeOutputAdapter")
+        event_types = config['event_types']
+        self.event_types: Set[OutputEventType] = set()
+        for et in event_types:
+            try:
+                if isinstance(et, str):
+                    self.event_types.add(OutputEventType[et.upper()])
+                else:
+                    self.event_types.add(et)
+            except KeyError:
+                logger.warning(f"Tipo evento sconosciuto: {et}")
         logger.info(f"PipeOutput filtro eventi: {[et.value for et in self.event_types]}")
         
     def start(self):

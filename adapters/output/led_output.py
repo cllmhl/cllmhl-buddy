@@ -27,16 +27,14 @@ class GPIOLEDOutput(LEDOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 100)
+        queue_maxsize = config['queue_maxsize']
         super().__init__(name, config, queue_maxsize)
-        
         # Pin configuration
-        self.led_ascolto_pin = config.get('led_ascolto_pin', 26)  # Blu
-        self.led_parlo_pin = config.get('led_parlo_pin', 21)      # Verde (rinominato)
-        
+        self.led_ascolto_pin = config['led_ascolto_pin']  # Blu
+        self.led_parlo_pin = config['led_parlo_pin']      # Verde (rinominato)
         # Blink timing configuration
-        self.blink_on_time = config.get('blink_on_time', 1.0)
-        self.blink_off_time = config.get('blink_off_time', 1.0)
+        self.blink_on_time = config['blink_on_time']
+        self.blink_off_time = config['blink_off_time']
         
         # Initialize LEDs
         # LED sono CRITICI per questo adapter - fail se non disponibili
@@ -198,7 +196,7 @@ class MockLEDOutput(LEDOutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 100)
+        queue_maxsize = config['queue_maxsize']
         super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💡 MockLEDOutput initialized")

@@ -33,9 +33,9 @@ class ConsoleOutput(ConsoleOutputPort):
     """Stampa eventi in console con formattazione"""
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 100)
+        queue_maxsize = config['queue_maxsize']
         super().__init__(name, config, queue_maxsize)
-        self.verbose = config.get('verbose', False)
+        self.verbose = config['verbose']
         self.worker_thread = None
     
     def start(self):
@@ -121,7 +121,7 @@ class MockConsoleOutput(ConsoleOutputPort):
     """Mock console output per test"""
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize', 100)
+        queue_maxsize = config['queue_maxsize']
         super().__init__(name, config, queue_maxsize)
         self.worker_thread = None
     

@@ -37,8 +37,9 @@ class JabraVoiceOutput(VoiceOutputPort):
         super().__init__(name, config, queue_maxsize)
         
         # Configurazione TTS
-        self.tts_mode = config.get('tts_mode', 'cloud').lower()  # 'cloud' o 'local'
-        self.voice_name = config.get('voice_name', 'paola').lower()
+            self.tts_mode = config['tts_mode'].lower()  # 'cloud' o 'local'
+            self.voice_name = config['voice_name'].lower()
+            self.audio_device = config['audio_device']  # Device ALSA per output
         
         # NOTA: LED status rimosso - gestito da GPIOLEDOutput via eventi LED_CONTROL
         # Il VoiceOutput non controlla direttamente GPIO, solo eventi
@@ -53,7 +54,7 @@ class JabraVoiceOutput(VoiceOutputPort):
         # Thread worker
         self.worker_thread: Optional[threading.Thread] = None
         
-        logger.info(f"🔊 JabraVoiceOutput initialized (mode: {self.tts_mode}, voice: {self.voice_name})")
+        logger.info(f"🔊 JabraVoiceOutput initialized (mode: {self.tts_mode}, voice: {self.voice_name}, device: {self.audio_device})")
     
     def _setup_piper(self):
         """Setup Piper TTS locale
@@ -181,26 +182,47 @@ class JabraVoiceOutput(VoiceOutputPort):
             self.device_manager.release()
     
     def _speak_gtts(self, text: str) -> None:
-        """TTS usando Google gTTS (cloud)"""
+        """TTS usando Google gTTS (cloud)
+        
+        Raises:
+            Exception: Se sintesi o playback falliscono
+        """
+        filename = None
         try:
+            # Genera TTS
+            logger.debug(f"Generating gTTS for: {text[:50]}...")
             tts = gTTS(text=text, lang='it')
             filename = f"/tmp/buddy_tts_{time.time()}.mp3"
             tts.save(filename)
+            logger.debug(f"TTS saved to {filename}")
             
-            # Play audio
-            subprocess.run(
-                ["mpg123", "-q", filename],
+            # Play audio con mpg123 su device configurato
+            logger.debug(f"Playing with mpg123 on device {self.audio_device}...")
+            result = subprocess.run(
+                ["mpg123", "-a", self.audio_device, "-q", filename],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
-                check=False
+                check=True  # Fail fast: solleva eccezione se mpg123 fallisce
             )
-            
-            # Cleanup
-            if os.path.exists(filename):
-                os.remove(filename)
+            logger.debug(f"mpg123 completed successfully")
         
+        except FileNotFoundError as e:
+            logger.error(f"❌ mpg123 not found - install with: sudo apt-get install mpg123")
+            raise
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ mpg123 failed: {e.stderr.decode() if e.stderr else 'unknown error'}")
+            raise
         except Exception as e:
-            logger.error(f"gTTS error: {e}")
+            logger.error(f"❌ gTTS error: {e}", exc_info=True)
+            raise
+        finally:
+            # Cleanup sempre
+            if filename and os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                    logger.debug(f"Cleaned up {filename}")
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup {filename}: {e}")
     
     def _speak_piper(self, text: str) -> None:
         """TTS usando Piper (local)"""
