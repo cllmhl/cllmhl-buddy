@@ -10,7 +10,7 @@ Group=cllmhl
 
 # IMPORTANTE: Imposta BUDDY_HOME per path assoluti
 Environment="BUDDY_HOME=/home/cllmhl/cllmhl-buddy"
-Environment="BUDDY_CONFIG=config/adapter_config_prod.yaml"
+Environment="BUDDY_CONFIG=config/prod.yaml"
 Environment="PYTHONUNBUFFERED=1"
 
 # NON serve WorkingDirectory - usiamo BUDDY_HOME
