@@ -26,6 +26,7 @@ class InputEventType(Enum):
     
     # Bypass Brain - per test e comandi diretti
     DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente
+    ADAPTER_COMMAND = "adapter_command"   # Invia comandi agli adapter (content = AdapterCommand enum value)
     
     # Sistema
     SHUTDOWN = "shutdown"

@@ -106,6 +106,10 @@ class BuddyBrain:
                 # Bypass Brain: unwrap l'evento interno e inoltralo direttamente
                 output_events.extend(self._handle_direct_output(input_event))
             
+            elif input_event.type == InputEventType.ADAPTER_COMMAND:
+                # Bypass Brain: converti comando e invia agli adapter
+                adapter_commands.extend(self._handle_adapter_command(input_event))
+            
             elif input_event.type == InputEventType.WAKEWORD:
                 output_events_temp, commands_temp = self._handle_wakeword(input_event)
                 output_events.extend(output_events_temp)
@@ -131,9 +135,13 @@ class BuddyBrain:
         except KeyboardInterrupt:
             logger.info("Brain interrupted by user")
             raise
+        except (ValueError, TypeError) as e:
+            # Errori di validazione - propaghiamo (fail-fast)
+            logger.error(f"Validation error for event {input_event.type}: {e}", exc_info=True)
+            raise
         except Exception as e:
             logger.error(f"Brain processing error for event {input_event.type}: {e}", exc_info=True)
-            # Non propaghiamo per non bloccare il sistema, ma loggiamo tutto
+            # Non propaghiamo altri errori per non bloccare il sistema, ma loggiamo tutto
         
         return output_events, adapter_commands
     
@@ -174,6 +182,35 @@ class BuddyBrain:
             return [inner_event]
             
         except Exception as e:
+            logger.error(f"Error handling DIRECT_OUTPUT: {e}", exc_info=True)
+            return []
+    
+    def _handle_adapter_command(self, event: Event) -> List[AdapterCommand]:
+        """
+        Gestisce ADAPTER_COMMAND: converte il comando e lo invia agli adapter.
+        Il content deve essere il nome del comando (string).
+        
+        Raises:
+            ValueError: Se il comando non è valido
+        """
+        command_name = event.content
+        
+        if not isinstance(command_name, str):
+            logger.error(f"ADAPTER_COMMAND content must be string, got {type(command_name)}")
+            raise TypeError(f"Command name must be string, got {type(command_name)}")
+        
+        try:
+            command = AdapterCommand(command_name)
+            logger.info(f"🎛️  ADAPTER_COMMAND received: {command.value}")
+            return [command]
+        except ValueError:
+            logger.error(f"❌ Invalid adapter command: {command_name}")
+            available = ", ".join([c.value for c in AdapterCommand])
+            logger.info(f"Available commands: {available}")
+            raise ValueError(
+                f"Unknown adapter command: {command_name}. "
+                f"Available: {available}"
+            )
             logger.error(f"❌ Critical error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
             raise RuntimeError(f"Failed to unwrap DIRECT_OUTPUT event: {e}") from e
     

@@ -238,6 +238,48 @@ class TestBuddyBrain:
         speak_events = [e for e in output_events if e.type == OutputEventType.SPEAK]
         assert len(speak_events) == 1
         assert "Ciao" in speak_events[0].content
+    
+    @patch('core.brain.genai.Client')
+    def test_brain_process_adapter_command(self, mock_client, mock_brain_config):
+        """Test processing di ADAPTER_COMMAND"""
+        from core.commands import AdapterCommand
+        
+        brain = BuddyBrain("fake_api_key", mock_brain_config)
+        
+        # Crea evento ADAPTER_COMMAND
+        input_event = create_input_event(
+            InputEventType.ADAPTER_COMMAND,
+            "wakeword_listen_start",
+            source="chat"
+        )
+        
+        # Processa
+        output_events, commands = brain.process_event(input_event)
+        
+        # Verifica che non ci siano eventi di output (solo comandi)
+        assert len(output_events) == 0
+        
+        # Verifica che ci sia il comando
+        assert len(commands) == 1
+        assert commands[0] == AdapterCommand.WAKEWORD_LISTEN_START
+    
+    @patch('core.brain.genai.Client')
+    def test_brain_adapter_command_invalid(self, mock_client, mock_brain_config):
+        """Test che ADAPTER_COMMAND invalido sollevi eccezione"""
+        brain = BuddyBrain("fake_api_key", mock_brain_config)
+        
+        # Crea evento ADAPTER_COMMAND con comando invalido
+        input_event = create_input_event(
+            InputEventType.ADAPTER_COMMAND,
+            "invalid_command_xyz",
+            source="chat"
+        )
+        
+        # Deve sollevare ValueError
+        with pytest.raises(ValueError) as exc_info:
+            brain.process_event(input_event)
+        
+        assert "Unknown adapter command" in str(exc_info.value)
 
 
 if __name__ == "__main__":
