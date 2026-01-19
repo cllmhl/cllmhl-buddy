@@ -24,20 +24,7 @@ class AdapterCommand(str, Enum):
     WAKEWORD_LISTEN_START = "wakeword_listen_start"
     WAKEWORD_LISTEN_STOP = "wakeword_listen_stop"
     
-    # Voice output control
-    VOICE_OUTPUT_STOP = "voice_output_stop"
-    VOICE_OUTPUT_RESUME = "voice_output_resume"
-    
     # Voice input control
     VOICE_INPUT_START = "voice_input_start"
     VOICE_INPUT_STOP = "voice_input_stop"
-    
-    # Sensor control (generic)
-    SENSOR_PAUSE = "sensor_pause"
-    SENSOR_RESUME = "sensor_resume"
-    
-    # LED visual feedback
-    LED_LISTENING = "led_listening"
-    LED_THINKING = "led_thinking"
-    LED_SPEAKING = "led_speaking"
-    LED_IDLE = "led_idle"
+

@@ -226,10 +226,16 @@ class BuddyBrain:
         output_events = []
         commands = []
         
-        logger.info(f"👂 Wakeword detected: {event.metadata.get('wakeword', 'unknown')}")
+        wakeword = event.metadata.get('wakeword', 'unknown') if event.metadata else 'unknown'
+        logger.info(f"👂 Wakeword detected: {wakeword}")
         
-        # Feedback visivo: LED in modalità ascolto
-        commands.append(AdapterCommand.LED_LISTENING)
+        # Feedback visivo: LED blu fisso (modalità ascolto)
+        output_events.append(create_output_event(
+            OutputEventType.LED_CONTROL,
+            None,
+            priority=EventPriority.HIGH,
+            metadata={'led': 'ascolto', 'command': 'on'}
+        ))
         
         # STOP wakeword detection (evita loop)
         commands.append(AdapterCommand.WAKEWORD_LISTEN_STOP)
