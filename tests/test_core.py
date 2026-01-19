@@ -229,7 +229,7 @@ class TestBuddyBrain:
         )
         
         # Processa
-        output_events = brain.process_event(input_event)
+        output_events, commands = brain.process_event(input_event)
         
         # Verifica che ci siano eventi di output
         assert len(output_events) > 0

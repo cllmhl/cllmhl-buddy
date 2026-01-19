@@ -459,7 +459,7 @@ class MockVoiceInput(InputPort):
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
         
-        self.interval = config['interval']
+        self.interval = config.get('interval', 10.0)
         self.worker_thread: Optional[threading.Thread] = None
         
         # Frasi di test simulate

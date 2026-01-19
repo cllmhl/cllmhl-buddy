@@ -52,7 +52,7 @@ def test_archivist_trigger():
         priority=EventPriority.NORMAL
     )
     
-    output_events = brain.process_event(sensor_event)
+    output_events, commands = brain.process_event(sensor_event)
     distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")
@@ -73,7 +73,7 @@ def test_archivist_trigger():
         priority=EventPriority.NORMAL
     )
     
-    output_events = brain.process_event(temp_event)
+    output_events, commands = brain.process_event(temp_event)
     distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")
@@ -94,7 +94,7 @@ def test_archivist_trigger():
         priority=EventPriority.NORMAL
     )
     
-    output_events = brain.process_event(sensor_event2)
+    output_events, commands = brain.process_event(sensor_event2)
     distill_events = [e for e in output_events if e.type == OutputEventType.DISTILL_MEMORY]
     
     print(f"   Output events: {len(output_events)}")

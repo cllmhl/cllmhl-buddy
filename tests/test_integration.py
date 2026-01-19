@@ -63,7 +63,7 @@ class TestIntegration:
                 source="test"
             )
             
-            output_events = brain.process_event(input_event)
+            output_events, commands = brain.process_event(input_event)
             
             # Verifica che ci siano almeno SPEAK e SAVE_HISTORY
             assert len(output_events) >= 2
