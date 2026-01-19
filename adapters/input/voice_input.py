@@ -158,10 +158,12 @@ class JabraVoiceInput(VoiceInputPort):
             logger.info("Available PyAudio input devices:")
             for i in range(pa.get_device_count()):
                 info = pa.get_device_info_by_index(i)
-                if info.get('maxInputChannels', 0) > 0:
-                    logger.info(f"  PyAudio Index {i}: {info['name']} (channels={info['maxInputChannels']})")
-                    pyaudio_indices.append((i, info['name']))
-                    if 'Jabra' in info['name']:
+                max_channels = int(info.get('maxInputChannels', 0))
+                device_name = str(info['name'])
+                if max_channels > 0:
+                    logger.info(f"  PyAudio Index {i}: {device_name} (channels={max_channels})")
+                    pyaudio_indices.append((i, device_name))
+                    if 'Jabra' in device_name:
                         jabra_pyaudio_index = i
             pa.terminate()
 
@@ -309,6 +311,7 @@ class JabraVoiceInput(VoiceInputPort):
                     continue
                 
                 # 2. Ascolta wake word
+                assert self.recorder is not None, "Recorder not initialized"
                 pcm = self.recorder.read()
                 result = self.porcupine.process(pcm)
                 
@@ -325,9 +328,10 @@ class JabraVoiceInput(VoiceInputPort):
                         self._emit_led_control('ascolto', 'on')
                         
                         # Stop Porcupine recorder
-                        self.recorder.stop()
-                        self.recorder.delete()
-                        self.recorder = None
+                        if self.recorder is not None:
+                            self.recorder.stop()
+                            self.recorder.delete()
+                            self.recorder = None
 
                         # Pausa tattica per rilascio driver
                         time.sleep(0.5)
@@ -340,7 +344,8 @@ class JabraVoiceInput(VoiceInputPort):
                         
                         # Resume wake word detection
                         logger.info("💤 Returning to wake word detection...")
-                        self.recorder.start()
+                        if self.recorder is not None:
+                            self.recorder.start()
                     
                     finally:
                         # Rilascia device

@@ -16,6 +16,7 @@ class InputEventType(Enum):
     """
     # Input vocale
     USER_SPEECH = "user_speech"           # Input vocale utente
+    WAKEWORD = "wakeword"                 # Wake word detected (triggers listening)
     
     # Sensori
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza
