@@ -65,7 +65,7 @@ def find_jabra_pyaudio() -> Optional[int]:
     logger.info("Available PyAudio input devices:")
     for i in range(pa.get_device_count()):
         info = pa.get_device_info_by_index(i)
-        max_channels = int(info.get('maxInputChannels', 0))
+        max_channels = int(info['maxInputChannels'])  # Fail-fast: must be present
         device_name = str(info['name'])
         
         if max_channels > 0:

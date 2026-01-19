@@ -25,7 +25,6 @@ adapters:
       config:
         stt_mode: "cloud"  # "cloud" o "local"
         max_silence_seconds: 15.0
-        led_ascolto_pin: 26
     
     # Radar fisico
     - class: "RadarInput"

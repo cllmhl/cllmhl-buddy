@@ -211,8 +211,6 @@ class BuddyBrain:
                 f"Unknown adapter command: {command_name}. "
                 f"Available: {available}"
             )
-            logger.error(f"❌ Critical error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to unwrap DIRECT_OUTPUT event: {e}") from e
     
     def _handle_wakeword(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
