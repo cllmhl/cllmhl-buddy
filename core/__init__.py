@@ -9,6 +9,7 @@ from .events import (
 )
 from .event_router import EventRouter
 from .brain import BuddyBrain
+from .orchestrator import BuddyOrchestrator
 
 __all__ = [
     'Event',
@@ -18,5 +19,6 @@ __all__ = [
     'create_input_event',
     'create_output_event',
     'EventRouter',
-    'BuddyBrain'
+    'BuddyBrain',
+    'BuddyOrchestrator'
 ]
