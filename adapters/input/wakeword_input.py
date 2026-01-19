@@ -1,7 +1,11 @@
 import threading
 import queue
+import time
+import pvporcupine
+import pyaudio
 from adapters.ports import InputPort
 from core.events import InputEventType, Event, EventPriority
+from core.commands import AdapterCommand
 
 class WakewordInput(InputPort):
     """
@@ -12,6 +16,7 @@ class WakewordInput(InputPort):
         super().__init__(name="wakeword_input", config=config, input_queue=input_queue)
         self._thread = None
         self._running = False
+        self._paused = False  # NEW: stato pausa
         self._porcupine = None
         self._audio_stream = None
         self._wakeword = config['wakeword']  # Fail-fast: must be present
@@ -38,14 +43,33 @@ class WakewordInput(InputPort):
         if self._porcupine is not None:
             self._porcupine.delete()
             self._porcupine = None
+    
+    def supported_commands(self):
+        """Dichiara comandi supportati"""
+        return {
+            AdapterCommand.WAKEWORD_LISTEN_START,
+            AdapterCommand.WAKEWORD_LISTEN_STOP
+        }
+    
+    def handle_command(self, command: AdapterCommand) -> bool:
+        """
+        Gestisce comandi di controllo dal Brain.
+        
+        Args:
+            command: Comando da eseguire
+            
+        Returns:
+            True se gestito, False se ignorato
+        """
+        if command == AdapterCommand.WAKEWORD_LISTEN_STOP:
+            self._paused = True
+            return True
+        elif command == AdapterCommand.WAKEWORD_LISTEN_START:
+            self._paused = False
+            return True
+        return False
 
     def _run(self):
-        try:
-            import pvporcupine
-            import pyaudio
-        except ImportError as e:
-            raise ImportError("Porcupine and PyAudio must be installed: {}".format(e))
-
         self._porcupine = pvporcupine.create(
             access_key=self._access_key,
             keyword_paths=[self._wakeword]
@@ -60,6 +84,11 @@ class WakewordInput(InputPort):
             input_device_index=self._device_index
         )
         while self._running:
+            # Se in pausa, aspetta senza consumare CPU
+            if self._paused:
+                time.sleep(0.1)
+                continue
+            
             try:
                 pcm = self._audio_stream.read(self._porcupine.frame_length, exception_on_overflow=False)
                 pcm = memoryview(pcm).cast('h')

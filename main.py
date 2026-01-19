@@ -18,6 +18,7 @@ from core import (
     Event, InputEventType, OutputEventType, EventPriority,
     EventRouter, BuddyBrain
 )
+from core.commands import AdapterCommand
 
 # Adapters imports
 from adapters import AdapterFactory
@@ -243,10 +244,13 @@ class BuddyOrchestrator:
                     self.running = False
                     # Processa comunque per salutare se necessario
                 
-                # Brain processa evento
-                output_events = self.brain.process_event(input_event)
+                # Brain processa evento → (eventi, comandi)
+                output_events, adapter_commands = self.brain.process_event(input_event)
                 
-                # Router smista output events
+                # PRIMA: Esegui comandi SINCRONI (stabilisci stato adapter)
+                self._execute_commands(adapter_commands)
+                
+                # POI: Router smista output events (asincroni)
                 self.router.route_events(output_events)
                 
                 self.input_queue.task_done()
@@ -256,6 +260,51 @@ class BuddyOrchestrator:
         
         finally:
             self._shutdown()
+    
+    def _execute_commands(self, commands: List[AdapterCommand]) -> None:
+        """
+        Esegue comandi adapter SINCRONAMENTE broadcast a tutti gli adapter.
+        
+        Ogni adapter decide se gestire o ignorare il comando basandosi
+        su supported_commands(). Non c'è routing - tutti ricevono tutti i comandi.
+        
+        Args:
+            commands: Lista di comandi da eseguire
+        """
+        if not commands:
+            return
+        
+        for command in commands:
+            handled_count = 0
+            
+            # Broadcast a TUTTI gli input adapter
+            for adapter in self.input_adapters:
+                try:
+                    if adapter.handle_command(command):
+                        handled_count += 1
+                        self.logger.debug(f"✅ {adapter.name} handled {command.value}")
+                except Exception as e:
+                    self.logger.error(
+                        f"❌ Error executing {command.value} on {adapter.name}: {e}",
+                        exc_info=True
+                    )
+            
+            # Broadcast a TUTTI gli output adapter
+            for adapter in self.output_adapters:
+                try:
+                    if adapter.handle_command(command):
+                        handled_count += 1
+                        self.logger.debug(f"✅ {adapter.name} handled {command.value}")
+                except Exception as e:
+                    self.logger.error(
+                        f"❌ Error executing {command.value} on {adapter.name}: {e}",
+                        exc_info=True
+                    )
+            
+            if handled_count == 0:
+                self.logger.warning(f"⚠️  Command {command.value} not handled by any adapter")
+            else:
+                self.logger.info(f"🎯 Command {command.value} handled by {handled_count} adapter(s)")
     
     def _shutdown(self) -> None:
         """Procedura di shutdown pulita"""

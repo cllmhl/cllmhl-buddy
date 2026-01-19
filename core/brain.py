@@ -5,11 +5,12 @@ Zero dipendenze da I/O, hardware, code.
 
 import logging
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from google import genai
 from google.genai import types
 
 from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
+from .commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ class BuddyBrain:
             logger.error(f"❌ Failed to initialize chat session: {e}", exc_info=True)
             self.chat_session = None
     
-    def process_event(self, input_event: Event) -> List[Event]:
+    def process_event(self, input_event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
         METODO PRINCIPALE: Processa un evento di input.
         
@@ -92,9 +93,12 @@ class BuddyBrain:
             input_event: Evento di input da processare
             
         Returns:
-            Lista di eventi di output da eseguire
+            Tuple di (eventi_output, comandi_adapter):
+            - eventi_output: Eventi da routare agli output adapter
+            - comandi_adapter: Comandi da broadcast a TUTTI gli adapter (sync)
         """
         output_events = []
+        adapter_commands = []
         
         try:
             # Gestione per tipo di evento
@@ -102,8 +106,15 @@ class BuddyBrain:
                 # Bypass Brain: unwrap l'evento interno e inoltralo direttamente
                 output_events.extend(self._handle_direct_output(input_event))
             
+            elif input_event.type == InputEventType.WAKEWORD:
+                output_events_temp, commands_temp = self._handle_wakeword(input_event)
+                output_events.extend(output_events_temp)
+                adapter_commands.extend(commands_temp)
+            
             elif input_event.type == InputEventType.USER_SPEECH:
-                output_events.extend(self._handle_user_input(input_event))
+                output_events_temp, commands_temp = self._handle_user_input(input_event)
+                output_events.extend(output_events_temp)
+                adapter_commands.extend(commands_temp)
             
             elif input_event.type.name.startswith("SENSOR_"):
                 output_events.extend(self._handle_sensor_input(input_event))
@@ -124,7 +135,7 @@ class BuddyBrain:
             logger.error(f"Brain processing error for event {input_event.type}: {e}", exc_info=True)
             # Non propaghiamo per non bloccare il sistema, ma loggiamo tutto
         
-        return output_events
+        return output_events, adapter_commands
     
     def _handle_direct_output(self, event: Event) -> List[Event]:
         """
@@ -166,9 +177,35 @@ class BuddyBrain:
             logger.error(f"❌ Critical error unwrapping DIRECT_OUTPUT: {e}", exc_info=True)
             raise RuntimeError(f"Failed to unwrap DIRECT_OUTPUT event: {e}") from e
     
-    def _handle_user_input(self, event: Event) -> List[Event]:
+    def _handle_wakeword(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+        """
+        Gestisce rilevamento wakeword.
+        
+        Returns:
+            Tuple di (eventi, comandi):
+            - Eventi: feedback visivo/sonoro
+            - Comandi: ferma wakeword detection, attiva voice input
+        """
+        output_events = []
+        commands = []
+        
+        logger.info(f"👂 Wakeword detected: {event.metadata.get('wakeword', 'unknown')}")
+        
+        # Feedback visivo: LED in modalità ascolto
+        commands.append(AdapterCommand.LED_LISTENING)
+        
+        # STOP wakeword detection (evita loop)
+        commands.append(AdapterCommand.WAKEWORD_LISTEN_STOP)
+        
+        # START voice input per catturare comando utente
+        commands.append(AdapterCommand.VOICE_INPUT_START)
+        
+        return output_events, commands
+    
+    def _handle_user_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """Gestisce input testuale/vocale dell'utente"""
         output_events = []
+        commands = []
         user_text = str(event.content)
         
         # Salva in history
@@ -196,8 +233,11 @@ class BuddyBrain:
                 priority=EventPriority.HIGH,
                 metadata={"triggered_by": "user_speech"}
             ))
+            
+            # Dopo aver parlato, riattiva wakeword detection
+            commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
         
-        return output_events
+        return output_events, commands
     
     def _handle_sensor_input(self, event: Event) -> List[Event]:
         """Gestisce eventi dai sensori"""
