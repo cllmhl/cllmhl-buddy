@@ -144,48 +144,20 @@ class JabraVoiceInput(InputPort):
             )
             logger.info("✅ Porcupine initialized")
 
-            # List all PvRecorder devices
-            available_devices = PvRecorder.get_available_devices()
-            logger.info(f"Available PvRecorder audio devices:")
-            for i, device in enumerate(available_devices):
-                logger.info(f"  PvRecorder Index {i}: {device}")
-
-            # List all PyAudio input devices
-            import pyaudio
-            pa = pyaudio.PyAudio()
-            pyaudio_indices = []
-            jabra_pyaudio_index = None
-            logger.info("Available PyAudio input devices:")
-            for i in range(pa.get_device_count()):
-                info = pa.get_device_info_by_index(i)
-                max_channels = int(info.get('maxInputChannels', 0))
-                device_name = str(info['name'])
-                if max_channels > 0:
-                    logger.info(f"  PyAudio Index {i}: {device_name} (channels={max_channels})")
-                    pyaudio_indices.append((i, device_name))
-                    if 'Jabra' in device_name:
-                        jabra_pyaudio_index = i
-            pa.terminate()
-
-            # Find Jabra in PvRecorder
-            jabra_pv_index = None
-            for i, device in enumerate(available_devices):
-                if "Jabra" in device:
-                    jabra_pv_index = i
-                    logger.info(f"✅ Jabra found in PvRecorder at index {i}: {device}")
-                    break
+            # Auto-detect Jabra device
+            from adapters.audio_device_manager import find_jabra_pvrecorder, find_jabra_pyaudio
+            
+            jabra_pv_index = find_jabra_pvrecorder()
             if jabra_pv_index is None:
-                logger.error("❌ Jabra device not found in PvRecorder device list. Please check connection.")
-                raise RuntimeError("Jabra device not found for Porcupine.")
-
-            # Find Jabra in PyAudio
+                raise RuntimeError("Jabra device not found for Porcupine")
+            
+            jabra_pyaudio_index = find_jabra_pyaudio()
             if jabra_pyaudio_index is None:
-                logger.error("❌ Jabra device not found in PyAudio device list. Please check connection.")
-                raise RuntimeError("Jabra device not found for speech_recognition.")
-
+                raise RuntimeError("Jabra device not found for speech_recognition")
+            
             self.device_index = jabra_pyaudio_index  # For sr.Microphone
             self.porcupine_device_index = jabra_pv_index  # For PvRecorder
-            logger.info(f"✅ Jabra indices: PvRecorder={jabra_pv_index}, PyAudio={jabra_pyaudio_index}")
+            logger.info(f"✅ Jabra auto-detected: PvRecorder={jabra_pv_index}, PyAudio={jabra_pyaudio_index}")
 
             # Porcupine MUST be initialized at this point
             if not self.porcupine:

@@ -15,11 +15,17 @@ archivist:
 
 adapters:
   input:
-    # Voice input con Jabra e Wake Word
-    - class: "JabraVoiceInput"
+    # Wake word detection con Porcupine
+    - class: "WakewordInput"
       config:
-        wake_word_path: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+        wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+    
+    # Speech recognition con Jabra (attivato dopo wakeword)
+    - class: "EarInput"
+      config:
         stt_mode: "cloud"  # "cloud" o "local"
+        max_silence_seconds: 15.0
+        led_ascolto_pin: 26
     
     # Radar fisico
     - class: "RadarInput"
@@ -52,7 +58,6 @@ adapters:
         queue_maxsize: 50
         tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
         voice_name: "paola"  # "paola" o "riccardo"
-        audio_device: "plughw:2,0"  # Jabra SPEAK 410 USB (card 2). Coontrolla con `aplay -l`
 
     # LED con GPIO
     - class: "GPIOLEDOutput"

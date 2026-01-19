@@ -31,12 +31,16 @@ class BuddyArchivist:
                 model=self.model_id,
                 contents=f"Analizza questa conversazione:\n{formatted_logs}",
                 config=types.GenerateContentConfig(
-                    system_instruction=self.config["system_instruction"],  # Required
+                    system_instruction=self.config["system_instruction"],
                     response_mime_type="application/json",
-                    temperature=self.config.get("temperature", 0.1)  # Default ok
+                    temperature=self.config["temperature"]
                 )
             )
 
+            # Fail-fast: response.text must be present
+            if not response.text:
+                raise ValueError("Empty response from LLM")
+            
             nuovi_ricordi = json.loads(response.text)
             
             if nuovi_ricordi:

@@ -1,11 +1,16 @@
 import threading
 import queue
 import time
+import os
+import logging
 import pvporcupine
 import pyaudio
 from adapters.ports import InputPort
 from core.events import InputEventType, Event, EventPriority
 from core.commands import AdapterCommand
+
+logger = logging.getLogger(__name__)
+
 
 class WakewordInput(InputPort):
     """
@@ -20,8 +25,19 @@ class WakewordInput(InputPort):
         self._porcupine = None
         self._audio_stream = None
         self._wakeword = config['wakeword']  # Fail-fast: must be present
-        self._access_key = config['access_key']  # Fail-fast: must be present
-        self._device_index = config.get('device_index', 0)
+        
+        # Access key da variabile di ambiente (fail-fast)
+        access_key = os.getenv("PICOVOICE_ACCESS_KEY")
+        if not access_key:
+            raise RuntimeError("PICOVOICE_ACCESS_KEY environment variable not set")
+        self._access_key: str = access_key
+        
+        # Auto-detect Jabra device
+        from adapters.audio_device_manager import find_jabra_pvrecorder
+        self._device_index = find_jabra_pvrecorder()
+        if self._device_index is None:
+            raise RuntimeError("Jabra device not found for WakewordInput")
+        logger.info(f"✅ Jabra auto-detected for WakewordInput: PvRecorder index={self._device_index}")
 
     def start(self):
         if self._thread is not None and self._thread.is_alive():

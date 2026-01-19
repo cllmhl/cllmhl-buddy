@@ -49,9 +49,14 @@ class EarInput(InputPort):
         
         # Configurazione
         self.stt_mode = config['stt_mode']
-        self.device_index = config.get('device_index', -1)  # Fail-fast se non configurato
-        self.max_silence_seconds = config.get('max_silence_seconds', 15.0)
-        self.led_ascolto_pin = config.get('led_ascolto_pin', 26)
+        self.max_silence_seconds = config['max_silence_seconds']
+        
+        # Auto-detect Jabra device
+        from adapters.audio_device_manager import find_jabra_pyaudio
+        self.device_index = find_jabra_pyaudio()
+        if self.device_index is None:
+            raise RuntimeError("Jabra device not found for EarInput")
+        logger.info(f"✅ Jabra auto-detected for EarInput: PyAudio index={self.device_index}")
         
         # Device Manager per coordinamento
         self.device_manager = get_jabra_manager()
@@ -149,36 +154,6 @@ class EarInput(InputPort):
         
         logger.info("🎤 Conversation thread started")
     
-    def _emit_led_control(self, led: str, command: str, **kwargs) -> None:
-        """
-        Helper per emettere eventi LED_CONTROL.
-        
-        Args:
-            led: 'ascolto' | 'parlo'
-            command: 'on' | 'off' | 'blink'
-            **kwargs: continuous, on_time, off_time, times
-        """
-        metadata = {
-            'led': led,
-            'command': command,
-            **kwargs
-        }
-        event = create_output_event(
-            OutputEventType.LED_CONTROL,
-            None,
-            EventPriority.HIGH,
-            metadata=metadata
-        )
-        # Pubblica direttamente come InputEvent DIRECT_OUTPUT
-        wrapper_event = create_input_event(
-            InputEventType.DIRECT_OUTPUT,
-            event,
-            source=self.name,
-            priority=EventPriority.HIGH
-        )
-        self.input_queue.put(wrapper_event)
-        logger.debug(f"LED_CONTROL emesso: {led} → {command}")
-    
     def _conversation_loop(self) -> None:
         """
         Loop conversazione continua con timeout.
@@ -195,9 +170,6 @@ class EarInput(InputPort):
         last_interaction_time = time.time()
         
         try:
-            # LED ascolto ON (fisso)
-            self._emit_led_control('ascolto', 'on')
-            
             # Apri microfono
             with SuppressStream():
                 mic_source = sr.Microphone(device_index=self.device_index)
@@ -238,9 +210,6 @@ class EarInput(InputPort):
             logger.error(f"Error opening microphone: {e}", exc_info=True)
         
         finally:
-            # LED torna IDLE (lampeggia)
-            self._emit_led_control('ascolto', 'blink', continuous=True, on_time=1.0, off_time=1.0)
-            
             # Rilascia device
             self.device_manager.release()
             

@@ -21,7 +21,7 @@ class DatabaseOutput(OutputPort):
     """
     
     def __init__(self, name: str, config: dict):
-        queue_maxsize = config.get('queue_maxsize')
+        queue_maxsize = config['queue_maxsize']  # Fail-fast: must be present
         super().__init__(name, config, queue_maxsize)
         
         # Configurazione database

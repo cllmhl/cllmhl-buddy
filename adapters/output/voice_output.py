@@ -39,7 +39,14 @@ class JabraVoiceOutput(OutputPort):
         # Configurazione TTS
         self.tts_mode = config['tts_mode']  # 'cloud' o 'local'
         self.voice_name = config['voice_name']
-        self.audio_device = config['audio_device']  # Device ALSA per output
+        
+        # Auto-detect Jabra device (ALSA)
+        from adapters.audio_device_manager import find_jabra_alsa
+        audio_device = find_jabra_alsa()
+        if not audio_device:
+            raise RuntimeError("Jabra audio device not found for output")
+        self.audio_device: str = audio_device  # Guaranteed non-None after check
+        logger.info(f"✅ Jabra output auto-detected: {self.audio_device}")
         
         # LED di stato (GPIO 21)
         self.led_pin = config.get('led_stato_pin', 21)
@@ -205,7 +212,7 @@ class JabraVoiceOutput(OutputPort):
         Raises:
             Exception: Se sintesi o playback falliscono
         """
-        filename = None
+        filename: Optional[str] = None
         try:
             # Genera TTS
             logger.debug(f"Generating gTTS for: {text[:50]}...")
@@ -214,9 +221,12 @@ class JabraVoiceOutput(OutputPort):
             tts.save(filename)
             logger.debug(f"TTS saved to {filename}")
             
+            # Fail-fast: filename must be set here
+            assert filename is not None, "TTS file generation failed"
+            
             # Play audio con mpg123 su device configurato
             logger.debug(f"Playing with mpg123 on device {self.audio_device}...")
-            result = subprocess.run(
+            subprocess.run(
                 ["mpg123", "-a", self.audio_device, "-q", filename],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
@@ -243,7 +253,11 @@ class JabraVoiceOutput(OutputPort):
                     logger.warning(f"Failed to cleanup {filename}: {e}")
     
     def _speak_piper(self, text: str) -> None:
-        """TTS usando Piper (local)"""
+        """TTS usando Piper (local)
+        
+        Raises:
+            Exception: Se pipeline fallisce
+        """
         try:
             piper_cmd = [
                 self.piper_binary,
@@ -280,14 +294,18 @@ class JabraVoiceOutput(OutputPort):
             if p_sox.stdout:
                 p_sox.stdout.close()
             
-            _, stderr = p_piper.communicate(input=text.encode('utf-8'))
+            # Comunica input a piper
+            stdout_data, stderr_data = p_piper.communicate(input=text.encode('utf-8'))
             p_aplay.wait()
             
             if p_piper.returncode != 0:
-                logger.error(f"Piper error: {stderr.decode()}")
+                error_msg = stderr_data.decode() if stderr_data else "Unknown error"
+                logger.error(f"Piper error: {error_msg}")
+                raise RuntimeError(f"Piper failed with return code {p_piper.returncode}")
         
         except Exception as e:
             logger.error(f"Piper TTS error: {e}")
+            raise
 
 
 class MockVoiceOutput(OutputPort):
