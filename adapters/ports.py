@@ -5,48 +5,40 @@ Implementazione del Port Pattern per l'architettura esagonale.
 
 from abc import ABC, abstractmethod
 from queue import PriorityQueue
-from typing import Optional, List
+from typing import List, Set
 import logging
 
 # Import required - fail fast if not available
 from core.events import InputEventType, OutputEventType
+from core.commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
 
 
-class InputPort(ABC):
+class AdapterPort(ABC):
     """
-    Interfaccia BASE per adapter di INPUT (Primary Adapters).
+    Classe base COMUNE per tutti gli adapter (Input e Output).
     
-    Gli input adapter:
-    - Ricevono eventi dal mondo esterno (utente, sensori, etc)
-    - Li trasformano in Event standardizzati
-    - Li pubblicano sulla input_queue
-    
-    NON usare direttamente, estendere le Port specifiche:
-    - VoiceInputPort per input vocale (wake word + speech)
-    - SensorInputPort per sensori generici
+    Fornisce:
+    - Gestione stato (name, config, running)
+    - Lifecycle methods (start, stop, is_running)
+    - Command handling (supported_commands, handle_command)
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+    def __init__(self, name: str, config: dict):
         """
         Args:
             name: Nome identificativo dell'adapter
             config: Configurazione specifica dell'adapter
-            input_queue: Coda centralizzata dove pubblicare gli eventi
         """
         self.name = name
         self.config = config
         self.running = False
-        self.input_queue = input_queue
-        logger.info(f"🔌 InputPort '{name}' initialized")
+        logger.info(f"🔌 {self.__class__.__name__} '{name}' initialized")
     
     @abstractmethod
     def start(self) -> None:
-        """
-        Avvia l'adapter.
-        L'adapter usa self.input_queue per pubblicare eventi.
-        """
+        """Avvia l'adapter"""
         pass
     
     @abstractmethod
@@ -57,64 +49,60 @@ class InputPort(ABC):
     def is_running(self) -> bool:
         """Controlla se l'adapter è attivo"""
         return self.running
+    
+    def supported_commands(self) -> Set[AdapterCommand]:
+        """
+        Dichiara quali comandi questo adapter è in grado di gestire.
+        Default: nessun comando (adapter senza controllo esterno).
+        
+        Returns:
+            Set di AdapterCommand supportati
+        """
+        return set()
+    
+    def handle_command(self, command: AdapterCommand) -> bool:
+        """
+        Gestisce un comando dal Brain.
+        Invocato SINCRONAMENTE dall'orchestrator per tutti gli adapter.
+        
+        Args:
+            command: Comando da eseguire
+            
+        Returns:
+            True se il comando è stato gestito, False se ignorato
+        """
+        return False  # Default: ignora tutti i comandi
 
 
-# ===== SPECIALIZED INPUT PORTS =====
-
-class VoiceInputPort(InputPort):
+class InputPort(AdapterPort):
     """
-    Port per input VOCALE (wake word + speech recognition).
+    Interfaccia per adapter di INPUT (Primary Adapters).
+    
+    Gli input adapter:
+    - Ricevono eventi dal mondo esterno (utente, sensori, etc)
+    - Li trasformano in Event standardizzati
+    - Li pubblicano sulla input_queue
     """
     
-    @classmethod
-    def emitted_events(cls):
-        """Eventi emessi da questa Port"""
-        return [InputEventType.USER_SPEECH]
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        """
+        Args:
+            name: Nome identificativo dell'adapter
+            config: Configurazione specifica dell'adapter
+            input_queue: Coda centralizzata dove pubblicare gli eventi
+        """
+        super().__init__(name, config)
+        self.input_queue = input_queue
 
 
-class SensorInputPort(InputPort):
+class OutputPort(AdapterPort):
     """
-    Port BASE per sensori generici.
-    Le sottoclassi devono specificare quali eventi emettono.
-    """
-    pass
-
-
-class RadarInputPort(SensorInputPort):
-    """
-    Port per sensore RADAR (presenza/movimento).
-    """
-    
-    @classmethod
-    def emitted_events(cls):
-        """Eventi emessi da questa Port"""
-        return [InputEventType.SENSOR_PRESENCE, InputEventType.SENSOR_MOVEMENT]
-
-
-class TemperatureInputPort(SensorInputPort):
-    """
-    Port per sensore TEMPERATURA/UMIDITÀ.
-    """
-    
-    @classmethod
-    def emitted_events(cls):
-        """Eventi emessi da questa Port"""
-        return [InputEventType.SENSOR_TEMPERATURE, InputEventType.SENSOR_HUMIDITY]
-
-
-class OutputPort(ABC):
-    """
-    Interfaccia BASE per adapter di OUTPUT (Secondary Adapters).
+    Interfaccia per adapter di OUTPUT (Secondary Adapters).
     
     Gli output adapter:
     - Hanno una coda interna per ricevere eventi
     - Consumano eventi dalla loro coda interna
     - Eseguono azioni nel mondo esterno (parlare, LED, DB, etc)
-    
-    NON usare direttamente, estendere le Port specifiche:
-    - VoiceOutputPort per output vocale/audio
-    - LEDOutputPort per LED e segnalazioni visive
-    - DatabaseOutputPort per persistenza dati
     """
     
     def __init__(self, name: str, config: dict, queue_maxsize: int = 50):
@@ -124,12 +112,9 @@ class OutputPort(ABC):
             config: Configurazione specifica dell'adapter
             queue_maxsize: Dimensione massima della coda interna
         """
-        self.name = name
-        self.config = config
-        self.running = False
-        # Coda interna dell'adapter
+        super().__init__(name, config)
         self.output_queue: PriorityQueue = PriorityQueue(maxsize=queue_maxsize)
-        logger.info(f"🔌 OutputPort '{name}' initialized (queue_size={queue_maxsize})")
+        logger.info(f"  Queue size: {queue_maxsize}")
     
     def send_event(self, event) -> bool:
         """
@@ -167,100 +152,10 @@ class OutputPort(ABC):
         """
         Restituisce la lista di OutputEventType gestiti da questa Port.
         
-        Deve essere implementato da tutte le sottoclassi per dichiarare
+        DEVE essere implementato da tutte le sottoclassi per dichiarare
         quali tipi di eventi sono in grado di processare.
         
         Returns:
             List[OutputEventType]: Eventi gestiti
         """
-        pass
-    
-    def is_running(self) -> bool:
-        """Controlla se l'adapter è attivo"""
-        return self.running
-
-
-# ===== SPECIALIZED OUTPUT PORTS =====
-
-class VoiceOutputPort(OutputPort):
-    """
-    Port per output VOCALE (TTS, audio).
-    """
-    
-    @classmethod
-    def handled_events(cls):
-        """Eventi gestiti da questa Port"""
-        return [OutputEventType.SPEAK]
-
-
-class LEDOutputPort(OutputPort):
-    """
-    Port per output LED (segnalazioni visive).
-    """
-    
-    @classmethod
-    def handled_events(cls):
-        """Eventi gestiti da questa Port"""
-        return [OutputEventType.LED_CONTROL]
-
-
-class DatabaseOutputPort(OutputPort):
-    """
-    Port per output DATABASE (persistenza).
-    """
-    
-    @classmethod
-    def handled_events(cls):
-        """Eventi gestiti da questa Port"""
-        return [OutputEventType.SAVE_HISTORY, OutputEventType.SAVE_MEMORY]
-
-
-class ArchivistOutputPort(OutputPort):
-    """
-    Port per output ARCHIVIST (distillazione memoria).
-    """
-    
-    @classmethod
-    def handled_events(cls):
-        """Eventi gestiti da questa Port"""
-        return [OutputEventType.DISTILL_MEMORY]
-
-
-class AudioDevicePort(ABC):
-    """
-    Port speciale per device audio condivisi (es: Jabra).
-    
-    Gestisce l'accesso esclusivo a device che sono sia input che output.
-    Implementa il coordinamento per evitare conflitti.
-    """
-    
-    def __init__(self, name: str, config: dict):
-        self.name = name
-        self.config = config
-        self.device_available = True
-        logger.info(f"🎤 AudioDevicePort '{name}' initialized")
-    
-    @abstractmethod
-    def acquire_for_input(self) -> bool:
-        """
-        Richiede accesso al device per input (microfono).
-        
-        Returns:
-            True se il device è disponibile, False altrimenti
-        """
-        pass
-    
-    @abstractmethod
-    def acquire_for_output(self) -> bool:
-        """
-        Richiede accesso al device per output (speaker).
-        
-        Returns:
-            True se il device è disponibile, False altrimenti
-        """
-        pass
-    
-    @abstractmethod
-    def release(self) -> None:
-        """Rilascia il device"""
         pass

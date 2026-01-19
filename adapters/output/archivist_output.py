@@ -8,7 +8,7 @@ from queue import PriorityQueue, Empty
 from typing import Optional
 
 from core.events import Event, OutputEventType
-from adapters.ports import ArchivistOutputPort
+from adapters.ports import OutputPort
 from infrastructure.memory_store import MemoryStore
 from core.archivist import BuddyArchivist
 import os
@@ -16,7 +16,7 @@ import os
 logger = logging.getLogger(__name__)
 
 
-class ArchivistOutput(ArchivistOutputPort):
+class ArchivistOutput(OutputPort):
     """
     Archivist Output Adapter.
     Distilla conversazioni in memoria permanente usando Gemini.
@@ -53,6 +53,11 @@ class ArchivistOutput(ArchivistOutputPort):
             self.archivist = None
         
         self.worker_thread: Optional[threading.Thread] = None
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.DISTILL_MEMORY]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -127,7 +132,7 @@ class ArchivistOutput(ArchivistOutputPort):
             logger.error(f"❌ Error during memory distillation: {e}", exc_info=True)
 
 
-class MockArchivistOutput(ArchivistOutputPort):
+class MockArchivistOutput(OutputPort):
     """
     Mock Archivist Output per testing.
     Simula distillazione senza effettivamente processare.
@@ -138,6 +143,11 @@ class MockArchivistOutput(ArchivistOutputPort):
         super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"📚 MockArchivistOutput initialized")
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.DISTILL_MEMORY]
     
     def start(self) -> None:
         """Avvia worker mock"""

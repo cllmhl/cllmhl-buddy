@@ -26,7 +26,7 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import VoiceInputPort
+from adapters.ports import InputPort
 from adapters.audio_device_manager import get_jabra_manager
 from core.events import create_input_event, create_output_event, InputEventType, OutputEventType, EventPriority
 
@@ -46,7 +46,7 @@ class SuppressStream:
         os.close(self.old_err)
 
 
-class JabraVoiceInput(VoiceInputPort):
+class JabraVoiceInput(InputPort):
     """
     Voice Input con Jabra + Porcupine Wake Word.
     Gestisce riconoscimento wake word e speech-to-text.
@@ -450,7 +450,7 @@ class JabraVoiceInput(VoiceInputPort):
             logger.error(f"Speech recognition error: {e}")
 
 
-class MockVoiceInput(VoiceInputPort):
+class MockVoiceInput(InputPort):
     """
     Mock Voice Input per testing.
     Genera frasi simulate per testare il sistema.

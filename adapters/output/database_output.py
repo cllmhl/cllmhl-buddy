@@ -7,14 +7,14 @@ import threading
 from queue import PriorityQueue, Empty
 from typing import Optional
 
-from adapters.ports import DatabaseOutputPort
+from adapters.ports import OutputPort
 from core.events import Event, OutputEventType
 from infrastructure.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseOutput(DatabaseOutputPort):
+class DatabaseOutput(OutputPort):
     """
     Database Output Adapter.
     Gestisce salvataggio history e memoria permanente.
@@ -38,6 +38,11 @@ class DatabaseOutput(DatabaseOutputPort):
             self.db = None
         
         self.worker_thread: Optional[threading.Thread] = None
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.SAVE_HISTORY, OutputEventType.SAVE_MEMORY]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -139,7 +144,7 @@ class DatabaseOutput(DatabaseOutputPort):
             logger.error(f"Error saving memory: {e}")
 
 
-class MockDatabaseOutput(DatabaseOutputPort):
+class MockDatabaseOutput(OutputPort):
     """
     Mock Database Output per testing.
     Scrive nel log applicativo invece di salvare nel database.
@@ -150,6 +155,11 @@ class MockDatabaseOutput(DatabaseOutputPort):
         super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💾 MockDatabaseOutput initialized")
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.SAVE_HISTORY, OutputEventType.SAVE_MEMORY]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""

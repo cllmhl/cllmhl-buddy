@@ -15,13 +15,13 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import LEDOutputPort
+from adapters.ports import OutputPort
 from core.events import Event, OutputEventType
 
 logger = logging.getLogger(__name__)
 
 
-class GPIOLEDOutput(LEDOutputPort):
+class GPIOLEDOutput(OutputPort):
     """
     LED Output con GPIO reale (Raspberry Pi).
     """
@@ -48,6 +48,11 @@ class GPIOLEDOutput(LEDOutputPort):
             raise RuntimeError(f"LED initialization failed: {e}") from e
         
         self.worker_thread: Optional[threading.Thread] = None
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.LED_CONTROL]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -189,7 +194,7 @@ class GPIOLEDOutput(LEDOutputPort):
 
 
 
-class MockLEDOutput(LEDOutputPort):
+class MockLEDOutput(OutputPort):
     """
     Mock LED Output per testing.
     Scrive su console invece di accendere LED.
@@ -200,6 +205,11 @@ class MockLEDOutput(LEDOutputPort):
         super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"💡 MockLEDOutput initialized")
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.LED_CONTROL]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""

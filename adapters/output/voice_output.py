@@ -18,14 +18,14 @@ if not os.path.exists('/proc/device-tree/model'):
 
 from gpiozero import LED
 
-from adapters.ports import VoiceOutputPort
+from adapters.ports import OutputPort
 from adapters.audio_device_manager import get_jabra_manager
 from core.events import Event, OutputEventType
 
 logger = logging.getLogger(__name__)
 
 
-class JabraVoiceOutput(VoiceOutputPort):
+class JabraVoiceOutput(OutputPort):
     """
     Voice Output con Jabra - Implementazione REALE.
     Gestisce TTS (gTTS o Piper) e LED di stato.
@@ -62,6 +62,11 @@ class JabraVoiceOutput(VoiceOutputPort):
         self.worker_thread: Optional[threading.Thread] = None
         
         logger.info(f"🔊 JabraVoiceOutput initialized (mode: {self.tts_mode}, voice: {self.voice_name}, device: {self.audio_device})")
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.SPEAK]
     
     def _setup_piper(self):
         """Setup Piper TTS locale
@@ -285,7 +290,7 @@ class JabraVoiceOutput(VoiceOutputPort):
             logger.error(f"Piper TTS error: {e}")
 
 
-class MockVoiceOutput(VoiceOutputPort):
+class MockVoiceOutput(OutputPort):
     """
     Mock Voice Output per testing.
     Scrive nel log applicativo invece di parlare.
@@ -296,6 +301,11 @@ class MockVoiceOutput(VoiceOutputPort):
         super().__init__(name, config, queue_maxsize)
         self.worker_thread: Optional[threading.Thread] = None
         logger.info(f"🔊 MockVoiceOutput initialized")
+    
+    @classmethod
+    def handled_events(cls):
+        """Eventi gestiti da questo adapter"""
+        return [OutputEventType.SPEAK]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""

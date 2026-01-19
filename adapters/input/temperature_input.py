@@ -22,13 +22,13 @@ except ImportError:
     DHT_AVAILABLE = False
     logging.warning("⚠️ adafruit_dht not available. DHT11 disabled.")
 
-from adapters.ports import TemperatureInputPort
+from adapters.ports import InputPort
 from core.events import create_input_event, InputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
 
-class TemperatureInput(TemperatureInputPort):
+class TemperatureInput(InputPort):
     """
     DHT11 Temperature/Humidity Input Adapter.
     Rileva temperatura e umidità tramite sensore GPIO.
@@ -206,7 +206,7 @@ class TemperatureInput(TemperatureInputPort):
             time.sleep(self.interval)
 
 
-class MockTemperatureInput(TemperatureInputPort):
+class MockTemperatureInput(InputPort):
     """
     Mock Temperature Input per testing.
     Genera dati fake per simulare sensore temperatura/umidità.

@@ -9,13 +9,13 @@ import serial
 from queue import PriorityQueue
 from typing import Optional, Dict, Any
 
-from adapters.ports import RadarInputPort
+from adapters.ports import InputPort
 from core.events import create_input_event, InputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
 
-class RadarInput(RadarInputPort):
+class RadarInput(InputPort):
     """
     Radar LD2410C Input Adapter.
     Rileva presenza e movimento tramite radar UART.
@@ -203,7 +203,7 @@ class RadarInput(RadarInputPort):
         return None
 
 
-class MockRadarInput(RadarInputPort):
+class MockRadarInput(InputPort):
     """
     Mock Radar Input per testing.
     Genera dati fake per simulare radar.
