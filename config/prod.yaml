@@ -19,6 +19,7 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+        sensitivity: 0.8  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"

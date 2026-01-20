@@ -46,6 +46,12 @@ class WakewordInput(InputPort):
         self._wakeword: str = str(wakeword_file.resolve())
         logger.info(f"✅ Wake word file: {self._wakeword}")
         
+        # Sensitivity (0.0 - 1.0, default: 0.5)
+        self._sensitivity: float = config['sensitivity'] # Fail-fast: must be present
+        if not 0.0 <= self._sensitivity <= 1.0:
+            raise ValueError(f"Sensitivity must be between 0.0 and 1.0, got: {self._sensitivity}")
+        logger.info(f"✅ Wake word sensitivity: {self._sensitivity}")
+        
         # Access key da variabile di ambiente (fail-fast)
         access_key = os.getenv("PICOVOICE_ACCESS_KEY")
         if not access_key:
@@ -114,7 +120,8 @@ class WakewordInput(InputPort):
     def _run(self):
         self._porcupine = pvporcupine.create(
             access_key=self._access_key,
-            keyword_paths=[self._wakeword]
+            keyword_paths=[self._wakeword],
+            sensitivities=[self._sensitivity]
         )
         
         try:
