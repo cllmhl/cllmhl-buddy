@@ -13,24 +13,11 @@ from typing import Optional
 import speech_recognition as sr
 
 from adapters.ports import InputPort
-from adapters.audio_device_manager import get_jabra_manager
+from adapters.audio_device_manager import get_jabra_manager, SuppressStream
 from core.events import create_input_event, create_output_event, InputEventType, OutputEventType, EventPriority
 from core.commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
-
-
-class SuppressStream:
-    """Sopprime stderr temporaneamente"""
-    def __enter__(self):
-        self.err_null = os.open(os.devnull, os.O_WRONLY)
-        self.old_err = os.dup(2)
-        os.dup2(self.err_null, 2)
-    
-    def __exit__(self, *args):
-        os.dup2(self.old_err, 2)
-        os.close(self.err_null)
-        os.close(self.old_err)
 
 
 class EarInput(InputPort):
@@ -240,17 +227,15 @@ class EarInput(InputPort):
             # Rilascia device
             self.device_manager.release()
             
-            # Riattiva wakeword detection ora che la conversazione è terminata
-            from core.events import create_input_event, InputEventType
-            from core.commands import AdapterCommand
-            wakeword_reactivation = create_input_event(
-                InputEventType.ADAPTER_COMMAND,
-                AdapterCommand.WAKEWORD_LISTEN_START,
+            # Invia evento CONVERSATION_END che il Brain gestirà
+            # (spegnerà LED e riattiva wakeword)
+            conversation_end_event = create_input_event(
+                InputEventType.CONVERSATION_END,
+                None,
                 source="ear_input",
                 priority=EventPriority.HIGH
             )
-            self.input_queue.put(wakeword_reactivation)
-            logger.info("🔊 Wakeword detection reactivated after conversation end")
+            self.input_queue.put(conversation_end_event)
             
             self._conversation_active = False
             logger.info("👂 Ear conversation session ended")

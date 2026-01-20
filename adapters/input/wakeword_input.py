@@ -7,6 +7,7 @@ from pathlib import Path
 import pvporcupine
 from pvrecorder import PvRecorder
 from adapters.ports import InputPort
+from adapters.audio_device_manager import SuppressStream
 from core.events import InputEventType, Event, EventPriority
 from core.commands import AdapterCommand
 
@@ -134,11 +135,13 @@ class WakewordInput(InputPort):
                 # Crea/ricrea recorder se necessario (con lock)
                 with self._recorder_lock:
                     if self._recorder is None:
-                        self._recorder = PvRecorder(
-                            device_index=self._device_index,
-                            frame_length=self._porcupine.frame_length
-                        )
-                        self._recorder.start()
+                        # Sopprimi stderr per evitare ALSA warnings
+                        with SuppressStream():
+                            self._recorder = PvRecorder(
+                                device_index=self._device_index,
+                                frame_length=self._porcupine.frame_length
+                            )
+                            self._recorder.start()
                         logger.info("🎤 PvRecorder started for wake word detection")
                 
                 try:

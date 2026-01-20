@@ -3,12 +3,27 @@ Audio Device Manager - Coordinamento device condivisi (Jabra)
 Gestisce l'accesso esclusivo a device audio usati sia per input che output.
 """
 
+import os
 import logging
 import threading
 from enum import Enum
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+class SuppressStream:
+    """Sopprime stderr temporaneamente per silenziare ALSA warnings"""
+    def __enter__(self):
+        self.err_null = os.open(os.devnull, os.O_WRONLY)
+        self.old_err = os.dup(2)
+        os.dup2(self.err_null, 2)
+        return self
+    
+    def __exit__(self, *args):
+        os.dup2(self.old_err, 2)
+        os.close(self.err_null)
+        os.close(self.old_err)
 
 
 def find_jabra_pvrecorder() -> Optional[int]:
@@ -59,22 +74,24 @@ def find_jabra_pyaudio() -> Optional[int]:
         logger.error("PyAudio not available")
         raise ImportError("PyAudio required for Jabra detection")
     
-    pa = pyaudio.PyAudio()
-    jabra_index = None
-    
-    logger.info("Available PyAudio input devices:")
-    for i in range(pa.get_device_count()):
-        info = pa.get_device_info_by_index(i)
-        max_channels = int(info['maxInputChannels'])  # Fail-fast: must be present
-        device_name = str(info['name'])
+    # Sopprime stderr per evitare ALSA warnings
+    with SuppressStream():
+        pa = pyaudio.PyAudio()
+        jabra_index = None
         
-        if max_channels > 0:
-            logger.info(f"  PyAudio Index {i}: {device_name} (channels={max_channels})")
-            if 'Jabra' in device_name:
-                jabra_index = i
-                logger.info(f"✅ Jabra found in PyAudio at index {i}: {device_name}")
-    
-    pa.terminate()
+        logger.info("Available PyAudio input devices:")
+        for i in range(pa.get_device_count()):
+            info = pa.get_device_info_by_index(i)
+            max_channels = int(info['maxInputChannels'])  # Fail-fast: must be present
+            device_name = str(info['name'])
+            
+            if max_channels > 0:
+                logger.info(f"  PyAudio Index {i}: {device_name} (channels={max_channels})")
+                if 'Jabra' in device_name:
+                    jabra_index = i
+                    logger.info(f"✅ Jabra found in PyAudio at index {i}: {device_name}")
+        
+        pa.terminate()
     
     if jabra_index is None:
         logger.error("❌ Jabra device not found in PyAudio device list")

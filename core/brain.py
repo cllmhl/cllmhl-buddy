@@ -59,6 +59,7 @@ class BuddyBrain:
             InputEventType.DIRECT_OUTPUT: self._handle_direct_output,
             InputEventType.ADAPTER_COMMAND: self._handle_adapter_command,
             InputEventType.WAKEWORD: self._handle_wakeword,
+            InputEventType.CONVERSATION_END: self._handle_conversation_end,
             InputEventType.USER_SPEECH: self._handle_user_input,
             InputEventType.SENSOR_PRESENCE: self._handle_sensor_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_sensor_input,
@@ -195,12 +196,12 @@ class BuddyBrain:
         wakeword = event.metadata.get('wakeword', 'unknown') if event.metadata else 'unknown'
         logger.info(f"👂 Wakeword detected: {wakeword}")
         
-        # Feedback visivo: LED blu fisso (modalità ascolto)
+        # Feedback visivo: LED ascolto lampeggia continuamente durante conversazione
         output_events.append(create_output_event(
             OutputEventType.LED_CONTROL,
             None,
             priority=EventPriority.HIGH,
-            metadata={'led': 'ascolto', 'command': 'on'}
+            metadata={'led': 'ascolto', 'command': 'blink', 'continuous': True, 'on_time': 0.5, 'off_time': 0.5}
         ))
         
         # STOP wakeword detection (evita loop)
@@ -208,6 +209,28 @@ class BuddyBrain:
         
         # START voice input per catturare comando utente
         commands.append(AdapterCommand.VOICE_INPUT_START)
+        
+        return output_events, commands
+    
+    def _handle_conversation_end(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+        """
+        Gestisce fine conversazione - spegne LED e riattiva wakeword.
+        """
+        output_events = []
+        commands = []
+        
+        logger.info("🔊 Conversation ended - turning off LED and reactivating wakeword")
+        
+        # Spegne LED ascolto
+        output_events.append(create_output_event(
+            OutputEventType.LED_CONTROL,
+            None,
+            priority=EventPriority.HIGH,
+            metadata={'led': 'ascolto', 'command': 'off'}
+        ))
+        
+        # Riattiva detection wakeword
+        commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
         
         return output_events, commands
     
