@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Buddy Orchestrator - Core Component
 Orchestrates the main event loop and lifecycle of Buddy system.
@@ -8,7 +10,7 @@ import queue
 import signal
 import logging
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, TYPE_CHECKING
 
 # Core imports
 from core.events import Event, InputEventType, OutputEventType, EventPriority
@@ -18,6 +20,9 @@ from core.commands import AdapterCommand
 
 # Adapters imports
 from adapters.factory import AdapterFactory
+
+if TYPE_CHECKING:
+    from adapters.ports import InputPort, OutputPort
 
 
 class BuddyOrchestrator:
