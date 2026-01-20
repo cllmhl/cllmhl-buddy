@@ -54,6 +54,19 @@ class BuddyBrain:
         # Inizializza sessione chat
         self._init_chat_session()
         
+        # Setup event handlers
+        self.handlers = {
+            InputEventType.DIRECT_OUTPUT: self._handle_direct_output,
+            InputEventType.ADAPTER_COMMAND: self._handle_adapter_command,
+            InputEventType.WAKEWORD: self._handle_wakeword,
+            InputEventType.USER_SPEECH: self._handle_user_input,
+            InputEventType.SENSOR_PRESENCE: self._handle_sensor_input,
+            InputEventType.SENSOR_TEMPERATURE: self._handle_sensor_input,
+            InputEventType.SENSOR_HUMIDITY: self._handle_sensor_input,
+            InputEventType.SENSOR_MOVEMENT: self._handle_sensor_input,
+            InputEventType.SHUTDOWN: self._handle_shutdown,
+        }
+        
         logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id}, archivist_interval: {self.archivist_interval}s)")
     
     def _init_chat_session(self):
@@ -87,7 +100,7 @@ class BuddyBrain:
     
     def process_event(self, input_event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
-        METODO PRINCIPALE: Processa un evento di input.
+        METODO PRINCIPALE: Processa un evento di input usando un sistema di handler.
         
         Args:
             input_event: Evento di input da processare
@@ -97,35 +110,21 @@ class BuddyBrain:
             - eventi_output: Eventi da routare agli output adapter
             - comandi_adapter: Comandi da broadcast a TUTTI gli adapter (sync)
         """
-        output_events = []
-        adapter_commands = []
+        output_events: List[Event] = []
+        adapter_commands: List[AdapterCommand] = []
         
         try:
-            # Gestione per tipo di evento
-            if input_event.type == InputEventType.DIRECT_OUTPUT:
-                # Bypass Brain: unwrap l'evento interno e inoltralo direttamente
-                output_events.extend(self._handle_direct_output(input_event))
+            # The brain only processes input events. This check also helps the type checker.
+            if not isinstance(input_event.type, InputEventType):
+                logger.warning(f"Brain received a non-input event to process: {input_event.type}")
+                return [], []
+
+            handler = self.handlers.get(input_event.type)
             
-            elif input_event.type == InputEventType.ADAPTER_COMMAND:
-                # Bypass Brain: converti comando e invia agli adapter
-                adapter_commands.extend(self._handle_adapter_command(input_event))
-            
-            elif input_event.type == InputEventType.WAKEWORD:
-                output_events_temp, commands_temp = self._handle_wakeword(input_event)
-                output_events.extend(output_events_temp)
-                adapter_commands.extend(commands_temp)
-            
-            elif input_event.type == InputEventType.USER_SPEECH:
-                output_events_temp, commands_temp = self._handle_user_input(input_event)
-                output_events.extend(output_events_temp)
-                adapter_commands.extend(commands_temp)
-            
-            elif input_event.type.name.startswith("SENSOR_"):
-                output_events.extend(self._handle_sensor_input(input_event))
-            
-            elif input_event.type == InputEventType.SHUTDOWN:
-                output_events.extend(self._handle_shutdown(input_event))
-            
+            if handler:
+                events, commands = handler(input_event)
+                output_events.extend(events)
+                adapter_commands.extend(commands)
             else:
                 logger.warning(f"Unhandled event type: {input_event.type}")
             
@@ -145,53 +144,31 @@ class BuddyBrain:
         
         return output_events, adapter_commands
     
-    def _handle_direct_output(self, event: Event) -> List[Event]:
+    def _handle_direct_output(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
         Gestisce DIRECT_OUTPUT: unwrap l'evento interno e inoltralo.
-        Utile per:
-        - Test hardware
-        - Comandi diretti da API/console
-        - Bypass della logica LLM
-        - Automazioni hardware
-        
-        Il content deve essere un Event di tipo OUTPUT.
         """
         try:
             inner_event = event.content
             
-            # Verifica che sia un Event valido
             if not isinstance(inner_event, Event):
-                logger.error(
-                    f"DIRECT_OUTPUT content must be an Event, got {type(inner_event)}"
-                )
-                return []
+                logger.error(f"DIRECT_OUTPUT content must be an Event, got {type(inner_event)}")
+                return [], []
             
-            # Verifica che sia un evento di output (non input)
             if isinstance(inner_event.type, InputEventType):
-                logger.warning(
-                    f"DIRECT_OUTPUT should contain output events, got {inner_event.type}"
-                )
-                return []
+                logger.warning(f"DIRECT_OUTPUT should contain output events, got {inner_event.type}")
+                return [], []
             
-            logger.info(
-                f"🎯 Direct output bypass: {inner_event.type.value} "
-                f"(content: {str(inner_event.content)[:50]})"
-            )
-            
-            # Inoltra direttamente l'evento interno
-            return [inner_event]
+            logger.info(f"🎯 Direct output bypass: {inner_event.type.value}")
+            return [inner_event], []
             
         except Exception as e:
             logger.error(f"Error handling DIRECT_OUTPUT: {e}", exc_info=True)
-            return []
+            return [], []
     
-    def _handle_adapter_command(self, event: Event) -> List[AdapterCommand]:
+    def _handle_adapter_command(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
         Gestisce ADAPTER_COMMAND: converte il comando e lo invia agli adapter.
-        Il content deve essere il nome del comando (string).
-        
-        Raises:
-            ValueError: Se il comando non è valido
         """
         command_name = event.content
         
@@ -202,24 +179,15 @@ class BuddyBrain:
         try:
             command = AdapterCommand(command_name)
             logger.info(f"🎛️  ADAPTER_COMMAND received: {command.value}")
-            return [command]
+            return [], [command]
         except ValueError:
             logger.error(f"❌ Invalid adapter command: {command_name}")
             available = ", ".join([c.value for c in AdapterCommand])
-            logger.info(f"Available commands: {available}")
-            raise ValueError(
-                f"Unknown adapter command: {command_name}. "
-                f"Available: {available}"
-            )
+            raise ValueError(f"Unknown adapter command: {command_name}. Available: {available}")
     
     def _handle_wakeword(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """
         Gestisce rilevamento wakeword.
-        
-        Returns:
-            Tuple di (eventi, comandi):
-            - Eventi: feedback visivo/sonoro
-            - Comandi: ferma wakeword detection, attiva voice input
         """
         output_events = []
         commands = []
@@ -280,7 +248,7 @@ class BuddyBrain:
         
         return output_events, commands
     
-    def _handle_sensor_input(self, event: Event) -> List[Event]:
+    def _handle_sensor_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """Gestisce eventi dai sensori"""
         output_events: List[Event] = []
         
@@ -295,8 +263,7 @@ class BuddyBrain:
                 
                 # Rilevamento forte = persona vicina
                 if mov_energy > 60 or static_energy > 60:
-                    logger.info(f"👤 Presenza forte rilevata: dist={distance}cm, "
-                               f"mov_energy={mov_energy}, static_energy={static_energy}")
+                    logger.info(f"👤 Presenza forte rilevata: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
                 # Rilevamento debole = potrebbe essere rumore
                 elif mov_energy < 20 and static_energy < 20:
                     logger.debug("👻 Presenza debole (possibile falso positivo)")
@@ -315,9 +282,9 @@ class BuddyBrain:
             if temp > 28 and humidity and humidity > 70:
                 logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
         
-        return output_events
+        return output_events, []
     
-    def _handle_shutdown(self, event: Event) -> List[Event]:
+    def _handle_shutdown(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """Gestisce comando di shutdown"""
         output_events = []
         
@@ -329,7 +296,7 @@ class BuddyBrain:
                 priority=EventPriority.CRITICAL
             ))
         
-        return output_events
+        return output_events, []
     
     def _generate_response(self, user_text: str) -> str:
         """
