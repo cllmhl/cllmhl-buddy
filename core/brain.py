@@ -242,9 +242,7 @@ class BuddyBrain:
                 priority=EventPriority.HIGH,
                 metadata={"triggered_by": "user_speech"}
             ))
-            
-            # Dopo aver parlato, riattiva wakeword detection
-            commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
+            # NON riattivare wakeword qui - lo farà EarInput quando termina la conversazione
         
         return output_events, commands
     

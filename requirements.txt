@@ -12,3 +12,4 @@ pyserial
 adafruit-circuitpython-dht
 pytest
 pyyaml
+sounddevice

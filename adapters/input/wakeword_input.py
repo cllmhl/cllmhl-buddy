@@ -3,8 +3,9 @@ import queue
 import time
 import os
 import logging
+from pathlib import Path
 import pvporcupine
-import pyaudio
+from pvrecorder import PvRecorder
 from adapters.ports import InputPort
 from core.events import InputEventType, Event, EventPriority
 from core.commands import AdapterCommand
@@ -17,14 +18,32 @@ class WakewordInput(InputPort):
     Input adapter for wake word detection using Porcupine.
     Dedicated to handling wake word events and pushing them to the input queue.
     """
-    def __init__(self, config: dict, input_queue: queue.PriorityQueue):
-        super().__init__(name="wakeword_input", config=config, input_queue=input_queue)
+    def __init__(self, name: str, config: dict, input_queue: queue.PriorityQueue):
+        super().__init__(name=name, config=config, input_queue=input_queue)
         self._thread = None
         self._running = False
         self._paused = False  # NEW: stato pausa
         self._porcupine = None
-        self._audio_stream = None
-        self._wakeword = config['wakeword']  # Fail-fast: must be present
+        self._recorder = None  # Track recorder instance
+        self._recorder_lock = threading.Lock()  # Proteggi accesso al recorder
+        
+        # Risolvi path wakeword (relativo a BUDDY_HOME)
+        wakeword_path = config['wakeword']  # Fail-fast: must be present
+        buddy_home = Path(os.getenv('BUDDY_HOME', '.')).resolve()
+        wakeword_file = Path(wakeword_path)
+        
+        # Se relativo, risolvilo rispetto a BUDDY_HOME
+        if not wakeword_file.is_absolute():
+            wakeword_file = buddy_home / wakeword_file
+        
+        # Fail-fast: file deve esistere
+        if not wakeword_file.exists():
+            raise FileNotFoundError(
+                f"Wake word file not found: {wakeword_file} (from config: {wakeword_path})"
+            )
+        
+        self._wakeword: str = str(wakeword_file.resolve())
+        logger.info(f"✅ Wake word file: {self._wakeword}")
         
         # Access key da variabile di ambiente (fail-fast)
         access_key = os.getenv("PICOVOICE_ACCESS_KEY")
@@ -48,17 +67,11 @@ class WakewordInput(InputPort):
 
     def stop(self):
         self._running = False
-        # Close audio stream FIRST to unblock the read() call
-        if self._audio_stream is not None:
-            self._audio_stream.close()
-            self._audio_stream = None
-        # Now the thread can exit cleanly
+        # The recorder will be cleaned up in the finally block of _run()
+        # Wait for thread to exit cleanly
         if self._thread is not None:
             self._thread.join(timeout=2)
-        # Clean up Porcupine
-        if self._porcupine is not None:
-            self._porcupine.delete()
-            self._porcupine = None
+
     
     def supported_commands(self):
         """Dichiara comandi supportati"""
@@ -79,9 +92,20 @@ class WakewordInput(InputPort):
         """
         if command == AdapterCommand.WAKEWORD_LISTEN_STOP:
             self._paused = True
+            # Ferma e rilascia il recorder per liberare il dispositivo
+            with self._recorder_lock:
+                if self._recorder is not None:
+                    try:
+                        self._recorder.stop()
+                        self._recorder.delete()
+                        self._recorder = None
+                        logger.info("🔇 PvRecorder stopped and released")
+                    except Exception as e:
+                        logger.error(f"Error stopping recorder: {e}")
             return True
         elif command == AdapterCommand.WAKEWORD_LISTEN_START:
             self._paused = False
+            # Il recorder verrà ricreato nel loop
             return True
         return False
 
@@ -90,41 +114,73 @@ class WakewordInput(InputPort):
             access_key=self._access_key,
             keyword_paths=[self._wakeword]
         )
-        pa = pyaudio.PyAudio()
-        self._audio_stream = pa.open(
-            rate=self._porcupine.sample_rate,
-            channels=1,
-            format=pyaudio.paInt16,
-            input=True,
-            frames_per_buffer=self._porcupine.frame_length,
-            input_device_index=self._device_index
-        )
-        while self._running:
-            # Se in pausa, aspetta senza consumare CPU
-            if self._paused:
-                time.sleep(0.1)
-                continue
-            
-            try:
-                pcm = self._audio_stream.read(self._porcupine.frame_length, exception_on_overflow=False)
-                pcm = memoryview(pcm).cast('h')
-                result = self._porcupine.process(pcm)
-                if result >= 0:
-                    event = Event(
-                        type=InputEventType.WAKEWORD,
-                        content='wakeword_detected',
-                        priority=EventPriority.HIGH,
-                        metadata={'wakeword': self._wakeword}
-                    )
-                    self.input_queue.put(event)
-            except (OSError, IOError) as e:
-                # Stream closed by stop() - exit cleanly
-                if not self._running:
-                    break
-                raise  # Re-raise if it's an unexpected error
         
-        # Cleanup (only if not already done by stop())
-        if self._audio_stream is not None:
-            self._audio_stream.close()
-        if self._porcupine is not None:
-            self._porcupine.delete()
+        try:
+            while self._running:
+                # Se in pausa, aspetta senza tenere il recorder attivo
+                if self._paused:
+                    # Assicurati che il recorder sia fermo (con lock)
+                    with self._recorder_lock:
+                        if self._recorder is not None:
+                            try:
+                                self._recorder.stop()
+                                self._recorder.delete()
+                                self._recorder = None
+                            except Exception as e:
+                                logger.error(f"Error cleaning recorder during pause: {e}")
+                    time.sleep(0.1)
+                    continue
+                
+                # Crea/ricrea recorder se necessario (con lock)
+                with self._recorder_lock:
+                    if self._recorder is None:
+                        self._recorder = PvRecorder(
+                            device_index=self._device_index,
+                            frame_length=self._porcupine.frame_length
+                        )
+                        self._recorder.start()
+                        logger.info("🎤 PvRecorder started for wake word detection")
+                
+                try:
+                    # Leggi con lock per evitare race condition
+                    with self._recorder_lock:
+                        if self._recorder is not None:
+                            pcm = self._recorder.read()
+                        else:
+                            # Recorder fermato da handle_command, skip
+                            time.sleep(0.01)
+                            continue
+                    
+                    result = self._porcupine.process(pcm)
+                    if result >= 0:
+                        event = Event(
+                            type=InputEventType.WAKEWORD,
+                            content='wakeword_detected',
+                            priority=EventPriority.HIGH,
+                            metadata={'wakeword': self._wakeword}
+                        )
+                        self.input_queue.put(event)
+                except (OSError, IOError) as e:
+                    # Stream closed by stop() - exit cleanly
+                    if not self._running:
+                        break
+                    # Altrimenti, ricrea recorder al prossimo giro
+                    with self._recorder_lock:
+                        if self._recorder is not None:
+                            try:
+                                self._recorder.stop()
+                                self._recorder.delete()
+                            except:
+                                pass
+                            self._recorder = None
+        finally:
+            # Cleanup (con lock)
+            with self._recorder_lock:
+                if self._recorder is not None:
+                    try:
+                        self._recorder.stop()
+                        self._recorder.delete()
+                    except Exception as e:
+                        logger.error(f"Error cleaning up recorder: {e}")
+            if self._porcupine is not None:
+                self._porcupine.delete()

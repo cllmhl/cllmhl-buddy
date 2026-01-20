@@ -24,7 +24,7 @@ adapters:
     - class: "EarInput"
       config:
         stt_mode: "cloud"  # "cloud" o "local"
-        max_silence_seconds: 15.0
+        max_silence_seconds: 8.0  # Timeout silenzio (come Alexa)
     
     # Radar fisico
     - class: "RadarInput"

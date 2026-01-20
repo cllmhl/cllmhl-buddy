@@ -44,8 +44,8 @@ class EarInput(InputPort):
     - Coordina con AudioDeviceManager per evitare conflitti
     """
     
-    def __init__(self, config: dict, input_queue: PriorityQueue):
-        super().__init__(name="ear_input", config=config, input_queue=input_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione
         self.stt_mode = config['stt_mode']
@@ -167,14 +167,34 @@ class EarInput(InputPort):
             self._conversation_active = False
             return
         
+        # Piccolo delay per dare tempo al wakeword di rilasciare il dispositivo
+        time.sleep(0.2)
+        
         last_interaction_time = time.time()
+        mic_source = None
         
         try:
-            # Apri microfono
+            # Apri microfono con retry
             with SuppressStream():
-                mic_source = sr.Microphone(device_index=self.device_index)
+                try:
+                    mic_source = sr.Microphone(device_index=self.device_index)
+                except Exception as e:
+                    logger.error(f"Failed to create Microphone object: {e}")
+                    raise
             
-            with mic_source as source:
+            # Verifica che il microfono sia stato creato correttamente
+            if mic_source is None:
+                raise RuntimeError("Microphone object is None")
+            
+            # Prova ad aprire il microfono (context manager)
+            try:
+                mic_source.__enter__()
+            except Exception as e:
+                logger.error(f"Failed to open microphone stream: {e}")
+                raise
+            
+            try:
+                source = mic_source
                 while self.running and not self._stop_conversation.is_set():
                     # 1. Check se Buddy sta parlando
                     if self.device_manager.is_speaking.is_set():
@@ -205,13 +225,32 @@ class EarInput(InputPort):
                     except Exception as e:
                         logger.error(f"Error in conversation loop: {e}")
                         break
+            finally:
+                # Chiudi il context manager del microfono
+                if mic_source is not None:
+                    try:
+                        mic_source.__exit__(None, None, None)
+                    except Exception as e:
+                        logger.error(f"Error closing microphone: {e}")
         
         except Exception as e:
-            logger.error(f"Error opening microphone: {e}", exc_info=True)
+            logger.error(f"Error in microphone setup: {e}", exc_info=True)
         
         finally:
             # Rilascia device
             self.device_manager.release()
+            
+            # Riattiva wakeword detection ora che la conversazione è terminata
+            from core.events import create_input_event, InputEventType
+            from core.commands import AdapterCommand
+            wakeword_reactivation = create_input_event(
+                InputEventType.ADAPTER_COMMAND,
+                AdapterCommand.WAKEWORD_LISTEN_START,
+                source="ear_input",
+                priority=EventPriority.HIGH
+            )
+            self.input_queue.put(wakeword_reactivation)
+            logger.info("🔊 Wakeword detection reactivated after conversation end")
             
             self._conversation_active = False
             logger.info("👂 Ear conversation session ended")
@@ -247,8 +286,8 @@ class MockEarInput(InputPort):
     Simula riconoscimento vocale senza hardware.
     """
     
-    def __init__(self, config: dict, input_queue: PriorityQueue):
-        super().__init__(name="mock_ear_input", config=config, input_queue=input_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name=name, config=config, input_queue=input_queue)
         
         self._conversation_active = False
         self._conversation_thread: Optional[threading.Thread] = None

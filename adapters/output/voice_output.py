@@ -12,15 +12,11 @@ from typing import Optional
 
 from gtts import gTTS
 
-# Mock GPIO per testing
-if not os.path.exists('/proc/device-tree/model'):
-    os.environ['GPIOZERO_PIN_FACTORY'] = 'mock'
-
 from gpiozero import LED
 
 from adapters.ports import OutputPort
 from adapters.audio_device_manager import get_jabra_manager
-from core.events import Event, OutputEventType
+from core.events import Event, OutputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +44,12 @@ class JabraVoiceOutput(OutputPort):
         self.audio_device: str = audio_device  # Guaranteed non-None after check
         logger.info(f"✅ Jabra output auto-detected: {self.audio_device}")
         
-        # LED di stato (GPIO 21)
-        self.led_pin = config.get('led_stato_pin', 21)
-        self.led_stato = None
-        try:
-            self.led_stato = LED(self.led_pin)
-            logger.info(f"✅ LED status on GPIO {self.led_pin}")
-        except Exception as e:
-            logger.warning(f"⚠️  LED status initialization failed: {e}")
-            logger.warning("Continuing without LED status indicator (non-critical)")
         
         # Device Manager per coordinamento Jabra
         self.device_manager = get_jabra_manager()
         
         # Setup Piper (se local mode)
-        if self.tts_mode == 'local':
+        if self.tts_mode == "local":
             self._setup_piper()
         
         # Thread worker
@@ -140,10 +127,7 @@ class JabraVoiceOutput(OutputPort):
             if self.worker_thread.is_alive():
                 logger.warning(f"⚠️  {self.name} thread did not terminate")
 
-        # LED off
-        if self.led_stato:
-            self.led_stato.off()
-        
+         
         logger.info(f"⏹️  {self.name} stopped")
     
     def _worker_loop(self) -> None:
@@ -185,9 +169,13 @@ class JabraVoiceOutput(OutputPort):
                 logger.warning("⚠️ Could not acquire audio device for output")
                 return
             
-            # LED on
-            if self.led_stato:
-                self.led_stato.on()
+            # Invia evento per accendere il LED 'parlo'
+            self.output_queue.put(Event(
+                type=OutputEventType.LED_CONTROL,
+                content="speak_start",
+                priority=EventPriority.HIGH,
+                metadata={'led': 'parlo', 'command': 'on'}
+            ))
 
             # TTS
             if self.tts_mode == "local":
@@ -199,9 +187,13 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            # LED off
-            if self.led_stato:
-                self.led_stato.off()
+            # Invia evento per spegnere il LED 'parlo'
+            self.output_queue.put(Event(
+                type=OutputEventType.LED_CONTROL,
+                content="speak_end",
+                priority=EventPriority.HIGH,
+                metadata={'led': 'parlo', 'command': 'off'}
+            ))
             
             # Rilascia device (sblocca input)
             self.device_manager.release()
