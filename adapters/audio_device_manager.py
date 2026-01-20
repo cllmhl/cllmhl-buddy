@@ -181,65 +181,73 @@ class AudioDeviceManager:
         self.is_speaking = threading.Event()  # Compatibility with old code
         
         logger.info(f"🎤 AudioDeviceManager initialized for '{device_name}'")
+        self.requester: Optional[str] = None
     
-    def request_input(self, timeout: Optional[float] = None) -> bool:
+    def request_input(self, requester: str, timeout: Optional[float] = None) -> bool:
         """
         Richiede accesso al device per INPUT (microfono).
         
         Args:
+            requester: Nome del componente che richiede l'accesso
             timeout: Timeout in secondi (None = blocca indefinitamente)
             
         Returns:
             True se accesso concesso, False se timeout/occupato
         """
         with self._lock:
-            # Se sta parlando, non possiamo ascoltare
             if self.state == AudioDeviceState.SPEAKING:
-                logger.warning(f"🎤 Device BUSY: Cannot accept input while SPEAKING")
+                logger.warning(f"🎤 Device BUSY: {requester} cannot acquire for INPUT (current owner: {self.requester} for SPEAKING)")
                 return False
             
-            # Se già in listening o idle, ok
-            if self.state in [AudioDeviceState.IDLE, AudioDeviceState.LISTENING]:
-                self.state = AudioDeviceState.LISTENING
-                logger.debug(f"🎤 Input access granted (state: {self.state.value})")
-                return True
-            
-            return False
+            if self.state == AudioDeviceState.LISTENING and self.requester != requester:
+                logger.warning(f"🎤 Device BUSY: {requester} cannot acquire for INPUT (current owner: {self.requester} for LISTENING)")
+                return False
+
+            self.state = AudioDeviceState.LISTENING
+            self.requester = requester
+            logger.info(f"🎤 Input access granted to {requester} (state: {self.state.value})")
+            return True
     
-    def request_output(self, timeout: Optional[float] = None) -> bool:
+    def request_output(self, requester: str, timeout: Optional[float] = None) -> bool:
         """
         Richiede accesso al device per OUTPUT (speaker).
         
         Args:
+            requester: Nome del componente che richiede l'accesso
             timeout: Timeout in secondi (None = blocca indefinitamente)
             
         Returns:
             True se accesso concesso, False se timeout/occupato
         """
         with self._lock:
-            # Se sta ascoltando, dobbiamo interrompere
             if self.state == AudioDeviceState.LISTENING:
-                logger.debug(f"🔊 Interrupting LISTENING for SPEAKING")
-            
-            # Imposta stato SPEAKING
+                logger.info(f"🔊 {requester} interrupting {self.requester} (LISTENING -> SPEAKING)")
+
             self.state = AudioDeviceState.SPEAKING
-            self.is_speaking.set()  # Notifica listeners
+            self.requester = requester
+            self.is_speaking.set()
             self.state_changed.set()
             
-            logger.debug(f"🔊 Output access granted (state: {self.state.value})")
+            logger.info(f"🔊 Output access granted to {requester} (state: {self.state.value})")
             return True
     
-    def release(self) -> None:
+    def release(self, requester: str) -> None:
         """Rilascia il device (torna IDLE)"""
         with self._lock:
+            if self.requester != requester:
+                logger.warning(f"⚠️  Release requested by {requester}, but current owner is {self.requester}")
+                # Non fare nulla se non sei il proprietario
+                return
+            
             old_state = self.state
             self.state = AudioDeviceState.IDLE
+            self.requester = None
             
             # Clear flags
             self.is_speaking.clear()
             self.state_changed.clear()
             
-            logger.debug(f"✅ Device released ({old_state.value} → {self.state.value})")
+            logger.info(f"✅ Device released by {requester} ({old_state.value} → {self.state.value})")
     
     def wait_until_idle(self, timeout: Optional[float] = None) -> bool:
         """

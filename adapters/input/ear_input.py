@@ -149,7 +149,7 @@ class EarInput(InputPort):
         logger.info("👂 Ear conversation session started")
         
         # Richiedi accesso device
-        if not self.device_manager.request_input():
+        if not self.device_manager.request_input(self.name):
             logger.warning("⚠️  Could not acquire device for input")
             self._conversation_active = False
             return
@@ -225,7 +225,7 @@ class EarInput(InputPort):
         
         finally:
             # Rilascia device
-            self.device_manager.release()
+            self.device_manager.release(self.name)
             
             # Invia evento CONVERSATION_END che il Brain gestirà
             # (spegnerà LED e riattiva wakeword)

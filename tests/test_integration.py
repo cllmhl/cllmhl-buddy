@@ -178,31 +178,31 @@ class TestIntegration:
         manager = get_jabra_manager()
         
         # Reset state
-        manager.release()
+        manager.release("test_suite")
         
         # Stato iniziale
         assert manager.state == AudioDeviceState.IDLE
         
         # Richiedi output
-        success = manager.request_output()
+        success = manager.request_output("test_requester")
         assert success
         assert manager.state == AudioDeviceState.SPEAKING
         
         # Non può fare input mentre parla
-        can_listen = manager.request_input()
+        can_listen = manager.request_input("test_requester")
         assert not can_listen
         
         # Rilascia
-        manager.release()
+        manager.release("test_requester")
         assert manager.state == AudioDeviceState.IDLE
         
         # Ora può fare input
-        can_listen = manager.request_input()
+        can_listen = manager.request_input("test_requester")
         assert can_listen
         assert manager.state == AudioDeviceState.LISTENING
         
         # Rilascia
-        manager.release()
+        manager.release("test_requester")
         assert manager.state == AudioDeviceState.IDLE
 
 

@@ -165,7 +165,7 @@ class JabraVoiceOutput(OutputPort):
         
         try:
             # Richiedi accesso al device (blocca input)
-            if not self.device_manager.request_output():
+            if not self.device_manager.request_output(self.name):
                 logger.warning("⚠️ Could not acquire audio device for output")
                 return
             
@@ -196,7 +196,7 @@ class JabraVoiceOutput(OutputPort):
             ))
             
             # Rilascia device (sblocca input)
-            self.device_manager.release()
+            self.device_manager.release(self.name)
     
     def _speak_gtts(self, text: str) -> None:
         """TTS usando Google gTTS (cloud)
