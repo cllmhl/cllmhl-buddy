@@ -9,8 +9,6 @@ from typing import List, Set
 import logging
 
 # Import required - fail fast if not available
-from core.events import InputEventType, OutputEventType
-from core.commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +48,7 @@ class AdapterPort(ABC):
         """Controlla se l'adapter è attivo"""
         return self.running
     
-    def supported_commands(self) -> Set[AdapterCommand]:
+    def supported_commands(self) -> Set['AdapterCommand']:
         """
         Dichiara quali comandi questo adapter è in grado di gestire.
         Default: nessun comando (adapter senza controllo esterno).
@@ -60,7 +58,7 @@ class AdapterPort(ABC):
         """
         return set()
     
-    def handle_command(self, command: AdapterCommand) -> bool:
+    def handle_command(self, command: 'AdapterCommand') -> bool:
         """
         Gestisce un comando dal Brain.
         Invocato SINCRONAMENTE dall'orchestrator per tutti gli adapter.
@@ -148,7 +146,7 @@ class OutputPort(AdapterPort):
     
     @classmethod
     @abstractmethod
-    def handled_events(cls) -> List[OutputEventType]:
+    def handled_events(cls) -> List['OutputEventType']:
         """
         Restituisce la lista di OutputEventType gestiti da questa Port.
         

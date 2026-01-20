@@ -18,7 +18,6 @@ from core.commands import AdapterCommand
 
 # Adapters imports
 from adapters.factory import AdapterFactory
-from adapters.ports import InputPort, OutputPort
 
 
 class BuddyOrchestrator:
