@@ -54,9 +54,10 @@ class WakewordInput(InputPort):
         
         # Auto-detect Jabra device
         from adapters.audio_device_manager import find_jabra_pvrecorder
-        self._device_index = find_jabra_pvrecorder()
-        if self._device_index is None:
+        device_index = find_jabra_pvrecorder()
+        if device_index is None:
             raise RuntimeError("Jabra device not found for WakewordInput")
+        self._device_index: int = device_index  # Type narrowing: guaranteed non-None after check
         logger.info(f"✅ Jabra auto-detected for WakewordInput: PvRecorder index={self._device_index}")
 
     def start(self):

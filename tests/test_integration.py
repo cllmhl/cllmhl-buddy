@@ -132,16 +132,16 @@ class TestIntegration:
         )
         assert mock_led is not None
     
-    def test_voice_input_adapter_available(self):
-        """Test che Voice Input adapter sia disponibile"""
+    def test_ear_input_adapter_available(self):
+        """Test che Ear Input adapter sia disponibile"""
         available = AdapterFactory.get_available_classes()
-        assert "JabraVoiceInput" in available['input']
-        assert "MockVoiceInput" in available['input']
+        assert "EarInput" in available['input']
+        assert "MockEarInput" in available['input']
         
         # Crea mock ear adapter
         input_queue = PriorityQueue()
         mock_ear = AdapterFactory.create_input_adapter(
-            "MockVoiceInput", {'interval': 5.0}, input_queue
+            "MockEarInput", {'stt_mode': 'cloud', 'max_silence_seconds': 10.0}, input_queue
         )
         assert mock_ear is not None
     

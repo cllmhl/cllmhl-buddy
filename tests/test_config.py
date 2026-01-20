@@ -28,8 +28,11 @@ class TestConfigLoader:
             'adapters': {
                 'input': [
                     {
-                        'class': 'JabraVoiceInput',
-                        'config': {}
+                        'class': 'EarInput',
+                        'config': {
+                            'stt_mode': 'cloud',
+                            'max_silence_seconds': 10.0
+                        }
                     }
                 ],
                 'output': []
