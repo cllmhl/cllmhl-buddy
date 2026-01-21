@@ -243,6 +243,7 @@ def print_menu():
     print(f"  {color('menu', Colors.BLUE)}         → Mostra questo menu")
     print(f"  {color('json', Colors.BLUE)}         → Invia JSON custom")
     print(f"  {color('test', Colors.BLUE)}         → Test sequenza LED+Voce")
+    print(f"  {color('barge', Colors.BLUE)}        → Testa barge-in")
     print(f"  {color('help', Colors.BLUE)}         → Guida completa")
     print(f"  {color('quit', Colors.RED)}         → Esci")
     
@@ -297,7 +298,7 @@ def interactive_loop():
     print(color("\n🚀 Buddy Chat avviato!", Colors.GREEN + Colors.BOLD))
     print(color(f"   Input pipe:  {PIPE_IN}", Colors.CYAN))
     print(color(f"   Output pipe: {PIPE_OUT}", Colors.CYAN))
-    print("\nDigita 'menu' per vedere i comandi disponibili")
+    print_menu()
     
     # Avvia monitor output
     monitor = OutputMonitor(PIPE_OUT)
@@ -457,6 +458,22 @@ def interactive_loop():
                         import time
                         time.sleep(1.5)
                     print(color("✅ Test completato!", Colors.GREEN))
+
+                elif action == 'barge':  # Barge-in test
+                    print(color("\n🧪 Avvio test barge-in...", Colors.MAGENTA))
+                    long_text = "Questo è un testo molto lungo che userò per testare la funzionalità di barge-in. Mentre parlo, prova a interrompermi con un altro comando."
+                    event_speak = build_direct_output("speak", long_text, "high")
+                    send_event(event_speak)
+                    print(color(f"  → Inviato SPEAK: '{long_text[:30]}...'", Colors.CYAN))
+                    
+                    import time
+                    time.sleep(2.5)
+                    
+                    interrupt_text = "stop"
+                    event_interrupt = build_user_speech(interrupt_text)
+                    send_event(event_interrupt)
+                    print(color(f"  → Inviato USER_SPEECH (interrupt): '{interrupt_text}'", Colors.YELLOW))
+                    print(color("✅ Test barge-in avviato. Verifica l'output.", Colors.GREEN))
                     
                 else:
                     print(color(f"❌ Comando sconosciuto: {action}", Colors.RED))
