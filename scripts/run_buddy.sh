@@ -2,10 +2,11 @@
 
 # ============================================================================
 # Buddy Launcher
-# RICHIEDE: BUDDY_HOME e BUDDY_CONFIG devono essere settati esternamente
+# RICHIEDE: BUDDY_HOME e usa configurazione di sviluppo
 # ============================================================================
 
 source "$(dirname "$0")/common.sh"
+export BUDDY_CONFIG=config/dev.yaml
 validate_all
 
 echo "--- Buddy OS Startup ---"

@@ -1,6 +1,3 @@
-# Buddy Adapter Configuration - TEST MODE
-# Configurazione per testing locale senza hardware
-
 brain:
   model_id: "gemini-2.5-flash-lite"
   temperature: 0.7
@@ -15,56 +12,45 @@ archivist:
 
 adapters:
   input:
+    # Wake word detection con Porcupine
+    - class: "WakewordInput"
+      config:
+        wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
+        sensitivity: 0.8  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+    
+    # Speech recognition con Jabra (attivato dopo wakeword)
+    - class: "EarInput"
+      config:
+        stt_mode: "cloud"  # "cloud" o "local"
+        max_silence_seconds: 8.0  # Timeout silenzio (come Alexa)
+
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
       config:
         pipe_path: "data/buddy.in"
-    
-    # Voice input MOCK in test mode
-    - class: "MockVoiceInput"
-      config:
-        interval: 10.0
-    
-    # Radar MOCK in test mode
-    - class: "MockRadarInput"
-      config:
-        interval: 5.0
-    
-    # Temperature/Humidity MOCK in test mode
-    - class: "MockTemperatureInput"
-      config:
-        interval: 10.0
   
   output:
     # Pipe Output - IPC communication (monitor all events)
     - class: "PipeOutputAdapter"
       config:
         pipe_path: "data/buddy.out"
-        event_types: ["speak", "led_control", "save_history", "save_memory"]
+        event_types: ["speak"]
     
-    # Voice output -> MOCK (log instead of audio)
-    - class: "MockVoiceOutput"
+    # Voice output con Jabra
+    - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 50
-    
-    # LED -> MOCK (console output)
-    - class: "MockLEDOutput"
+        tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
+        voice_name: "paola"  # "paola" o "riccardo"
+
+    # LED con GPIO
+    - class: "GPIOLEDOutput"
       config:
         queue_maxsize: 100
-        blink_on_time: 1.0   # Default blink timing
+        led_ascolto_pin: 26  # LED Blu
+        led_parlo_pin: 21    # LED Verde
+        blink_on_time: 1.0
         blink_off_time: 1.0
-    
-    # Database -> MOCK
-    - class: "MockDatabaseOutput"
-      config:
-        queue_maxsize: 50
-        sqlite_path: "data/system.db"
-        chroma_path: "data/memory"
-    
-    # Archivist -> MOCK
-    - class: "MockArchivistOutput"
-      config:
-        queue_maxsize: 50
 
 queues:
   input_maxsize: 100
@@ -74,4 +60,4 @@ logging:
   log_file: "logs/dev.log"
   max_bytes: 10485760  # 10MB
   backup_count: 3
-  level: "INFO"
+  level: "DEBUG"
