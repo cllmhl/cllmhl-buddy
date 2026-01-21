@@ -13,7 +13,7 @@ from typing import Optional
 import speech_recognition as sr
 
 from adapters.ports import InputPort
-from adapters.audio_device_manager import get_jabra_manager, SuppressStream
+from adapters.shared_audio_state import is_speaking, find_jabra_pyaudio, SuppressStream
 from core.events import create_input_event, create_output_event, InputEventType, OutputEventType, EventPriority
 from core.commands import AdapterCommand
 
@@ -39,14 +39,10 @@ class EarInput(InputPort):
         self.max_silence_seconds = config['max_silence_seconds']
         
         # Auto-detect Jabra device
-        from adapters.audio_device_manager import find_jabra_pyaudio
         self.device_index = find_jabra_pyaudio()
         if self.device_index is None:
             raise RuntimeError("Jabra device not found for EarInput")
         logger.info(f"✅ Jabra auto-detected for EarInput: PyAudio index={self.device_index}")
-        
-        # Device Manager per coordinamento
-        self.device_manager = get_jabra_manager()
         
         # Stato conversazione
         self._conversation_active = False
@@ -148,12 +144,6 @@ class EarInput(InputPort):
         """
         logger.info("👂 Ear conversation session started")
         
-        # Richiedi accesso device
-        if not self.device_manager.request_input(self.name):
-            logger.warning("⚠️  Could not acquire device for input")
-            self._conversation_active = False
-            return
-        
         # Piccolo delay per dare tempo al wakeword di rilasciare il dispositivo
         time.sleep(0.2)
         
@@ -184,7 +174,7 @@ class EarInput(InputPort):
                 source = mic_source
                 while self.running and not self._stop_conversation.is_set():
                     # 1. Check se Buddy sta parlando
-                    if self.device_manager.is_speaking.is_set():
+                    if is_speaking.is_set():
                         # Reset timeout mentre parla
                         last_interaction_time = time.time()
                         time.sleep(0.1)
@@ -224,9 +214,6 @@ class EarInput(InputPort):
             logger.error(f"Error in microphone setup: {e}", exc_info=True)
         
         finally:
-            # Rilascia device
-            self.device_manager.release(self.name)
-            
             # Invia evento CONVERSATION_END che il Brain gestirà
             # (spegnerà LED e riattiva wakeword)
             conversation_end_event = create_input_event(

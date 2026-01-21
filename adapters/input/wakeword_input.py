@@ -7,7 +7,7 @@ from pathlib import Path
 import pvporcupine
 from pvrecorder import PvRecorder
 from adapters.ports import InputPort
-from adapters.audio_device_manager import SuppressStream
+from adapters.shared_audio_state import SuppressStream, find_jabra_pvrecorder
 from core.events import InputEventType, Event, EventPriority
 from core.commands import AdapterCommand
 
@@ -59,7 +59,6 @@ class WakewordInput(InputPort):
         self._access_key: str = access_key
         
         # Auto-detect Jabra device
-        from adapters.audio_device_manager import find_jabra_pvrecorder
         device_index = find_jabra_pvrecorder()
         if device_index is None:
             raise RuntimeError("Jabra device not found for WakewordInput")

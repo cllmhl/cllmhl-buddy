@@ -15,7 +15,7 @@ from gtts import gTTS
 from gpiozero import LED
 
 from adapters.ports import OutputPort
-from adapters.audio_device_manager import get_jabra_manager
+from adapters.shared_audio_state import is_speaking, find_jabra_alsa
 from core.events import Event, OutputEventType, EventPriority
 
 logger = logging.getLogger(__name__)
@@ -37,16 +37,12 @@ class JabraVoiceOutput(OutputPort):
         self.voice_name = config['voice_name']
         
         # Auto-detect Jabra device (ALSA)
-        from adapters.audio_device_manager import find_jabra_alsa
         audio_device = find_jabra_alsa()
         if not audio_device:
             raise RuntimeError("Jabra audio device not found for output")
         self.audio_device: str = audio_device  # Guaranteed non-None after check
         logger.info(f"✅ Jabra output auto-detected: {self.audio_device}")
         
-        
-        # Device Manager per coordinamento Jabra
-        self.device_manager = get_jabra_manager()
         
         # Setup Piper (se local mode)
         if self.tts_mode == "local":
@@ -164,10 +160,7 @@ class JabraVoiceOutput(OutputPort):
         logger.info(f"🗣️  Speaking: {text[:50]}...")
         
         try:
-            # Richiedi accesso al device (blocca input)
-            if not self.device_manager.request_output(self.name):
-                logger.warning("⚠️ Could not acquire audio device for output")
-                return
+            is_speaking.set()
             
             # Invia evento per accendere il LED 'parlo'
             self.output_queue.put(Event(
@@ -195,8 +188,7 @@ class JabraVoiceOutput(OutputPort):
                 metadata={'led': 'parlo', 'command': 'off'}
             ))
             
-            # Rilascia device (sblocca input)
-            self.device_manager.release(self.name)
+            is_speaking.clear()
     
     def _speak_gtts(self, text: str) -> None:
         """TTS usando Google gTTS (cloud)
