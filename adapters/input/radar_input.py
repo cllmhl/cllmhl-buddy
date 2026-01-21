@@ -6,7 +6,7 @@ import logging
 import threading
 import time
 import serial
-from queue import PriorityQueue
+from queue import PriorityQueue, Queue
 from typing import Optional, Dict, Any
 
 from adapters.ports import InputPort
@@ -21,8 +21,8 @@ class RadarInput(InputPort):
     Rileva presenza e movimento tramite radar UART.
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name, config, input_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
+        super().__init__(name, config, input_queue, interrupt_queue)
         
         # Configurazione radar
         self.port = config['port']
@@ -201,89 +201,3 @@ class RadarInput(InputPort):
             )
         
         return None
-
-
-class MockRadarInput(InputPort):
-    """
-    Mock Radar Input per testing.
-    Genera dati fake per simulare radar.
-    """
-    
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name, config, input_queue)
-        
-        self.interval = config['interval']
-        self.worker_thread: Optional[threading.Thread] = None
-        
-        logger.info(f"📡 MockRadarInput initialized")
-    
-    def start(self) -> None:
-        """Avvia worker"""
-        self.running = True
-        
-        self.worker_thread = threading.Thread(
-            target=self._worker_loop,
-            daemon=True,
-            name=f"{self.name}_worker"
-        )
-        self.worker_thread.start()
-        
-        logger.info(f"▶️  {self.name} started")
-    
-    def stop(self) -> None:
-        """Ferma worker"""
-        self.running = False
-        if self.worker_thread:
-            self.worker_thread.join(timeout=2.0)
-        
-        logger.info(f"⏹️  {self.name} stopped")
-    
-    def _worker_loop(self) -> None:
-        """Loop che genera dati fake"""
-        import random
-        
-        presence = False
-        counter = 0
-        
-        while self.running:
-            try:
-                # Toggle presence ogni 3 iterazioni
-                if counter % 3 == 0:
-                    presence = not presence
-                    
-                    # Genera valori realistici con energy levels
-                    distance = random.randint(50, 250) if presence else 0
-                    mov_energy = random.randint(20, 80) if presence else 0
-                    static_energy = random.randint(30, 70) if presence else 0
-                    
-                    logger.info(
-                        f"📡 [MOCK] Radar: Presence={presence} | "
-                        f"Distance={distance}cm | "
-                        f"Mov Energy={mov_energy} | "
-                        f"Static Energy={static_energy}"
-                    )
-                    
-                    event = create_input_event(
-                        InputEventType.SENSOR_PRESENCE,
-                        presence,
-                        source="mock_radar",
-                        priority=EventPriority.LOW,
-                        metadata={
-                            'presence': presence,
-                            'movement': presence,
-                            'static': presence,
-                            'distance': distance,
-                            'mov_distance': distance - 10 if presence else 0,
-                            'mov_energy': mov_energy,
-                            'static_distance': distance if presence else 0,
-                            'static_energy': static_energy
-                        }
-                    )
-                    self.input_queue.put(event)
-                
-                counter += 1
-            
-            except Exception as e:
-                logger.error(f"Mock radar error: {e}")
-            
-            time.sleep(self.interval)

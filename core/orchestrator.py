@@ -9,11 +9,12 @@ import os
 import queue
 import signal
 import logging
+import threading
 from pathlib import Path
 from typing import Dict, Any, List, TYPE_CHECKING
 
 # Core imports
-from core.events import Event, InputEventType, OutputEventType, EventPriority
+from core.events import Event, InputEventType, OutputEventType, EventPriority, create_input_event
 from core.event_router import EventRouter
 from core.brain import BuddyBrain
 from core.commands import AdapterCommand
@@ -59,6 +60,8 @@ class BuddyOrchestrator:
         # Setup coda di input centralizzata
         queue_config = self.config['queues']
         self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
+        self.interrupt_queue: queue.Queue = queue.Queue(maxsize=queue_config.get('interrupt_maxsize', 10))
+        self._interrupt_handler_thread: threading.Thread | None = None
         
         # Event Router
         self.router = EventRouter()
@@ -124,7 +127,8 @@ class BuddyOrchestrator:
             adapter = AdapterFactory.create_input_adapter(
                 class_name, 
                 config,
-                self.input_queue
+                self.input_queue,
+                self.interrupt_queue
             )
             if adapter:
                 self.input_adapters.append(adapter)
@@ -183,6 +187,10 @@ class BuddyOrchestrator:
         
         # Avvia adapters
         self._start_adapters()
+        
+        # Avvia interrupt handler thread
+        self._interrupt_handler_thread = threading.Thread(target=self._interrupt_handler_loop, daemon=True)
+        self._interrupt_handler_thread.start()
         
         # Banner
         self._print_banner()
@@ -269,6 +277,40 @@ class BuddyOrchestrator:
                 self.logger.warning(f"⚠️  Command {command.value} not handled by any adapter")
             else:
                 self.logger.info(f"🎯 Command {command.value} handled by {handled_count} adapter(s)")
+
+    def _interrupt_handler_loop(self) -> None:
+        """
+        Loop del thread di interruzione.
+        Ascolta sulla interrupt_queue e agisce immediatamente.
+        """
+        self.logger.info("🚨 Interrupt handler thread started")
+        while self.running:
+            try:
+                interrupt_event = self.interrupt_queue.get(timeout=1.0)
+                
+                if interrupt_event.type == InputEventType.INTERRUPT:
+                    self.logger.warning(f"⚡ INTERRUPT received: {interrupt_event.content}")
+                    
+                    # 1. Ferma immediatamente l'output vocale
+                    for adapter in self.output_adapters:
+                        if "VoiceOutput" in adapter.name:
+                            adapter.handle_command(AdapterCommand.VOICE_OUTPUT_STOP)
+                            
+                    # 2. Inserisci l'evento di interruzione nella coda principale per l'elaborazione
+                    event = create_input_event(
+                        InputEventType.USER_SPEECH,
+                        interrupt_event.content,
+                        source="interrupt",
+                        priority=EventPriority.HIGH
+                    )
+                    self.input_queue.put(event)
+                
+                self.interrupt_queue.task_done()
+                
+            except queue.Empty:
+                continue
+            except Exception as e:
+                self.logger.error(f"Error in interrupt handler loop: {e}", exc_info=True)
     
     def _shutdown(self) -> None:
         """Procedura di shutdown pulita"""

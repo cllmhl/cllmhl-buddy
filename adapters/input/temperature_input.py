@@ -6,7 +6,7 @@ import os
 import logging
 import threading
 import time
-from queue import PriorityQueue
+from queue import PriorityQueue, Queue
 from typing import Optional
 
 # Mock GPIO per testing
@@ -34,8 +34,8 @@ class TemperatureInput(InputPort):
     Rileva temperatura e umidità tramite sensore GPIO.
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name, config, input_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
+        super().__init__(name, config, input_queue, interrupt_queue)
         
         # Configurazione DHT11
         self.pin = config['pin']
@@ -203,93 +203,4 @@ class TemperatureInput(InputPort):
                 logger.error(f"DHT11 worker error: {e}", exc_info=True)
             
             # Attendi intervallo
-            time.sleep(self.interval)
-
-
-class MockTemperatureInput(InputPort):
-    """
-    Mock Temperature Input per testing.
-    Genera dati fake per simulare sensore temperatura/umidità.
-    """
-    
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name, config, input_queue)
-        
-        self.interval = config['interval']
-        self.worker_thread: Optional[threading.Thread] = None
-        
-        logger.info(f"🌡️  MockTemperatureInput initialized")
-    
-    def start(self) -> None:
-        """Avvia worker"""
-        self.running = True
-        
-        self.worker_thread = threading.Thread(
-            target=self._worker_loop,
-            daemon=True,
-            name=f"{self.name}_worker"
-        )
-        self.worker_thread.start()
-        
-        logger.info(f"▶️  {self.name} started")
-    
-    def stop(self) -> None:
-        """Ferma worker"""
-        self.running = False
-        if self.worker_thread:
-            self.worker_thread.join(timeout=2.0)
-        
-        logger.info(f"⏹️  {self.name} stopped")
-    
-    def _worker_loop(self) -> None:
-        """Loop che genera dati fake"""
-        import random
-        
-        prev_temperature = None
-        prev_humidity = None
-        
-        while self.running:
-            try:
-                # Temperatura random 18-28°C, Umidità 40-70%
-                temp = random.uniform(18.0, 28.0)
-                humidity = random.uniform(40.0, 70.0)
-                
-                # Simula cambiamenti significativi
-                temp_changed = prev_temperature is None or abs(temp - prev_temperature) >= 0.5
-                humidity_changed = prev_humidity is None or abs(humidity - prev_humidity) >= 2.0
-                
-                if temp_changed or humidity_changed:
-                    prev_temperature = temp
-                    prev_humidity = humidity
-                    
-                    # Emetti evento combinato come il sensore reale
-                    climate_event = create_input_event(
-                        InputEventType.SENSOR_TEMPERATURE,
-                        temp,
-                        source="mock_dht11",
-                        priority=EventPriority.LOW,
-                        metadata={
-                            'temperature': temp,
-                            'humidity': humidity,
-                            'temp_unit': 'celsius',
-                            'humidity_unit': 'percent',
-                            'sensor': 'DHT11 (Mock)',
-                            'read_time': time.time(),
-                            'temp_changed': temp_changed,
-                            'humidity_changed': humidity_changed
-                        }
-                    )
-                    self.input_queue.put(climate_event)
-                    
-                    # Log info complete
-                    changes = []
-                    if temp_changed:
-                        changes.append(f"T={temp:.1f}°C")
-                    if humidity_changed:
-                        changes.append(f"H={humidity:.1f}%")
-                    logger.info(f"🌡️  [MOCK] DHT11: {', '.join(changes)}")
-            
-            except Exception as e:
-                logger.error(f"Mock temperature error: {e}")
-            
             time.sleep(self.interval)

@@ -8,7 +8,7 @@ usando getattr(), eliminando la necessità di un registry esplicito.
 """
 
 import logging
-from queue import PriorityQueue
+from queue import PriorityQueue, Queue
 
 from .ports import InputPort, OutputPort
 
@@ -28,7 +28,8 @@ class AdapterFactory:
         cls,
         class_name: str,
         config: dict,
-        input_queue: PriorityQueue
+        input_queue: PriorityQueue,
+        interrupt_queue: Queue
     ) -> InputPort:
         """
         Crea un input adapter dalla configurazione.
@@ -71,7 +72,8 @@ class AdapterFactory:
             adapter = adapter_class(
                 name=class_name,
                 config=config,
-                input_queue=input_queue
+                input_queue=input_queue,
+                interrupt_queue=interrupt_queue
             )
             
             logger.info(f"✅ Created input adapter: {adapter.name}")

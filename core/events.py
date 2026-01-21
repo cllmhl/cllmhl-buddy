@@ -19,6 +19,8 @@ class InputEventType(Enum):
     WAKEWORD = "wakeword"                 # Wake word detected (triggers listening)
     CONVERSATION_END = "conversation_end" # Conversazione terminata (EarInput)
     
+    INTERRUPT = "interrupt"               # Barge-in event
+    
     # Sensori
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza
     SENSOR_TEMPERATURE = "sensor_temperature"

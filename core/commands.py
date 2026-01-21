@@ -27,4 +27,7 @@ class AdapterCommand(str, Enum):
     # Voice input control
     VOICE_INPUT_START = "voice_input_start"
     VOICE_INPUT_STOP = "voice_input_stop"
+    
+    # Voice output control
+    VOICE_OUTPUT_STOP = "voice_output_stop"
 

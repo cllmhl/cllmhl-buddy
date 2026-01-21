@@ -17,6 +17,7 @@ from gpiozero import LED
 from adapters.ports import OutputPort
 from adapters.shared_audio_state import is_speaking, find_jabra_alsa
 from core.events import Event, OutputEventType, EventPriority
+from core.commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class JabraVoiceOutput(OutputPort):
         
         # Thread worker
         self.worker_thread: Optional[threading.Thread] = None
+        self._playback_process: Optional[subprocess.Popen] = None
         
         logger.info(f"🔊 JabraVoiceOutput initialized (mode: {self.tts_mode}, voice: {self.voice_name}, device: {self.audio_device})")
     
@@ -57,6 +59,21 @@ class JabraVoiceOutput(OutputPort):
     def handled_events(cls):
         """Eventi gestiti da questo adapter"""
         return [OutputEventType.SPEAK]
+
+    def supported_commands(self):
+        """Dichiara comandi supportati"""
+        return {AdapterCommand.VOICE_OUTPUT_STOP}
+
+    def handle_command(self, command: AdapterCommand) -> bool:
+        """Gestisce comandi"""
+        if command == AdapterCommand.VOICE_OUTPUT_STOP:
+            if self._playback_process and self._playback_process.poll() is None:
+                logger.info("🛑 Stopping voice output")
+                self._playback_process.terminate()
+                self._playback_process = None
+                is_speaking.clear()
+                return True
+        return False
     
     def _setup_piper(self):
         """Setup Piper TTS locale
@@ -210,12 +227,12 @@ class JabraVoiceOutput(OutputPort):
             
             # Play audio con mpg123 su device configurato
             logger.debug(f"Playing with mpg123 on device {self.audio_device}...")
-            subprocess.run(
+            self._playback_process = subprocess.Popen(
                 ["mpg123", "-a", self.audio_device, "-q", filename],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
-                check=True  # Fail fast: solleva eccezione se mpg123 fallisce
             )
+            self._playback_process.wait()
             logger.debug(f"mpg123 completed successfully")
         
         except FileNotFoundError as e:
@@ -265,12 +282,13 @@ class JabraVoiceOutput(OutputPort):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
-            p_aplay = subprocess.Popen(
+            self._playback_process = subprocess.Popen(
                 aplay_cmd,
                 stdin=p_sox.stdout,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
+            p_aplay = self._playback_process
             
             # Close stdout per consentire pipe chain di chiudersi correttamente
             if p_piper.stdout:

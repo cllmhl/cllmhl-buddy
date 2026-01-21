@@ -7,7 +7,7 @@ import os
 import time
 import logging
 import threading
-from queue import PriorityQueue
+from queue import PriorityQueue, Queue
 from typing import Optional
 
 import speech_recognition as sr
@@ -31,8 +31,8 @@ class EarInput(InputPort):
     - Coordina con AudioDeviceManager per evitare conflitti
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name, config, input_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
+        super().__init__(name, config, input_queue, interrupt_queue)
         
         # Configurazione
         self.stt_mode = config['stt_mode']
@@ -173,28 +173,23 @@ class EarInput(InputPort):
             try:
                 source = mic_source
                 while self.running and not self._stop_conversation.is_set():
-                    # 1. Check se Buddy sta parlando
-                    if is_speaking.is_set():
-                        # Reset timeout mentre parla
-                        last_interaction_time = time.time()
-                        time.sleep(0.1)
-                        continue
-                    
-                    # 2. Check timeout
-                    elapsed = time.time() - last_interaction_time
-                    if elapsed > self.max_silence_seconds:
-                        logger.info(f"⏳ Silence timeout ({self.max_silence_seconds}s), ending session")
-                        break
+                    # 1. Check timeout se NON sta parlando
+                    if not is_speaking.is_set():
+                        elapsed = time.time() - last_interaction_time
+                        if elapsed > self.max_silence_seconds:
+                            logger.info(f"⏳ Silence timeout ({self.max_silence_seconds}s), ending session")
+                            break
                     
                     try:
-                        # 3. Ascolta (con timeout breve per polling)
+                        # 2. Ascolta (con timeout breve per polling)
                         audio = self._recognizer.listen(source, timeout=1.0, phrase_time_limit=15)
                         
-                        # Reset timeout
+                        # 3. Se sente qualcosa, resetta il timeout
                         last_interaction_time = time.time()
                         
-                        # Processa audio
-                        self._process_audio(audio)
+                        # 4. Processa audio. Se sta parlando, è un'interruzione
+                        is_barge_in = is_speaking.is_set()
+                        self._process_audio(audio, is_barge_in)
                     
                     except sr.WaitTimeoutError:
                         # Nessun audio, continua loop
@@ -227,22 +222,36 @@ class EarInput(InputPort):
             self._conversation_active = False
             logger.info("👂 Ear conversation session ended")
     
-    def _process_audio(self, audio) -> None:
-        """Processa audio e crea evento USER_SPEECH"""
+    def _process_audio(self, audio, is_barge_in: bool = False) -> None:
+        """Processa audio e crea evento.
+        
+        Args:
+            audio: Dati audio da processare
+            is_barge_in: Se True, invia un evento INTERRUPT
+        """
         try:
             text = self._recognizer.recognize_google(audio, language="it-IT")  # type: ignore[attr-defined]
             
-            if text:
+            if not text:
+                return
+
+            if is_barge_in:
+                logger.info(f"⚡ Barge-in detected: {text}")
+                event = create_input_event(
+                    InputEventType.INTERRUPT,
+                    text,
+                    source="ear",
+                    priority=EventPriority.CRITICAL
+                )
+                self.interrupt_queue.put(event)
+            else:
                 logger.info(f"🗣️  Recognized: {text}")
-                
-                # Crea evento
                 event = create_input_event(
                     InputEventType.USER_SPEECH,
                     text,
                     source="ear",
                     priority=EventPriority.HIGH
                 )
-                
                 self.input_queue.put(event)
         
         except sr.UnknownValueError:
@@ -250,120 +259,3 @@ class EarInput(InputPort):
             logger.debug("Audio not recognized, ignoring")
         except Exception as e:
             logger.error(f"Speech recognition error: {e}", exc_info=True)
-
-
-class MockEarInput(InputPort):
-    """
-    Mock Ear Input per testing.
-    Simula riconoscimento vocale senza hardware.
-    """
-    
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
-        super().__init__(name=name, config=config, input_queue=input_queue)
-        
-        self._conversation_active = False
-        self._conversation_thread: Optional[threading.Thread] = None
-        self._stop_conversation = threading.Event()
-        
-        # Frasi simulate
-        self.test_phrases = [
-            "Ciao, come stai?",
-            "Che ore sono?",
-            "Raccontami una barzelletta",
-            "Grazie, è tutto",
-        ]
-        self.phrase_index = 0
-        
-        logger.info(f"👂 MockEarInput initialized")
-    
-    def start(self) -> None:
-        """Start adapter"""
-        self.running = True
-        logger.info(f"▶️  {self.name} started (waiting for VOICE_INPUT_START)")
-    
-    def stop(self) -> None:
-        """Stop adapter"""
-        self.running = False
-        if self._conversation_active:
-            self._stop_conversation.set()
-            if self._conversation_thread:
-                self._conversation_thread.join(timeout=2.0)
-        logger.info(f"⏹️  {self.name} stopped")
-    
-    def supported_commands(self):
-        """Dichiara comandi supportati"""
-        return {
-            AdapterCommand.VOICE_INPUT_START,
-            AdapterCommand.VOICE_INPUT_STOP
-        }
-    
-    def handle_command(self, command: AdapterCommand) -> bool:
-        """Gestisce comandi"""
-        if command == AdapterCommand.VOICE_INPUT_START:
-            if not self._conversation_active:
-                self._start_conversation()
-            return True
-        
-        elif command == AdapterCommand.VOICE_INPUT_STOP:
-            if self._conversation_active:
-                self._stop_conversation.set()
-            return True
-        
-        return False
-    
-    def _start_conversation(self) -> None:
-        """Avvia mock conversation"""
-        if self._conversation_active:
-            return
-        
-        self._conversation_active = True
-        self._stop_conversation.clear()
-        
-        self._conversation_thread = threading.Thread(
-            target=self._mock_conversation_loop,
-            daemon=True,
-            name=f"{self.name}_conversation"
-        )
-        self._conversation_thread.start()
-        
-        logger.info("🎤 [MOCK] Conversation started")
-    
-    def _mock_conversation_loop(self) -> None:
-        """Simula conversazione con 3 frasi e poi termina"""
-        try:
-            phrases_count = 0
-            max_phrases = 3
-            
-            while self.running and not self._stop_conversation.is_set() and phrases_count < max_phrases:
-                # Simula tempo di ascolto
-                time.sleep(2.0)
-                
-                if self._stop_conversation.is_set():
-                    break
-                
-                # Genera frase
-                phrase = self.test_phrases[self.phrase_index % len(self.test_phrases)]
-                self.phrase_index += 1
-                phrases_count += 1
-                
-                logger.info(f"👂 [MOCK] Recognized: {phrase}")
-                
-                # Emetti evento
-                event = create_input_event(
-                    InputEventType.USER_SPEECH,
-                    phrase,
-                    source="ear_mock",
-                    priority=EventPriority.HIGH
-                )
-                self.input_queue.put(event)
-                
-                # Simula tempo di processing
-                time.sleep(1.0)
-            
-            logger.info(f"👂 [MOCK] Conversation ended after {phrases_count} phrases")
-        
-        except Exception as e:
-            logger.error(f"Mock conversation error: {e}")
-        
-        finally:
-            self._conversation_active = False

@@ -19,8 +19,8 @@ class WakewordInput(InputPort):
     Input adapter for wake word detection using Porcupine.
     Dedicated to handling wake word events and pushing them to the input queue.
     """
-    def __init__(self, name: str, config: dict, input_queue: queue.PriorityQueue):
-        super().__init__(name=name, config=config, input_queue=input_queue)
+    def __init__(self, name: str, config: dict, input_queue: queue.PriorityQueue, interrupt_queue: queue.Queue):
+        super().__init__(name=name, config=config, input_queue=input_queue, interrupt_queue=interrupt_queue)
         self._thread = None
         self._running = False
         self._paused = False  # NEW: stato pausa
