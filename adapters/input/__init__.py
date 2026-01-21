@@ -9,7 +9,6 @@ from .ear_input import EarInput, MockEarInput
 from .radar_input import RadarInput, MockRadarInput
 from .temperature_input import TemperatureInput, MockTemperatureInput
 from .pipe_input import PipeInputAdapter
-from .direct_output_input import DirectOutputInput
 from .wakeword_input import WakewordInput
 
 __all__ = [
@@ -20,6 +19,5 @@ __all__ = [
     'TemperatureInput',
     'MockTemperatureInput',
     'PipeInputAdapter',
-    'DirectOutputInput',
     'WakewordInput'
 ]
