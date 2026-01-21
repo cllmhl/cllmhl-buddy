@@ -23,8 +23,11 @@
 ## 2.0 Ufficio
 
 ### 2.1 Memoria e Intelligence
-- [ ] **Database SQLite su SSD:** Ottimizzazione storage per log conversazioni e metadati persistenti
-- [ ] **RAG (Il Diario):** Ricerca semantica nel DB per recupero contesto storico prima di rispondere
+- [ ] **Contesto e stato di base:** Il sistema deve sempre avere chiaro chi è, che ora è, dove è, come mi chiamo, se qualcuno è in casa, la temperatura, ... Verificare che sia così. Con una serie di test di interazione di base.
+- [ ] **Come funziona Buddy:** Come funziona il gioco? quanto dura una chat? Quale è la dimensione ragionevole di un contesto per una AI? Posso recuperare intere chat del giorno prima a comando? Posso lierare spazio/contesto a comando?
+- [ ] **Database SQLite e memoria:** Ottimizzazione storage per log conversazioni e metadati persistenti. Cosa salvo? Solo quello che dico io o anche quello che dice lui? Come impara cosa mi piace e cosa no delle sue risposte?
+- [ ] **Questionario? Cheklist?:** Esiste un set di domande standard per arricchirlo? 
+- [ ] **RAG (Il Diario):** Ricerca semantica nel DB per recupero contesto storico prima di rispondere (tifo Juvenus, mi piace il tennis, sono un fisico, sono sposato con due figli, ....). 
 - [ ] **Dimenticatoio Selettivo (Decay):** Implementazione algoritmo di pulizia ricordi vecchi/inutili
 - [ ] **Sentiment Analysis:** Tracciamento umore dell'utente nel DB
 - [ ] **Inside Jokes:** Evoluzione personalità basata sullo storico a lungo termine
