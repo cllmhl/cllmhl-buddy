@@ -2,15 +2,17 @@
 
 ## 1.0 CASA
 
-### 1.1 Logica proattiva
+### 1.1 Miglioramento Voce (Google Cloud API)
+- [ ] **Google Cloud TTS (Professionale):** Sostituzione gTTS con API Neural2/WaveNet (richiede account Billing Google Cloud)
+- [ ] **Google Cloud STT (Streaming):** Valutazione passaggio a STT in streaming reale per latenza zero (vs speech_recognition attuale)
+
+### 1.2 Logica proattiva
+- [ ] **Verificare e chiarire comportamento atuale sensore presenza:** Quali eventi emette? Quando?
+- [ ] **Verificare e chiarire comportamento atuale sensore temperatura:** Quali eventi emette? Quando?
 - [ ] **Bentornato a casa:** capisce che entro in casa: Saluto ed inizio dialogo.
 - [ ] **Accediamo le luci:** capisce che entro in casa oltre le 18: "Alexa: accendi la luce".
 - [ ] **Spengo le luci:** sono tra le 18 e le 8: spengo le luci se non mi muovo per un po'
 - [ ] **Accendo le luci:** sono tra le 18 e le 8: accendo le luci se mi muovo dopo essere stato fermo
-
-### 1.2 Miglioramento Voce (Google Cloud API)
-- [ ] **Google Cloud TTS (Professionale):** Sostituzione gTTS con API Neural2/WaveNet (richiede account Billing Google Cloud)
-- [ ] **Google Cloud STT (Streaming):** Valutazione passaggio a STT in streaming reale per latenza zero (vs speech_recognition attuale)
 
 ### 1.3 Integrazione Hardware
 - [ ] **Sensore Luminosita:** Integrazione LDR (Luce): questo su GPIO non va perchè analogico. DObbiamo fare una catena. Mettiamo il sensore su arduino, colleghiamo arduino alla porta USB del Raspberry. Leggiamo dalla porta USB i dati di luminosità. In pratica la porta USB alimenta Arduino ed allo stesso tempo è un input di segnale di luce.
