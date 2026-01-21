@@ -13,3 +13,6 @@ adafruit-circuitpython-dht
 pytest
 pyyaml
 sounddevice
+google-cloud-texttospeech
+pygame
+edge-tts

@@ -3,8 +3,10 @@
 ## 1.0 CASA
 
 ### 1.1 Miglioramento Voce (Google Cloud API)
-- [ ] **Google Cloud TTS (Professionale):** Sostituzione gTTS con API Neural2/WaveNet (richiede account Billing Google Cloud)
-- [ ] **Google Cloud STT (Streaming):** Valutazione passaggio a STT in streaming reale per latenza zero (vs speech_recognition attuale)
+- [X] **Google Cloud TTS (Professionale):** Sostituzione gTTS con API Neural2/WaveNet (richiede account Billing Google Cloud):
+   <br>21/01/2025-Vedi cartella tools/tts_evaluation. 
+   <br>Non ho notato grandi differenze che giustificano il passaggio ad una API potenzialmente a pagamento. Per il momento restiamo su gTTS.
+   <br>Potrebbe essere interessante edge_tts ma non vale la pea perderci temo.
 
 ### 1.2 Logica proattiva
 - [ ] **Verificare e chiarire comportamento atuale sensore presenza:** Quali eventi emette? Quando?
