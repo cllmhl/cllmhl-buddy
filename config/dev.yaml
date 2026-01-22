@@ -40,8 +40,8 @@ adapters:
     - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 50
-        tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
-        voice_name: "paola"  # "paola" o "riccardo"
+        tts_mode: "texttospeech"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
+        voice_name: "it-IT-Chirp3-HD-Zubenelgenubi"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
 
     # LED con GPIO
     - class: "GPIOLEDOutput"
