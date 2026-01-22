@@ -11,6 +11,7 @@ from queue import PriorityQueue, Empty
 from typing import Optional
 
 from gtts import gTTS
+from google.cloud import texttospeech
 
 from gpiozero import LED
 
@@ -34,7 +35,7 @@ class JabraVoiceOutput(OutputPort):
         super().__init__(name, config, queue_maxsize)
         
         # Configurazione TTS
-        self.tts_mode = config['tts_mode']  # 'cloud' o 'local'
+        self.tts_mode = config['tts_mode']  # 'cloud', 'local' o 'texttospeech'
         self.voice_name = config['voice_name']
         
         # Auto-detect Jabra device (ALSA)
@@ -49,6 +50,9 @@ class JabraVoiceOutput(OutputPort):
         if self.tts_mode == "local":
             self._setup_piper()
         
+        if self.tts_mode == "texttospeech":
+            self._setup_texttospeech()
+
         # Thread worker
         self.worker_thread: Optional[threading.Thread] = None
         self._playback_process: Optional[subprocess.Popen] = None
@@ -115,6 +119,17 @@ class JabraVoiceOutput(OutputPort):
                 f"Piper model not found: {self.piper_model}. "
                 f"Download models from Piper releases."
             )
+
+    def _setup_texttospeech(self):
+        """Setup Google Cloud Text-to-Speech
+        
+        Raises:
+            ValueError: If voice not supported
+        """
+        # For now, no specific setup is needed, but we can check credentials here
+        if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
+        logger.info("✅ Google Cloud Text-to-Speech configured.")
     
     def start(self) -> None:
         """Avvia il worker thread che consuma dalla coda interna"""
@@ -190,6 +205,8 @@ class JabraVoiceOutput(OutputPort):
             # TTS
             if self.tts_mode == "local":
                 self._speak_piper(text)
+            elif self.tts_mode == "texttospeech":
+                self._speak_texttospeech(text)
             else:
                 self._speak_gtts(text)
         
@@ -267,7 +284,7 @@ class JabraVoiceOutput(OutputPort):
                 "--output_file", "-"
             ]
             sox_cmd = ["sox", "-t", "wav", "-", "-r", "48000", "-t", "wav", "-"]
-            aplay_cmd = ["aplay", "-D", "plughw:0,0"]
+            aplay_cmd = ["aplay", "-D", self.audio_device]
             
             # Pipeline: Piper -> Sox -> Aplay
             p_piper = subprocess.Popen(
@@ -309,4 +326,69 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"Piper TTS error: {e}")
             raise
 
+    def _speak_texttospeech(self, text: str) -> None:
+        """TTS using Google Cloud Text-to-Speech (cloud)
+        
+        Raises:
+            Exception: If synthesis or playback fail
+        """
+        filename: Optional[str] = None
+        try:
+            # Check if credentials are set
+            if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+                logger.error("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
+                return
+
+            client = texttospeech.TextToSpeechClient()
+
+            input_text = texttospeech.SynthesisInput(text=text)
+
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="it-IT",
+                name=self.voice_name,
+            )
+
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+
+            response = client.synthesize_speech(
+                request={"input": input_text, "voice": voice, "audio_config": audio_config}
+            )
+
+            filename = f"/tmp/buddy_tts_{time.time()}.mp3"
+            with open(filename, "wb") as out:
+                out.write(response.audio_content)
+            logger.debug(f"TTS saved to {filename}")
+
+            # Fail-fast: filename must be set here
+            assert filename is not None, "TTS file generation failed"
+            
+            # Play audio con mpg123 su device configurato
+            logger.debug(f"Playing with mpg123 on device {self.audio_device}...")
+            self._playback_process = subprocess.Popen(
+                ["mpg123", "-a", self.audio_device, "-q", filename],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+            self._playback_process.wait()
+            logger.debug(f"mpg123 completed successfully")
+        
+        except FileNotFoundError as e:
+            logger.error(f"❌ mpg123 not found - install with: sudo apt-get install mpg123")
+            raise
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ mpg123 failed: {e.stderr.decode() if e.stderr else 'unknown error'}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ TextToSpeech error: {e}", exc_info=True)
+            raise
+        finally:
+            # Cleanup sempre
+            if filename and os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                    logger.debug(f"Cleaned up {filename}")
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup {filename}: {e}")
 
