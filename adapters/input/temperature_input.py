@@ -66,20 +66,13 @@ class TemperatureInput(InputPort):
             return
         
         try:
-            # Map pin number to board pin
-            pin_map = {
-                4: board.D4,
-                17: board.D17,
-                18: board.D18,
-                27: board.D27,
-                22: board.D22,
-                23: board.D23,
-                24: board.D24
-            }
-            
-            board_pin = pin_map.get(self.pin, board.D4)
+            # Ottieni dinamicamente il pin corretto da board
+            board_pin = getattr(board, f'D{self.pin}')
             self.dht11 = adafruit_dht.DHT11(board_pin)
             logger.info(f"✅ DHT11 initialized on GPIO {self.pin}")
+        except AttributeError:
+            logger.error(f"⚠️ Pin GPIO {self.pin} non valido. Controlla la documentazione di 'board'.")
+            self.dht11 = None
         except Exception as e:
             logger.warning(f"⚠️ DHT11 initialization failed: {e}")
             self.dht11 = None
