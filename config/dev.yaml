@@ -16,13 +16,13 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.8  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        sensitivity: 0.7  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"
       config:
         stt_mode: "cloud"  # "cloud" o "local"
-        max_silence_seconds: 8.0  # Timeout silenzio (come Alexa)
+        max_silence_seconds: 7.0  # Timeout silenzio (come Alexa)
 
     # Radar fisico
     - class: "RadarInput"
@@ -31,7 +31,6 @@ adapters:
         baudrate: 256000
         interval: 1.0 # Intervallo di scansione in secondi
         sensitivity: 3  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
-        confirmations: 5 # Numero di letture consecutive per confermare un cambio di stato
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"

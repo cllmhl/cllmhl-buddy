@@ -29,7 +29,6 @@ class RadarInput(InputPort):
         self.baudrate = config['baudrate']
         self.interval = config['interval']
         self.sensitivity = config['sensitivity']
-        self.confirmations = config['confirmations']
         
         # Hardware
         self.radar = None
@@ -145,16 +144,14 @@ class RadarInput(InputPort):
     
     def _worker_loop(self) -> None:
         """
-        Worker per radar con logica di debouncing per stabilizzare il segnale.
-        Un cambio di stato (presenza/assenza) viene confermato solo se
-        il nuovo stato viene letto per un numero consecutivo di volte
-        pari a `self.confirmations`.
+        Worker per radar.
+        Legge i dati dal sensore e invia eventi quando rileva
+        un cambio di stato di presenza (da assente a presente e viceversa).
+        Invia anche eventi di movimento.
         """
-        logger.info(f"📡 Radar worker loop started (confirmations: {self.confirmations})")
+        logger.info("📡 Radar worker loop started")
         
-        last_stable_presence = None # Ultimo stato confermato
-        potential_presence = None   # Stato potenziale in attesa di conferma
-        confirmation_count = 0      # Conteggio conferme consecutive
+        last_presence_state = None
 
         while self.running:
             try:
@@ -162,35 +159,20 @@ class RadarInput(InputPort):
                 
                 if data:
                     current_presence = data['presence']
-
-                    # Inizializzazione al primo ciclo
-                    if last_stable_presence is None:
-                        last_stable_presence = current_presence
-                        potential_presence = current_presence
-                        confirmation_count = 1
-                        logger.info(f"📡 Radar initialized with state: Presence={last_stable_presence}")
-                        # Invia subito il primo stato rilevato
-                        self._send_presence_event(current_presence, data)
-
-
-                    # Logica di debouncing
-                    if current_presence == potential_presence:
-                        confirmation_count += 1
-                        logger.debug(f"Confirmation count for state {potential_presence} is now {confirmation_count}")
-                    else:
-                        # Lo stato è cambiato, resetta il conteggio
-                        potential_presence = current_presence
-                        confirmation_count = 1
-                        logger.debug(f"Potential state changed to {potential_presence}. Resetting count.")
-
-                    # Controlla se il cambio di stato è confermato
-                    if confirmation_count >= self.confirmations and potential_presence != last_stable_presence:
-                        logger.info(f"✅ State change confirmed: {last_stable_presence} -> {potential_presence} after {self.confirmations} checks.")
-                        last_stable_presence = potential_presence
-                        if last_stable_presence is not None:
-                            self._send_presence_event(last_stable_presence, data)
                     
-                    # Gestione evento movimento (indipendente dal debouncing di presenza)
+                    # Inizializza o controlla il cambio di stato per la presenza
+                    if last_presence_state is None:
+                        # Inizializza e invia il primo stato
+                        last_presence_state = current_presence
+                        logger.info(f"📡 Radar initialized with state: Presence={last_presence_state}")
+                        self._send_presence_event(last_presence_state, data)
+
+                    elif current_presence != last_presence_state:
+                        # Invia evento solo se lo stato di presenza cambia
+                        last_presence_state = current_presence
+                        self._send_presence_event(last_presence_state, data)
+
+                    # Gestione evento movimento (indipendente dalla presenza)
                     if data.get('movement') and data['mov_energy'] > 15:
                         self._send_movement_event(data)
                 

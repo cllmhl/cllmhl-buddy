@@ -51,6 +51,10 @@ class BuddyBrain:
         self.archivist_interval = config["archivist_interval"]
         self.last_archivist_time = time.time()
         
+        # Timer per spegnimento luci
+        self.presence_lost_timestamp: Optional[float] = None
+        self.light_off_timeout: int = 180 # Secondi. TODO: Spostare in config.
+        
         # Inizializza sessione chat
         self._init_chat_session()
         
@@ -131,6 +135,7 @@ class BuddyBrain:
             
             # Controllo polling archivist (dopo ogni evento)
             output_events.extend(self._check_archivist_trigger())
+            output_events.extend(self._check_light_off_timer())
         
         except KeyboardInterrupt:
             logger.info("Brain interrupted by user")
@@ -275,30 +280,39 @@ class BuddyBrain:
         
         # Logica proattiva (esempio)
         if event.type == InputEventType.SENSOR_PRESENCE:
+            # --- Gestione Presenza Rilevata ---
             if event.content is True:
-                # Presenza rilevata - usa energy levels per valutare qualità
+                # Se il timer di spegnimento era attivo, cancellalo e non fare altro
+                if self.presence_lost_timestamp is not None:
+                    logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
+                    self.presence_lost_timestamp = None
+                    return [], []
+                
+                # Altrimenti, questa è una nuova presenza, applica la logica normale
                 metadata = event.metadata or {}
                 mov_energy = metadata.get('mov_energy', 0)
                 static_energy = metadata.get('static_energy', 0)
                 distance = metadata.get('distance', 0)
                 
-                # Rilevamento forte = persona vicina
-                if mov_energy > 30 or static_energy > 30:
-                    logger.info(f"👤 Presenza forte rilevata: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
+                logger.info(f"👤 New presence detected: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
 
-                    # Logica notturna per accensione luci
-                    current_hour = time.localtime().tm_hour
-                    if current_hour >= 18 or current_hour < 7:
-                        logger.info("💡 Rilevata presenza forte in orario notturno, invio comando vocale per le luci.")
-                        self._send_alexa_command("accendi tutte le luci", output_events)
-                # Rilevamento debole = potrebbe essere rumore
+                current_hour = time.localtime().tm_hour
+                if current_hour >= 18 or current_hour < 7:
+                    logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
+                    self._send_alexa_command("Accendi tutte le luci", output_events)
                 elif mov_energy < 20 and static_energy < 20:
                     logger.debug("👻 Presenza debole (possibile falso positivo)")
                 else:
                     logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
+
+            # --- Gestione Assenza Rilevata ---
             elif event.content is False:
-                logger.info("👤 Assenza rilevata, invio comando vocale per spegnere le luci.")
-                self._send_alexa_command("spegni tutte le luci", output_events)
+                # Avvia il timer di spegnimento solo se non è già partito
+                if self.presence_lost_timestamp is None:
+                    logger.info(f"👤 Absence detected, starting {self.light_off_timeout}s timer to turn off lights.")
+                    self.presence_lost_timestamp = time.time()
+                else:
+                    logger.debug("👤 Absence confirmed, light-off timer already running.")
         
         elif event.type == InputEventType.SENSOR_TEMPERATURE:
             # Ora abbiamo sia temperatura che umidità nel metadata
@@ -416,4 +430,26 @@ class BuddyBrain:
                 metadata={"elapsed_seconds": elapsed}
             )]
         
+        return []
+    
+    def _check_light_off_timer(self) -> List[Event]:
+        """
+        Controlla se il timer di spegnimento luci è scaduto.
+        Chiamato dopo ogni evento processato.
+        """
+        if self.presence_lost_timestamp is None:
+            return []
+
+        elapsed = time.time() - self.presence_lost_timestamp
+        if elapsed >= self.light_off_timeout:
+            logger.info(f"💡 Light-off timer expired after {elapsed:.1f}s. Turning off lights.")
+            
+            # Reset timer
+            self.presence_lost_timestamp = None
+            
+            # Generate events to turn off lights
+            output_events: List[Event] = []
+            self._send_alexa_command("spegni tutte le luci", output_events)
+            return output_events
+            
         return []
