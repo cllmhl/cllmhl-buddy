@@ -283,13 +283,22 @@ class BuddyBrain:
                 distance = metadata.get('distance', 0)
                 
                 # Rilevamento forte = persona vicina
-                if mov_energy > 60 or static_energy > 60:
+                if mov_energy > 30 or static_energy > 30:
                     logger.info(f"👤 Presenza forte rilevata: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
+
+                    # Logica notturna per accensione luci
+                    current_hour = time.localtime().tm_hour
+                    if current_hour >= 18 or current_hour < 7:
+                        logger.info("💡 Rilevata presenza forte in orario notturno, invio comando vocale per le luci.")
+                        self._send_alexa_command("accendi tutte le luci", output_events)
                 # Rilevamento debole = potrebbe essere rumore
                 elif mov_energy < 20 and static_energy < 20:
                     logger.debug("👻 Presenza debole (possibile falso positivo)")
                 else:
                     logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
+            elif event.content is False:
+                logger.info("👤 Assenza rilevata, invio comando vocale per spegnere le luci.")
+                self._send_alexa_command("spegni tutte le luci", output_events)
         
         elif event.type == InputEventType.SENSOR_TEMPERATURE:
             # Ora abbiamo sia temperatura che umidità nel metadata
@@ -354,6 +363,32 @@ class BuddyBrain:
             logger.error(f"LLM API error: {e}", exc_info=True)
             return "Mi dispiace, ho avuto un problema tecnico."
     
+    def _send_alexa_command(self, command: str, output_events: List[Event]):
+        """
+        Genera una sequenza di eventi SPEAK per pronunciare un comando Alexa.
+        La pausa tra "Alexa" e il comando è gestita implicitamente dalla coda
+        dell'adattatore vocale, che processa un evento alla volta.
+        """
+        logger.info(f"🎙️ Sending Alexa command: {command}")
+        
+        # Evento 1: Pronuncia "Alexa"
+        output_events.append(create_output_event(
+            OutputEventType.SPEAK,
+            "Alexa; ",
+            priority=EventPriority.HIGH,
+            metadata={"triggered_by": "alexa_automation_wakeword"}
+        ))
+        
+        time.sleep(1)
+        
+        # Evento 2: Pronuncia il comando
+        output_events.append(create_output_event(
+            OutputEventType.SPEAK,
+            command,
+            priority=EventPriority.HIGH,
+            metadata={"triggered_by": "alexa_automation_command"}
+        ))
+
     def reset_session(self) -> None:
         """Reset della sessione chat (utile per testing)"""
         logger.info("Resetting chat session...")
