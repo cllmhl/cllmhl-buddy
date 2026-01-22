@@ -208,6 +208,10 @@ class BuddyOrchestrator:
                     else:
                         input_event = queue_item
                 except queue.Empty:
+                    # Timeout - nessuna coda. Controlliamo i timer.
+                    timer_events = self.brain.check_timers()
+                    if timer_events:
+                        self.router.route_events(timer_events)
                     continue
                 
                 # Check shutdown

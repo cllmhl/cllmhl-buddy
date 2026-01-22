@@ -53,7 +53,7 @@ class BuddyBrain:
         
         # Timer per spegnimento luci
         self.presence_lost_timestamp: Optional[float] = None
-        self.light_off_timeout: int = 180 # Secondi. TODO: Spostare in config.
+        self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
         
         # Inizializza sessione chat
         self._init_chat_session()
@@ -135,7 +135,6 @@ class BuddyBrain:
             
             # Controllo polling archivist (dopo ogni evento)
             output_events.extend(self._check_archivist_trigger())
-            output_events.extend(self._check_light_off_timer())
         
         except KeyboardInterrupt:
             logger.info("Brain interrupted by user")
@@ -432,24 +431,23 @@ class BuddyBrain:
         
         return []
     
-    def _check_light_off_timer(self) -> List[Event]:
+    def check_timers(self) -> List[Event]:
         """
-        Controlla se il timer di spegnimento luci è scaduto.
-        Chiamato dopo ogni evento processato.
+        Controlla tutti i timer attivi (es. spegnimento luci).
+        Questo metodo è pensato per essere chiamato periodicamente dall'Orchestrator.
         """
-        if self.presence_lost_timestamp is None:
-            return []
+        output_events: List[Event] = []
 
-        elapsed = time.time() - self.presence_lost_timestamp
-        if elapsed >= self.light_off_timeout:
-            logger.info(f"💡 Light-off timer expired after {elapsed:.1f}s. Turning off lights.")
-            
-            # Reset timer
-            self.presence_lost_timestamp = None
-            
-            # Generate events to turn off lights
-            output_events: List[Event] = []
-            self._send_alexa_command("spegni tutte le luci", output_events)
-            return output_events
-            
-        return []
+        # --- Check light-off timer ---
+        if self.presence_lost_timestamp is not None:
+            elapsed = time.time() - self.presence_lost_timestamp
+            if elapsed >= self.light_off_timeout:
+                logger.info(f"💡 Light-off timer expired after {elapsed:.1f}s. Turning off lights.")
+                
+                # Reset timer
+                self.presence_lost_timestamp = None
+                
+                # Generate events to turn off lights
+                self._send_alexa_command("spegni tutte le luci", output_events)
+
+        return output_events

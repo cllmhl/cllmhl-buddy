@@ -126,81 +126,51 @@ class TemperatureInput(InputPort):
     def _worker_loop(self) -> None:
         """Worker per DHT11 (polling periodico)"""
         logger.info("🌡️  DHT11 worker loop started")
-        
-        # Stati precedenti per rilevare cambiamenti significativi
-        prev_temperature = None
-        prev_humidity = None
-        
+
         while self.running:
+            temperature = None
+            humidity = None
             try:
-                # Proteggi lettura DHT11 con min_read_interval (2s)
+                # Tenta di leggere i dati dal sensore
                 current_time = time.time()
-                if current_time - self.last_read_time < self.min_read_interval:
-                    # Usa valori cached
+                if current_time - self.last_read_time >= self.min_read_interval:
+                    if self.dht11:
+                        temperature = self.dht11.temperature
+                        humidity = self.dht11.humidity
+                        self.last_read_time = current_time
+                        # Aggiorna cache solo con letture valide
+                        if temperature is not None and humidity is not None:
+                            self.last_temperature = temperature
+                            self.last_humidity = humidity
+                else:
+                    # Usa valori in cache se l'intervallo minimo non è passato
                     temperature = self.last_temperature
                     humidity = self.last_humidity
-                else:
-                    # Leggi nuovi valori (verifica che dht11 sia inizializzato)
-                    if self.dht11 is None:
-                        continue
-                    temperature = self.dht11.temperature
-                    humidity = self.dht11.humidity
-                    self.last_read_time = current_time
-                    self.last_temperature = temperature
-                    self.last_humidity = humidity
-                
+
                 if temperature is not None and humidity is not None:
-                    logger.debug(f"🌡️  T={temperature:.1f}°C, H={humidity:.1f}%")
+                    logger.debug(f"🌡️  Lettura DHT11: T={temperature:.1f}°C, H={humidity:.1f}%")
                     
-                    # Controlla se c'è un cambio significativo in temperatura O umidità
-                    temp_changed = prev_temperature is None or abs(temperature - prev_temperature) >= 0.5
-                    humidity_changed = prev_humidity is None or abs(humidity - prev_humidity) >= 2.0
-                    
-                    if temp_changed or humidity_changed:
-                        # Aggiorna stati precedenti
-                        prev_temperature = temperature
-                        prev_humidity = humidity
-                        
-                        # Emetti un unico evento con tutti i dati DHT11
-                        climate_event = create_input_event(
-                            InputEventType.SENSOR_TEMPERATURE,  # Tipo primario
-                            temperature,                    # Valore primario
-                            source="dht11",
-                            priority=EventPriority.LOW,
-                            metadata={
-                                'temperature': temperature,
-                                'humidity': humidity,
-                                'temp_unit': 'celsius',
-                                'humidity_unit': 'percent',
-                                'sensor': 'DHT11',
-                                'read_time': self.last_read_time,
-                                'temp_changed': temp_changed,
-                                'humidity_changed': humidity_changed
-                            }
-                        )
-                        self.input_queue.put(climate_event)
-                        
-                        # Log con info complete
-                        changes = []
-                        if temp_changed:
-                            changes.append(f"T={temperature:.1f}°C")
-                        if humidity_changed:
-                            changes.append(f"H={humidity:.1f}%")
-                        logger.info(f"🌡️  DHT11: {', '.join(changes)}")
-            
+                    # Invia evento a ogni intervallo
+                    climate_event = create_input_event(
+                        InputEventType.SENSOR_TEMPERATURE,
+                        temperature,
+                        source=self.name,
+                        priority=EventPriority.LOW,
+                        metadata={
+                            'temperature': temperature,
+                            'humidity': humidity,
+                            'unit': 'celsius',
+                            'sensor': 'DHT11'
+                        }
+                    )
+                    self.input_queue.put(climate_event)
+                    logger.info(f"🌡️  Evento DHT11 inviato: T={temperature:.1f}°C, H={humidity:.1f}%")
+
             except RuntimeError as e:
-                # DHT11 spesso fallisce letture singole - è normale
-                # Usa valori cached se disponibili
-                logger.debug(f"DHT11 read error (expected): {e}")
-                temperature = self.last_temperature
-                humidity = self.last_humidity
-                if temperature is None or humidity is None:
-                    continue  # Skip questo ciclo se non abbiamo ancora valori validi
-            except KeyboardInterrupt:
-                logger.info("Temperature worker interrupted by user")
-                break
+                # Errore comune con DHT11, non critico
+                logger.debug(f"Errore lettura DHT11 (normale): {e}")
             except Exception as e:
-                logger.error(f"DHT11 worker error: {e}", exc_info=True)
+                logger.error(f"Errore inatteso nel worker DHT11: {e}", exc_info=True)
             
-            # Attendi intervallo
+            # Attendi l'intervallo configurato prima della prossima lettura
             time.sleep(self.interval)
