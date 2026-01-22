@@ -16,26 +16,27 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.8  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        sensitivity: 0.7  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"
       config:
         stt_mode: "cloud"  # "cloud" o "local"
-        max_silence_seconds: 8.0  # Timeout silenzio (come Alexa)
+        max_silence_seconds: 7.0  # Timeout silenzio (come Alexa)
 
     # Radar fisico
     - class: "RadarInput"
       config:
         port: "/dev/ttyAMA0"
         baudrate: 256000
-        interval: 0.5
-    
+        interval: 1.0 # Intervallo di scansione in secondi
+        sensitivity: 3  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
+
     # Sensore temperatura/umidità fisico
     - class: "TemperatureInput"
       config:
         pin: 18
-        interval: 1.0
+        interval: 300
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
@@ -53,8 +54,8 @@ adapters:
     - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 50
-        tts_mode: "cloud"  # "cloud" (gTTS) o "local" (Piper)
-        voice_name: "paola"  # "paola" o "riccardo"
+        tts_mode: "cloud"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
+        voice_name: "it-IT-Standard-A"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
 
     # LED con GPIO
     - class: "GPIOLEDOutput"
