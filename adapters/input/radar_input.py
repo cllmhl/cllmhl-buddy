@@ -172,9 +172,6 @@ class RadarInput(InputPort):
                         last_presence_state = current_presence
                         self._send_presence_event(last_presence_state, data)
 
-                    # Gestione evento movimento (indipendente dalla presenza)
-                    if data.get('movement') and data['mov_energy'] > 15:
-                        self._send_movement_event(data)
                 
                 time.sleep(self.interval)
             
@@ -202,20 +199,6 @@ class RadarInput(InputPort):
         )
         self.input_queue.put(event)
 
-    def _send_movement_event(self, data: Dict[str, Any]):
-        """Invia un evento di movimento al cervello."""
-        logger.debug(
-            f"🏃 Movement detected: distance={data['mov_distance']}cm, "
-            f"energy={data['mov_energy']}"
-        )
-        event = create_input_event(
-            InputEventType.SENSOR_MOVEMENT,
-            True,
-            source="radar",
-            priority=EventPriority.LOW,
-            metadata=data
-        )
-        self.input_queue.put(event)
 
     def _read_radar_data(self) -> Optional[Dict[str, Any]]:
         """Legge dati dal radar LD2410C"""

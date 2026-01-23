@@ -24,8 +24,6 @@ class InputEventType(Enum):
     # Sensori
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza
     SENSOR_TEMPERATURE = "sensor_temperature"
-    SENSOR_HUMIDITY = "sensor_humidity"
-    SENSOR_MOVEMENT = "sensor_movement"
     
     # Bypass Brain - per test e comandi diretti
     DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente

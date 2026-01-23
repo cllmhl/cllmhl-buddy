@@ -65,10 +65,8 @@ class BuddyBrain:
             InputEventType.WAKEWORD: self._handle_wakeword,
             InputEventType.CONVERSATION_END: self._handle_conversation_end,
             InputEventType.USER_SPEECH: self._handle_user_input,
-            InputEventType.SENSOR_PRESENCE: self._handle_sensor_input,
-            InputEventType.SENSOR_TEMPERATURE: self._handle_sensor_input,
-            InputEventType.SENSOR_HUMIDITY: self._handle_sensor_input,
-            InputEventType.SENSOR_MOVEMENT: self._handle_sensor_input,
+            InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
+            InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
             InputEventType.SHUTDOWN: self._handle_shutdown,
         }
         
@@ -273,57 +271,60 @@ class BuddyBrain:
         
         return output_events, commands
     
-    def _handle_sensor_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
-        """Gestisce eventi dai sensori"""
+    def _handle_presence_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+        """Gestisce eventi dal sensore di presenza."""
         output_events: List[Event] = []
         
-        # Logica proattiva (esempio)
-        if event.type == InputEventType.SENSOR_PRESENCE:
-            # --- Gestione Presenza Rilevata ---
-            if event.content is True:
-                # Se il timer di spegnimento era attivo, cancellalo e non fare altro
-                if self.presence_lost_timestamp is not None:
-                    logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
-                    self.presence_lost_timestamp = None
-                    return [], []
-                
-                # Altrimenti, questa è una nuova presenza, applica la logica normale
-                metadata = event.metadata or {}
-                mov_energy = metadata.get('mov_energy', 0)
-                static_energy = metadata.get('static_energy', 0)
-                distance = metadata.get('distance', 0)
-                
-                logger.info(f"👤 New presence detected: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
+        # --- Gestione Presenza Rilevata ---
+        if event.content is True:
+            # Se il timer di spegnimento era attivo, cancellalo e non fare altro
+            if self.presence_lost_timestamp is not None:
+                logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
+                self.presence_lost_timestamp = None
+                return [], []
+            
+            # Altrimenti, questa è una nuova presenza, applica la logica normale
+            metadata = event.metadata or {}
+            mov_energy = metadata.get('mov_energy', 0)
+            static_energy = metadata.get('static_energy', 0)
+            distance = metadata.get('distance', 0)
+            
+            logger.info(f"👤 New presence detected: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
 
-                current_hour = time.localtime().tm_hour
-                if current_hour >= 17 or current_hour < 9:
-                    logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
-                    self._send_alexa_command("Accendi tutte le luci", output_events)
-                elif mov_energy < 20 and static_energy < 20:
-                    logger.debug("👻 Presenza debole (possibile falso positivo)")
-                else:
-                    logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
+            current_hour = time.localtime().tm_hour
+            if current_hour >= 17 or current_hour < 9:
+                logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
+                self._send_alexa_command("Accendi tutte le luci", output_events)
+            elif mov_energy < 20 and static_energy < 20:
+                logger.debug("👻 Presenza debole (possibile falso positivo)")
+            else:
+                logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
 
-            # --- Gestione Assenza Rilevata ---
-            elif event.content is False:
-                # Avvia il timer di spegnimento solo se non è già partito
-                if self.presence_lost_timestamp is None:
-                    logger.info(f"👤 Absence detected, starting {self.light_off_timeout}s timer to turn off lights.")
-                    self.presence_lost_timestamp = time.time()
-                else:
-                    logger.debug("👤 Absence confirmed, light-off timer already running.")
+        # --- Gestione Assenza Rilevata ---
+        elif event.content is False:
+            # Avvia il timer di spegnimento solo se non è già partito
+            if self.presence_lost_timestamp is None:
+                logger.info(f"👤 Absence detected, starting {self.light_off_timeout}s timer to turn off lights.")
+                self.presence_lost_timestamp = time.time()
+            else:
+                logger.debug("👤 Absence confirmed, light-off timer already running.")
         
-        elif event.type == InputEventType.SENSOR_TEMPERATURE:
-            # Ora abbiamo sia temperatura che umidità nel metadata
-            temp = float(event.content)
-            humidity = event.metadata.get('humidity') if event.metadata else None
-            
-            if temp > 30:
-                logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
-            
-            # Esempio: logica combinata temperatura + umidità
-            if temp > 28 and humidity and humidity > 70:
-                logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
+        return output_events, []
+
+    def _handle_temperature_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+        """Gestisce eventi dal sensore di temperatura."""
+        output_events: List[Event] = []
+
+        # Ora abbiamo sia temperatura che umidità nel metadata
+        temp = float(event.content)
+        humidity = event.metadata.get('humidity') if event.metadata else None
+        
+        if temp > 30:
+            logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
+        
+        # Esempio: logica combinata temperatura + umidità
+        if temp > 28 and humidity and humidity > 70:
+            logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
         
         return output_events, []
     
