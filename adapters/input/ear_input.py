@@ -172,7 +172,16 @@ class EarInput(InputPort):
             
             try:
                 source = mic_source
+                buddy_was_speaking = False
                 while self.running and not self._stop_conversation.is_set():
+                    # Se Buddy ha appena smesso di parlare, resetta il timer
+                    if buddy_was_speaking and not is_speaking.is_set():
+                        logger.debug("Buddy finished speaking, resetting silence timer.")
+                        last_interaction_time = time.time()
+
+                    # Aggiorna lo stato di "is_speaking" per il prossimo ciclo
+                    buddy_was_speaking = is_speaking.is_set()
+                    
                     # 1. Check timeout se NON sta parlando
                     if not is_speaking.is_set():
                         elapsed = time.time() - last_interaction_time

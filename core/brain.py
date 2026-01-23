@@ -296,7 +296,7 @@ class BuddyBrain:
                 logger.info(f"👤 New presence detected: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
 
                 current_hour = time.localtime().tm_hour
-                if current_hour >= 18 or current_hour < 7:
+                if current_hour >= 17 or current_hour < 9:
                     logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
                     self._send_alexa_command("Accendi tutte le luci", output_events)
                 elif mov_energy < 20 and static_energy < 20:
