@@ -35,13 +35,16 @@ def setup_logging(config: Dict[str, Any]) -> None:
         backupCount=log_config.get('backup_count')
     )
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+        '%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+        datefmt='%H:%M:%S',
     )
     handler.setFormatter(formatter)
     
     # Root logger
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    log_level_str = log_config.get('level').upper()
+    log_level = getattr(logging, log_level_str)
+    logger.setLevel(log_level)
     logger.addHandler(handler)
     
     # Silence noisy libraries
