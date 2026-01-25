@@ -16,3 +16,4 @@ sounddevice
 google-cloud-texttospeech
 pygame
 edge-tts
+pytz

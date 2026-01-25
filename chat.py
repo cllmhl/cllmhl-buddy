@@ -514,4 +514,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 2 and sys.argv[1] == 't':
+        text = " ".join(sys.argv[2:])
+        event = build_user_speech(text)
+        send_event(event)
+        print(color(f"✅ Inviato: USER_SPEECH '{text}'", Colors.GREEN))
+    else:
+        main()
