@@ -18,6 +18,7 @@ from core.events import Event, InputEventType, OutputEventType, EventPriority, c
 from core.event_router import EventRouter
 from core.brain import BuddyBrain
 from core.commands import AdapterCommand
+import core.tools as tools
 
 # Adapters imports
 from adapters.factory import AdapterFactory
@@ -62,6 +63,9 @@ class BuddyOrchestrator:
         self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
         self.interrupt_queue: queue.Queue = queue.Queue(maxsize=queue_config.get('interrupt_maxsize', 10))
         self._interrupt_handler_thread: threading.Thread | None = None
+
+        # Inject queue into tools
+        tools.set_input_queue(self.input_queue)
         
         # Event Router
         self.router = EventRouter()

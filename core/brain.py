@@ -11,7 +11,8 @@ from google.genai import types
 
 from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
 from .commands import AdapterCommand
-from .tools import get_current_time, web_search, set_current_temp, get_current_temp, get_current_position
+from .tools import get_current_time, web_search, set_current_temp, get_current_temp, get_current_position, set_lights_on, set_lights_off
+import core.tools as tools
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class BuddyBrain:
                     # tools=[types.Tool(google_search=types.GoogleSearch())],
                     # FIXME Disabilitato momentaneamente per issue 4312
                     # https://github.com/vercel/ai/issues/4312
-                    tools=[get_current_time, get_current_position, get_current_temp, web_search],
+                    tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
                     thinking_config=types.ThinkingConfig(include_thoughts=False)
                 )
             )
@@ -301,7 +302,8 @@ class BuddyBrain:
             current_hour = time.localtime().tm_hour
             if current_hour >= 17 or current_hour < 9:
                 logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
-                self._send_alexa_command("Accendi tutte le luci", output_events)
+                # Tools inject events directly into input queue
+                tools.set_lights_on()
             elif mov_energy < 20 and static_energy < 20:
                 logger.debug("👻 Presenza debole (possibile falso positivo)")
             else:
@@ -395,32 +397,6 @@ class BuddyBrain:
             logger.error(f"LLM API error: {e}", exc_info=True)
             return "Mi dispiace, ho avuto un problema tecnico."
     
-    def _send_alexa_command(self, command: str, output_events: List[Event]):
-        """
-        Genera una sequenza di eventi SPEAK per pronunciare un comando Alexa.
-        La pausa tra "Alexa" e il comando è gestita implicitamente dalla coda
-        dell'adattatore vocale, che processa un evento alla volta.
-        """
-        logger.info(f"🎙️ Sending Alexa command: {command}")
-        
-        # Evento 1: Pronuncia "Alexa"
-        output_events.append(create_output_event(
-            OutputEventType.SPEAK,
-            "Alexa; ",
-            priority=EventPriority.HIGH,
-            metadata={"triggered_by": "alexa_automation_wakeword"}
-        ))
-        
-        time.sleep(1)
-        
-        # Evento 2: Pronuncia il comando
-        output_events.append(create_output_event(
-            OutputEventType.SPEAK,
-            command,
-            priority=EventPriority.HIGH,
-            metadata={"triggered_by": "alexa_automation_command"}
-        ))
-
     def reset_session(self) -> None:
         """Reset della sessione chat (utile per testing)"""
         logger.info("Resetting chat session...")
@@ -467,6 +443,6 @@ class BuddyBrain:
                 self.presence_lost_timestamp = None
                 
                 # Generate events to turn off lights
-                self._send_alexa_command("spegni tutte le luci", output_events)
+                tools.set_lights_off()
 
         return output_events

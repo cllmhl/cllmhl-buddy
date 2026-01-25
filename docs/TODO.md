@@ -6,7 +6,7 @@
 - [ ] **Bentornato a casa:** capisce che entro in casa: Saluto ed inizio dialogo.
 
 ### 1.3 Integrazione Hardware
-- [ ] **Domotica Tapo:** Integrazione luci e prese smart tramite API
+- [ ] **Domotica Tapo:** Integrazione luci tramite API
 - [ ] **Sensore Luminosita:** Integrazione LDR (Luce): questo su GPIO non va perchè analogico. DObbiamo fare una catena. Mettiamo il sensore su arduino, colleghiamo arduino alla porta USB del Raspberry. Leggiamo dalla porta USB i dati di luminosità. In pratica la porta USB alimenta Arduino ed allo stesso tempo è un input di segnale di luce.
 - [ ] **Display 7-Segment (TM1637):** Visualizzazione codici stato (es. "Err", "On")
 - [ ] **LED a piacere:** ci possiamo mettere tutti i led che vogliamo
@@ -17,8 +17,6 @@
 
 ### 2.1 Action tools. Vedi context.png
 - [ ] **get_presence_events:** Buddy deve sapere gli ultimi eventi di presenza/assenza per decidere se parlare, spegnere le luci, ... 
-- [ ] **set_lights_off:** Buddy spegne le luci
-- [ ] **set_lights_on:** Buddy accende le luci
 - [ ] **weather_forecast:** Buddy mi dice le previsioni usando Open-Meteo
 - [ ] **local_newst:** Buddy mi dice notizie (Glebali, Locali, ..) usando degli RSS feeds
 - [ ] **sport_newst:** Verificare come fare...

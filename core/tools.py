@@ -5,8 +5,12 @@ from datetime import datetime
 import logging
 import os
 import pytz
+import time
+import queue
 from typing import Optional
 from tavily import TavilyClient
+
+from core.events import create_output_event, create_input_event, OutputEventType, InputEventType, EventPriority
 
 # Inizializza solo quando necessario (lazy-load)
 tavily: Optional[TavilyClient] = None
@@ -15,7 +19,78 @@ tavily: Optional[TavilyClient] = None
 CURRENT_TEMPERATURE: Optional[float] = None
 CURRENT_HUMIDITY: Optional[float] = None
 
+# Global event queue for side effects (DIRECT_OUTPUT)
+_INPUT_QUEUE: Optional[queue.PriorityQueue] = None
+
 logger = logging.getLogger(__name__)
+
+def set_input_queue(q: queue.PriorityQueue):
+    """
+    Imposta la coda di input globale per permettere ai tool di inviare eventi.
+    """
+    global _INPUT_QUEUE
+    _INPUT_QUEUE = q
+    logger.info("✅ Tools: Input queue injected")
+
+def _send_alexa_sequence(command: str) -> None:
+    """
+    Invia una sequenza di comandi Alexa (Wakeword + Command) alla input queue.
+    """
+    if _INPUT_QUEUE is None:
+        logger.error("❌ Cannot send Alexa command: Input queue not set in tools")
+        return
+
+    # 1. Evento Wakeword "Alexa;"
+    wakeword_event = create_output_event(
+        OutputEventType.SPEAK,
+        "Alexa; ",
+        priority=EventPriority.HIGH,
+        metadata={"triggered_by": "tool_alexa_wakeword"}
+    )
+    # Wrap in DIRECT_OUTPUT per iniettarlo nel sistema
+    input_evt_1 = create_input_event(
+        InputEventType.DIRECT_OUTPUT,
+        wakeword_event,
+        source="tools",
+        priority=EventPriority.HIGH
+    )
+    _INPUT_QUEUE.put(input_evt_1)
+    
+    # Pausa per garantire sequenza corretta
+    time.sleep(1.0)
+    
+    # 2. Evento Comando
+    command_event = create_output_event(
+        OutputEventType.SPEAK,
+        command,
+        priority=EventPriority.HIGH,
+        metadata={"triggered_by": "tool_alexa_command"}
+    )
+    input_evt_2 = create_input_event(
+        InputEventType.DIRECT_OUTPUT,
+        command_event,
+        source="tools",
+        priority=EventPriority.HIGH
+    )
+    _INPUT_QUEUE.put(input_evt_2)
+
+def set_lights_on() -> str:
+    """
+    Accende tutte le luci di casa tramite Alexa.
+    Usa questo tool quando l'utente chiede di accendere le luci o quando rilevi che è buio.
+    """
+    logger.info("💡 Tool set_lights_on called")
+    _send_alexa_sequence("Accendi tutte le luci")
+    return "Sto accendendo le luci."
+
+def set_lights_off() -> str:
+    """
+    Spegne tutte le luci di casa tramite Alexa.
+    Usa questo tool quando l'utente chiede di spegnere le luci o quando non c'è nessuno in casa.
+    """
+    logger.info("💡 Tool set_lights_off called")
+    _send_alexa_sequence("Spegni tutte le luci")
+    return "Sto spegnendo le luci."
 
 def set_current_temp(temp: float, humidity: Optional[float] = None):
     """
