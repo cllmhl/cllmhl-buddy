@@ -11,7 +11,32 @@ from tavily import TavilyClient
 # Inizializza solo quando necessario (lazy-load)
 tavily: Optional[TavilyClient] = None
 
+# Global state for temperature/humidity
+CURRENT_TEMPERATURE: Optional[float] = None
+CURRENT_HUMIDITY: Optional[float] = None
+
 logger = logging.getLogger(__name__)
+
+def set_current_temp(temp: float, humidity: Optional[float] = None):
+    """
+    Aggiorna la temperatura e umidità correnti (chiamato dal Brain).
+    """
+    global CURRENT_TEMPERATURE, CURRENT_HUMIDITY
+    CURRENT_TEMPERATURE = temp
+    CURRENT_HUMIDITY = humidity
+    logger.debug(f"Tools state updated: T={temp}, H={humidity}")
+
+def get_current_temp() -> str:
+    """
+    Restituisce la temperatura e l'umidità correnti rilevate dai sensori.
+    Usa questo tool quando l'utente chiede informazioni sul clima nella stanza, temperatura o umidità.
+    """
+    global CURRENT_TEMPERATURE, CURRENT_HUMIDITY
+    if CURRENT_TEMPERATURE is None:
+        return "Dato temperatura non disponibile."
+    
+    hum_str = f"{CURRENT_HUMIDITY}%" if CURRENT_HUMIDITY is not None else "N/D"
+    return f"Temperatura: {CURRENT_TEMPERATURE}°C, Umidità: {hum_str}"
 
 def get_current_time() -> str:
     """

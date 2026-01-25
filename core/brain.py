@@ -11,7 +11,7 @@ from google.genai import types
 
 from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
 from .commands import AdapterCommand
-from .tools import get_current_time, web_search
+from .tools import get_current_time, web_search, set_current_temp, get_current_temp
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +91,9 @@ class BuddyBrain:
                     system_instruction=self.config["system_instruction"],
                     temperature=self.config["temperature"],
                     # tools=[types.Tool(google_search=types.GoogleSearch())],
-                    # FIXME Disabilitato momentaneamente per issue 4312 
+                    # FIXME Disabilitato momentaneamente per issue 4312
                     # https://github.com/vercel/ai/issues/4312
-                    tools=[get_current_time, web_search], 
+                    tools=[get_current_time, web_search, get_current_temp],
                     thinking_config=types.ThinkingConfig(include_thoughts=False)
                 )
             )
@@ -329,6 +329,9 @@ class BuddyBrain:
         self.last_temperature = temp
         self.last_humidity = humidity
         
+        # Aggiorna lo stato globale dei tools
+        set_current_temp(temp, humidity)
+        
         logger.info(f"🌡️  Temperature/Humidity updated: {temp}°C / {humidity}%")
         
         if temp > 30:
@@ -354,24 +357,9 @@ class BuddyBrain:
         
         return output_events, []
     
-    def _get_dynamic_context(self) -> str:
-        """
-        Genera il contesto dinamico basato su ora e sensori, da iniettare nel prompt.
-        """
-        current_time_str = get_current_time()
-        
-        context = f"*** CONTEXTO DINAMICO ***\n"
-        context += f"Ora corrente (Strasburgo): {current_time_str}\n"
-        # Safely check for None before formatting, although it should be updated by sensor events
-        temp_str = f"{self.last_temperature}°C" if self.last_temperature is not None else "N/D"
-        humidity_str = f"{self.last_humidity}%" if self.last_humidity is not None else "N/D"
-        context += f"Temperatura/Umidità (Ultima lettura): {temp_str} / {humidity_str}\n"
-        context += f"*************************\n"
-        return context
-
     def _generate_response(self, user_text: str) -> str:
         """
-        Genera risposta usando LLM, iniettando il contesto dinamico.
+        Genera risposta usando LLM.
         Logica isolata per facilitare testing/mocking.
         """
         if not self.chat_session:
@@ -379,16 +367,10 @@ class BuddyBrain:
             return "Mi dispiace, non sono momentaneamente disponibile."
         
         try:
-            # 1. Genera il contesto dinamico
-            dynamic_context = self._get_dynamic_context()
+            logger.debug(f"Sending prompt to LLM:\n{user_text}")
             
-            # 2. Crea il prompt finale iniettando il contesto prima del messaggio utente
-            final_prompt = f"{dynamic_context}\n\nUser Request: {user_text}"
-            
-            logger.debug(f"Sending prompt to LLM:\n{final_prompt}")
-            
-            # 3. Invia il prompt completo
-            response = self.chat_session.send_message(final_prompt)
+            # Invia il prompt completo
+            response = self.chat_session.send_message(user_text)
             
             # Fail fast: response deve esistere
             if not response:
