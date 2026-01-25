@@ -55,6 +55,10 @@ class BuddyBrain:
         self.presence_lost_timestamp: Optional[float] = None
         self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
         
+        # State for dynamic context injection
+        self.last_temperature: Optional[float] = None
+        self.last_humidity: Optional[float] = None
+        
         # Inizializza sessione chat
         self._init_chat_session()
         
@@ -302,7 +306,7 @@ class BuddyBrain:
                 logger.debug("👻 Presenza debole (possibile falso positivo)")
             else:
                 logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
-
+        
         # --- Gestione Assenza Rilevata ---
         elif event.content is False:
             # Avvia il timer di spegnimento solo se non è già partito
@@ -313,14 +317,19 @@ class BuddyBrain:
                 logger.debug("👤 Absence confirmed, light-off timer already running.")
         
         return output_events, []
-
+ 
     def _handle_temperature_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
         """Gestisce eventi dal sensore di temperatura."""
         output_events: List[Event] = []
 
-        # Ora abbiamo sia temperatura che umidità nel metadata
+        # Aggiorna lo stato interno del Brain
         temp = float(event.content)
         humidity = event.metadata.get('humidity') if event.metadata else None
+        
+        self.last_temperature = temp
+        self.last_humidity = humidity
+        
+        logger.info(f"🌡️  Temperature/Humidity updated: {temp}°C / {humidity}%")
         
         if temp > 30:
             logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
@@ -345,9 +354,24 @@ class BuddyBrain:
         
         return output_events, []
     
+    def _get_dynamic_context(self) -> str:
+        """
+        Genera il contesto dinamico basato su ora e sensori, da iniettare nel prompt.
+        """
+        current_time_str = get_current_time()
+        
+        context = f"*** CONTEXTO DINAMICO ***\n"
+        context += f"Ora corrente (Strasburgo): {current_time_str}\n"
+        # Safely check for None before formatting, although it should be updated by sensor events
+        temp_str = f"{self.last_temperature}°C" if self.last_temperature is not None else "N/D"
+        humidity_str = f"{self.last_humidity}%" if self.last_humidity is not None else "N/D"
+        context += f"Temperatura/Umidità (Ultima lettura): {temp_str} / {humidity_str}\n"
+        context += f"*************************\n"
+        return context
+
     def _generate_response(self, user_text: str) -> str:
         """
-        Genera risposta usando LLM.
+        Genera risposta usando LLM, iniettando il contesto dinamico.
         Logica isolata per facilitare testing/mocking.
         """
         if not self.chat_session:
@@ -355,7 +379,16 @@ class BuddyBrain:
             return "Mi dispiace, non sono momentaneamente disponibile."
         
         try:
-            response = self.chat_session.send_message(user_text)
+            # 1. Genera il contesto dinamico
+            dynamic_context = self._get_dynamic_context()
+            
+            # 2. Crea il prompt finale iniettando il contesto prima del messaggio utente
+            final_prompt = f"{dynamic_context}\n\nUser Request: {user_text}"
+            
+            logger.debug(f"Sending prompt to LLM:\n{final_prompt}")
+            
+            # 3. Invia il prompt completo
+            response = self.chat_session.send_message(final_prompt)
             
             # Fail fast: response deve esistere
             if not response:

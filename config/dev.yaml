@@ -29,8 +29,14 @@ adapters:
       config:
         port: "/dev/ttyAMA0"
         baudrate: 256000
-        interval: 1.0 # Intervallo di scansione in secondi
+        interval: 0.5 # Intervallo di scansione in secondi
         sensitivity: 3  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
+
+    # Sensore temperatura/umidità fisico
+    - class: "TemperatureInput"
+      config:
+        pin: 18
+        interval: 30
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
