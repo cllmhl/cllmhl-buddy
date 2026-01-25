@@ -11,7 +11,7 @@ from google.genai import types
 
 from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
 from .commands import AdapterCommand
-from .tools import get_current_time
+from .tools import get_current_time, web_search
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +90,10 @@ class BuddyBrain:
                 config=types.GenerateContentConfig(
                     system_instruction=self.config["system_instruction"],
                     temperature=self.config["temperature"],
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                    # tools=[types.Tool(google_search=types.GoogleSearch())],
                     # FIXME Disabilitato momentaneamente per issue 4312 
                     # https://github.com/vercel/ai/issues/4312
-                    # tools=[get_current_time], 
+                    tools=[get_current_time, web_search], 
                     thinking_config=types.ThinkingConfig(include_thoughts=False)
                 )
             )
