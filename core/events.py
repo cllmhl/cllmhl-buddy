@@ -6,6 +6,7 @@ Architettura Esagonale: separazione esplicita tra Input e Output events
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
+from abc import ABC
 import time
 
 
@@ -27,7 +28,6 @@ class InputEventType(Enum):
     
     # Bypass Brain - per test e comandi diretti
     DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente
-    ADAPTER_COMMAND = "adapter_command"   # Invia comandi agli adapter (content = AdapterCommand enum value)
     
     # Sistema
     SHUTDOWN = "shutdown"
@@ -65,32 +65,51 @@ class EventPriority(Enum):
         return self.value < other.value
 
 
-@dataclass(order=True)
-class Event:
-    """
-    Evento base del sistema.
-    Usato sia per input che output.
-    """
-    
-    # Priority first per PriorityQueue sorting
+@dataclass(order=True, kw_only=True)
+class BaseEvent(ABC):
+    """Classe base astratta per eventi (Input/Output)"""
     priority: EventPriority = field(compare=True)
-    
-    # Event data
-    type: Union[InputEventType, OutputEventType] = field(compare=False)
     content: Any = field(compare=False)
-    
-    # Metadata
     timestamp: float = field(default_factory=time.time, compare=False)
-    source: Optional[str] = field(default=None, compare=False)
     metadata: Optional[dict] = field(default=None, compare=False)
-    
+
+
+@dataclass(order=True, kw_only=True)
+class InputEvent(BaseEvent):
+    """
+    Evento di Input.
+    Emesso da InputAdapter, consumato dal Brain.
+    """
+    type: InputEventType = field(compare=False)
+    source: Optional[str] = field(default=None, compare=False)
+
     def __repr__(self):
         content_str = str(self.content)[:50]
         if len(str(self.content)) > 50:
             content_str += "..."
-        return (f"Event(type={self.type.value}, "
+        return (f"InputEvent(type={self.type.value}, "
                 f"priority={self.priority.name}, "
                 f"content={content_str})")
+
+
+@dataclass(order=True, kw_only=True)
+class OutputEvent(BaseEvent):
+    """
+    Evento di Output.
+    Emesso dal Brain, consumato da OutputAdapter.
+    """
+    type: OutputEventType = field(compare=False)
+
+    def __repr__(self):
+        content_str = str(self.content)[:50]
+        if len(str(self.content)) > 50:
+            content_str += "..."
+        return (f"OutputEvent(type={self.type.value}, "
+                f"priority={self.priority.name}, "
+                f"content={content_str})")
+
+# Alias per retrocompatibilità o type checking generico
+Event = Union[InputEvent, OutputEvent]
 
 
 # ===== HELPER FUNCTIONS =====
@@ -101,9 +120,9 @@ def create_input_event(
     source: str,
     priority: EventPriority = EventPriority.NORMAL,
     metadata: Optional[dict] = None
-) -> Event:
+) -> InputEvent:
     """Helper per creare eventi di input"""
-    return Event(
+    return InputEvent(
         priority=priority,
         type=event_type,
         content=content,
@@ -117,9 +136,9 @@ def create_output_event(
     content: Any,
     priority: EventPriority = EventPriority.NORMAL,
     metadata: Optional[dict] = None
-) -> Event:
+) -> OutputEvent:
     """Helper per creare eventi di output"""
-    return Event(
+    return OutputEvent(
         priority=priority,
         type=event_type,
         content=content,

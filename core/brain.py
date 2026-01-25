@@ -9,8 +9,7 @@ from typing import List, Optional, Tuple
 from google import genai
 from google.genai import types
 
-from .events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
-from .commands import AdapterCommand
+from .events import Event, InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_output_event
 from .tools import get_current_time, web_search, set_current_temp, get_current_temp, get_current_position, set_lights_on, set_lights_off
 import core.tools as tools
 
@@ -20,8 +19,8 @@ class BuddyBrain:
     """
     Cervello di Buddy - Logica pura.
     
-    Input: Event di input
-    Output: List[Event] di output
+    Input: InputEvent
+    Output: List[OutputEvent]
     
     NON SA NULLA DI:
     - Code
@@ -66,7 +65,6 @@ class BuddyBrain:
         # Setup event handlers
         self.handlers = {
             InputEventType.DIRECT_OUTPUT: self._handle_direct_output,
-            InputEventType.ADAPTER_COMMAND: self._handle_adapter_command,
             InputEventType.WAKEWORD: self._handle_wakeword,
             InputEventType.CONVERSATION_END: self._handle_conversation_end,
             InputEventType.USER_SPEECH: self._handle_user_input,
@@ -109,7 +107,7 @@ class BuddyBrain:
             logger.error(f"❌ Failed to initialize chat session: {e}", exc_info=True)
             self.chat_session = None
     
-    def process_event(self, input_event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def process_event(self, input_event: InputEvent) -> List[OutputEvent]:
         """
         METODO PRINCIPALE: Processa un evento di input usando un sistema di handler.
         
@@ -117,25 +115,21 @@ class BuddyBrain:
             input_event: Evento di input da processare
             
         Returns:
-            Tuple di (eventi_output, comandi_adapter):
-            - eventi_output: Eventi da routare agli output adapter
-            - comandi_adapter: Comandi da broadcast a TUTTI gli adapter (sync)
+            eventi_output: Eventi da routare agli output adapter
         """
-        output_events: List[Event] = []
-        adapter_commands: List[AdapterCommand] = []
+        output_events: List[OutputEvent] = []
         
         try:
             # The brain only processes input events. This check also helps the type checker.
-            if not isinstance(input_event.type, InputEventType):
-                logger.warning(f"Brain received a non-input event to process: {input_event.type}")
-                return [], []
+            if not isinstance(input_event, InputEvent):
+                logger.warning(f"Brain received a non-input event to process: {type(input_event)}")
+                return []
 
             handler = self.handlers.get(input_event.type)
             
             if handler:
-                events, commands = handler(input_event)
+                events = handler(input_event)
                 output_events.extend(events)
-                adapter_commands.extend(commands)
             else:
                 logger.warning(f"Unhandled event type: {input_event.type}")
             
@@ -153,55 +147,31 @@ class BuddyBrain:
             logger.error(f"Brain processing error for event {input_event.type}: {e}", exc_info=True)
             # Non propaghiamo altri errori per non bloccare il sistema, ma loggiamo tutto
         
-        return output_events, adapter_commands
+        return output_events
     
-    def _handle_direct_output(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_direct_output(self, event: InputEvent) -> List[OutputEvent]:
         """
         Gestisce DIRECT_OUTPUT: unwrap l'evento interno e inoltralo.
         """
         try:
             inner_event = event.content
             
-            if not isinstance(inner_event, Event):
-                logger.error(f"DIRECT_OUTPUT content must be an Event, got {type(inner_event)}")
-                return [], []
-            
-            if isinstance(inner_event.type, InputEventType):
-                logger.warning(f"DIRECT_OUTPUT should contain output events, got {inner_event.type}")
-                return [], []
+            if not isinstance(inner_event, OutputEvent):
+                logger.error(f"DIRECT_OUTPUT content must be an OutputEvent, got {type(inner_event)}")
+                return []
             
             logger.info(f"🎯 Direct output bypass: {inner_event.type.value}")
-            return [inner_event], []
+            return [inner_event]
             
         except Exception as e:
             logger.error(f"Error handling DIRECT_OUTPUT: {e}", exc_info=True)
-            return [], []
+            return []
     
-    def _handle_adapter_command(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
-        """
-        Gestisce ADAPTER_COMMAND: converte il comando e lo invia agli adapter.
-        """
-        command_name = event.content
-        
-        if not isinstance(command_name, str):
-            logger.error(f"ADAPTER_COMMAND content must be string, got {type(command_name)}")
-            raise TypeError(f"Command name must be string, got {type(command_name)}")
-        
-        try:
-            command = AdapterCommand(command_name)
-            logger.info(f"🎛️  ADAPTER_COMMAND received: {command.value}")
-            return [], [command]
-        except ValueError:
-            logger.error(f"❌ Invalid adapter command: {command_name}")
-            available = ", ".join([c.value for c in AdapterCommand])
-            raise ValueError(f"Unknown adapter command: {command_name}. Available: {available}")
-    
-    def _handle_wakeword(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_wakeword(self, event: InputEvent) -> List[OutputEvent]:
         """
         Gestisce rilevamento wakeword.
         """
-        output_events = []
-        commands = []
+        output_events: List[OutputEvent] = []
         
         wakeword = event.metadata.get('wakeword', 'unknown') if event.metadata else 'unknown'
         logger.info(f"👂 Wakeword detected: {wakeword}")
@@ -214,20 +184,13 @@ class BuddyBrain:
             metadata={'led': 'ascolto', 'command': 'blink', 'continuous': True, 'on_time': 0.5, 'off_time': 0.5}
         ))
         
-        # STOP wakeword detection (evita loop)
-        commands.append(AdapterCommand.WAKEWORD_LISTEN_STOP)
-        
-        # START voice input per catturare comando utente
-        commands.append(AdapterCommand.VOICE_INPUT_START)
-        
-        return output_events, commands
+        return output_events
     
-    def _handle_conversation_end(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_conversation_end(self, event: InputEvent) -> List[OutputEvent]:
         """
         Gestisce fine conversazione - spegne LED e riattiva wakeword.
         """
-        output_events = []
-        commands = []
+        output_events: List[OutputEvent] = []
         
         logger.info("🔊 Conversation ended - turning off LED and reactivating wakeword")
         
@@ -239,15 +202,11 @@ class BuddyBrain:
             metadata={'led': 'ascolto', 'command': 'off'}
         ))
         
-        # Riattiva detection wakeword
-        commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
-        
-        return output_events, commands
+        return output_events
     
-    def _handle_user_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_user_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce input testuale/vocale dell'utente"""
-        output_events = []
-        commands = []
+        output_events: List[OutputEvent] = []
         user_text = str(event.content)
         
         # Salva in history
@@ -277,11 +236,11 @@ class BuddyBrain:
             ))
             # NON riattivare wakeword qui - lo farà EarInput quando termina la conversazione
         
-        return output_events, commands
+        return output_events
     
-    def _handle_presence_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_presence_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di presenza."""
-        output_events: List[Event] = []
+        output_events: List[OutputEvent] = []
         
         # --- Gestione Presenza Rilevata ---
         if event.content is True:
@@ -289,7 +248,7 @@ class BuddyBrain:
             if self.presence_lost_timestamp is not None:
                 logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
                 self.presence_lost_timestamp = None
-                return [], []
+                return []
             
             # Altrimenti, questa è una nuova presenza, applica la logica normale
             metadata = event.metadata or {}
@@ -318,11 +277,11 @@ class BuddyBrain:
             else:
                 logger.debug("👤 Absence confirmed, light-off timer already running.")
         
-        return output_events, []
- 
-    def _handle_temperature_input(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+        return output_events
+    
+    def _handle_temperature_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di temperatura."""
-        output_events: List[Event] = []
+        output_events: List[OutputEvent] = []
 
         # Aggiorna lo stato interno del Brain
         temp = float(event.content)
@@ -343,11 +302,11 @@ class BuddyBrain:
         if temp > 28 and humidity and humidity > 70:
             logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
         
-        return output_events, []
+        return output_events
     
-    def _handle_shutdown(self, event: Event) -> Tuple[List[Event], List[AdapterCommand]]:
+    def _handle_shutdown(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce comando di shutdown"""
-        output_events = []
+        output_events: List[OutputEvent] = []
         
         # Se era vocale, saluta
         if event.source == "voice":
@@ -357,7 +316,7 @@ class BuddyBrain:
                 priority=EventPriority.CRITICAL
             ))
         
-        return output_events, []
+        return output_events
     
     def _generate_response(self, user_text: str) -> str:
         """
@@ -402,7 +361,7 @@ class BuddyBrain:
         logger.info("Resetting chat session...")
         self._init_chat_session()
     
-    def _check_archivist_trigger(self) -> List[Event]:
+    def _check_archivist_trigger(self) -> List[OutputEvent]:
         """
         Controlla se è il momento di triggerare la distillazione memoria.
         Chiamato dopo ogni evento processato.
@@ -426,12 +385,12 @@ class BuddyBrain:
         
         return []
     
-    def check_timers(self) -> List[Event]:
+    def check_timers(self) -> List[OutputEvent]:
         """
         Controlla tutti i timer attivi (es. spegnimento luci).
         Questo metodo è pensato per essere chiamato periodicamente dall'Orchestrator.
         """
-        output_events: List[Event] = []
+        output_events: List[OutputEvent] = []
 
         # --- Check light-off timer ---
         if self.presence_lost_timestamp is not None:

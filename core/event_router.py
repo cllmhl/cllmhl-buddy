@@ -8,7 +8,7 @@ import logging
 from typing import Dict, List
 from collections import defaultdict
 
-from .events import Event, OutputEventType
+from .events import OutputEvent, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class EventRouter:
                 logger.warning(f"📍 No routes registered for {event_type.value}")
         return False
     
-    def route_event(self, event: Event) -> int:
+    def route_event(self, event: OutputEvent) -> int:
         """
         Smista un singolo evento a tutti gli adapter registrati.
         
@@ -90,8 +90,8 @@ class EventRouter:
         """
         with self._lock:
             # Controlla se esiste una route
-            if not isinstance(event.type, OutputEventType):
-                logger.warning(f"Cannot route non-output event: {event.type}")
+            if not isinstance(event, OutputEvent):
+                logger.warning(f"Cannot route non-output event: {type(event)}")
                 return 0
             
             if event.type not in self._routes or not self._routes[event.type]:
@@ -121,7 +121,7 @@ class EventRouter:
             
             return routed_count
     
-    def route_events(self, events: List[Event]) -> int:
+    def route_events(self, events: List[OutputEvent]) -> int:
         """
         Smista una lista di eventi.
         

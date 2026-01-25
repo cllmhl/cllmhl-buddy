@@ -11,7 +11,7 @@ from pathlib import Path
 from queue import Empty
 from typing import Optional, Set
 
-from core.events import Event, OutputEventType
+from core.events import OutputEvent, OutputEventType
 from adapters.ports import OutputPort
 
 
@@ -139,7 +139,7 @@ class PipeOutputAdapter(OutputPort):
         import stat
         return stat.S_ISFIFO(os.stat(path).st_mode)
         
-    def handle_event(self, event: Event):
+    def handle_event(self, event: OutputEvent):
         """
         Gestisce un evento scrivendolo sulla pipe.
         Filtra per event_types configurati.
@@ -157,7 +157,7 @@ class PipeOutputAdapter(OutputPort):
             "content": event.content,
             "timestamp": event.timestamp,
             "priority": event.priority.name,
-            "source": event.source,
+            "source": getattr(event, 'source', 'brain'),
             "metadata": event.metadata or {}
         }
         

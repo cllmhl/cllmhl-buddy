@@ -16,7 +16,7 @@ if not os.path.exists('/proc/device-tree/model'):
 from gpiozero import LED
 
 from adapters.ports import OutputPort
-from core.events import Event, OutputEventType
+from core.events import OutputEvent, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class GPIOLEDOutput(OutputPort):
             return self.led_parlo
         return None
     
-    def _handle_led_control(self, event: Event) -> None:
+    def _handle_led_control(self, event: OutputEvent) -> None:
         """
         Gestisce evento LED_CONTROL unificato.
         

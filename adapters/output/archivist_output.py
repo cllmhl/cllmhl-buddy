@@ -7,7 +7,7 @@ import threading
 from queue import PriorityQueue, Empty
 from typing import Optional
 
-from core.events import Event, OutputEventType
+from core.events import OutputEvent, OutputEventType
 from adapters.ports import OutputPort
 from infrastructure.memory_store import MemoryStore
 from core.archivist import BuddyArchivist
@@ -107,7 +107,7 @@ class ArchivistOutput(OutputPort):
                     exc_info=True
                 )
     
-    def _handle_distill_memory(self, event: Event) -> None:
+    def _handle_distill_memory(self, event: OutputEvent) -> None:
         """Esegue distillazione della memoria"""
         if not self.db or not self.archivist:
             logger.warning("Archivist or database not available, skipping distillation")

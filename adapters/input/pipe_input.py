@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 from queue import Queue
 
-from core.events import Event, InputEventType, OutputEventType, EventPriority, create_output_event
+from core.events import InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_output_event
 from adapters.ports import InputPort
 
 
@@ -162,7 +162,7 @@ class PipeInputAdapter(InputPort):
             output_event = self._parse_direct_output(content, priority, output_metadata)
             if output_event:
                 # Crea un InputEvent wrapper
-                event = Event(
+                event = InputEvent(
                     priority=priority,
                     type=InputEventType.DIRECT_OUTPUT,
                     content=output_event,
@@ -176,7 +176,7 @@ class PipeInputAdapter(InputPort):
         # Altri InputEvents
         try:
             event_type = InputEventType[event_type_str.upper()]
-            event = Event(
+            event = InputEvent(
                 priority=priority,
                 type=event_type,
                 content=content,
@@ -189,7 +189,7 @@ class PipeInputAdapter(InputPort):
         except KeyError:
             logger.error(f"Tipo evento sconosciuto: {event_type_str}")
             
-    def _parse_direct_output(self, content: dict, priority: EventPriority, metadata: Optional[dict] = None) -> Optional[Event]:
+    def _parse_direct_output(self, content: dict, priority: EventPriority, metadata: Optional[dict] = None) -> Optional[OutputEvent]:
         """
         Parsa il content di un DIRECT_OUTPUT event
         

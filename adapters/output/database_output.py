@@ -8,7 +8,7 @@ from queue import PriorityQueue, Empty
 from typing import Optional
 
 from adapters.ports import OutputPort
-from core.events import Event, OutputEventType
+from core.events import OutputEvent, OutputEventType
 from infrastructure.memory_store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class DatabaseOutput(OutputPort):
                     exc_info=True  # Full stack trace
                 )
     
-    def _handle_save_history(self, event: Event) -> None:
+    def _handle_save_history(self, event: OutputEvent) -> None:
         """Salva in history (conversazione temporanea)"""
         if not self.db:
             logger.warning("Database not available, skipping save_history")
@@ -120,7 +120,7 @@ class DatabaseOutput(OutputPort):
         except Exception as e:
             logger.error(f"Error saving history: {e}")
     
-    def _handle_save_memory(self, event: Event) -> None:
+    def _handle_save_memory(self, event: OutputEvent) -> None:
         """Salva in memoria permanente (ChromaDB)"""
         if not self.db:
             logger.warning("Database not available, skipping save_memory")

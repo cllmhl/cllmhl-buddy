@@ -17,7 +17,7 @@ from gpiozero import LED
 
 from adapters.ports import OutputPort
 from adapters.shared_audio_state import is_speaking, find_jabra_alsa
-from core.events import Event, OutputEventType, EventPriority
+from core.events import OutputEvent, OutputEventType, EventPriority
 from core.commands import AdapterCommand
 
 logger = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ class JabraVoiceOutput(OutputPort):
                 )
                 # Continue loop - un errore non deve fermare il worker
     
-    def _handle_speak_event(self, event: Event) -> None:
+    def _handle_speak_event(self, event: OutputEvent) -> None:
         """Gestisce evento SPEAK"""
         text = str(event.content)
         
@@ -195,7 +195,7 @@ class JabraVoiceOutput(OutputPort):
             is_speaking.set()
             
             # Invia evento per accendere il LED 'parlo'
-            self.output_queue.put(Event(
+            self.output_queue.put(OutputEvent(
                 type=OutputEventType.LED_CONTROL,
                 content="speak_start",
                 priority=EventPriority.HIGH,
@@ -215,7 +215,7 @@ class JabraVoiceOutput(OutputPort):
         
         finally:
             # Invia evento per spegnere il LED 'parlo'
-            self.output_queue.put(Event(
+            self.output_queue.put(OutputEvent(
                 type=OutputEventType.LED_CONTROL,
                 content="speak_end",
                 priority=EventPriority.HIGH,

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, Any, List, TYPE_CHECKING
 
 # Core imports
-from core.events import Event, InputEventType, OutputEventType, EventPriority, create_input_event
+from core.events import InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_input_event
 from core.event_router import EventRouter
 from core.brain import BuddyBrain
 from core.commands import AdapterCommand
@@ -206,6 +206,8 @@ class BuddyOrchestrator:
                 # Preleva evento input (blocca se vuota, timeout 1s)
                 try:
                     queue_item = self.input_queue.get(timeout=1.0)
+                    input_event: InputEvent
+                    
                     # PriorityQueue contiene (priority, event)
                     if isinstance(queue_item, tuple):
                         _, input_event = queue_item
@@ -224,13 +226,14 @@ class BuddyOrchestrator:
                     self.running = False
                     # Processa comunque per salutare se necessario
                 
-                # Brain processa evento → (eventi, comandi)
-                output_events, adapter_commands = self.brain.process_event(input_event)
+                # 1. Orchestration Logic: Calcola comandi di sistema basati sull'input
+                system_commands = self._get_system_commands(input_event)
+                self._execute_commands(system_commands)
                 
-                # PRIMA: Esegui comandi SINCRONI (stabilisci stato adapter)
-                self._execute_commands(adapter_commands)
+                # 2. Business Logic: Brain processa evento
+                output_events = self.brain.process_event(input_event)
                 
-                # POI: Router smista output events (asincroni)
+                # 3. Routing: Smista output events
                 self.router.route_events(output_events)
                 
                 self.input_queue.task_done()
@@ -241,6 +244,24 @@ class BuddyOrchestrator:
         finally:
             self._shutdown()
     
+    def _get_system_commands(self, event: InputEvent) -> List[AdapterCommand]:
+        """
+        Definisce la logica di orchestrazione pura.
+        Mappa eventi di input su comandi di controllo per gli adapter.
+        """
+        commands: List[AdapterCommand] = []
+        
+        if event.type == InputEventType.WAKEWORD:
+            # Wake word rilevata -> Stop ascolto wakeword + Start input vocale
+            commands.append(AdapterCommand.WAKEWORD_LISTEN_STOP)
+            commands.append(AdapterCommand.VOICE_INPUT_START)
+            
+        elif event.type == InputEventType.CONVERSATION_END:
+            # Fine conversazione -> Riattiva ascolto wakeword
+            commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
+            
+        return commands
+
     def _execute_commands(self, commands: List[AdapterCommand]) -> None:
         """
         Esegue comandi adapter SINCRONAMENTE broadcast a tutti gli adapter.

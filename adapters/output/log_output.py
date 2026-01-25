@@ -4,7 +4,7 @@ from queue import Empty
 from typing import List
 
 from adapters.ports import OutputPort
-from core.events import OutputEventType
+from core.events import OutputEvent, OutputEventType
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ class LogOutput(OutputPort):
     def _process_queue(self):
         while self.running:
             try:
-                event = self.output_queue.get(timeout=1)
-                logger.info(f"Event received: {event.payload}")
+                event: OutputEvent = self.output_queue.get(timeout=1)
+                logger.info(f"Event received: {event.content}")
                 self.output_queue.task_done()
             except Empty:
                 continue

@@ -11,7 +11,7 @@ from typing import List, Set, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
-    from core.events import InputEventType, OutputEventType
+    from core.events import InputEventType, OutputEventType, InputEvent, OutputEvent
     from core.commands import AdapterCommand
 
 # Import required - fail fast if not available
@@ -84,7 +84,7 @@ class InputPort(AdapterPort):
     
     Gli input adapter:
     - Ricevono eventi dal mondo esterno (utente, sensori, etc)
-    - Li trasformano in Event standardizzati
+    - Li trasformano in InputEvent standardizzati
     - Li pubblicano sulla input_queue
     """
     
@@ -93,7 +93,7 @@ class InputPort(AdapterPort):
         Args:
             name: Nome identificativo dell'adapter
             config: Configurazione specifica dell'adapter
-            input_queue: Coda centralizzata dove pubblicare gli eventi
+            input_queue: Coda centralizzata dove pubblicare gli InputEvent
             interrupt_queue: Coda per eventi di interruzione ad alta priorità
         """
         super().__init__(name, config)
@@ -122,12 +122,12 @@ class OutputPort(AdapterPort):
         self.output_queue: PriorityQueue = PriorityQueue(maxsize=queue_maxsize)
         logger.info(f"  Queue size: {queue_maxsize}")
     
-    def send_event(self, event) -> bool:
+    def send_event(self, event: OutputEvent) -> bool:
         """
         Invia un evento all'adapter (chiamato dal Router).
         
         Args:
-            event: Evento da processare
+            event: Evento di output da processare
             
         Returns:
             True se l'evento è stato accodato, False se la coda è piena
