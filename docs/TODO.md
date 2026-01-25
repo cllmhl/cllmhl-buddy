@@ -16,10 +16,6 @@
 ## 2.0 Ufficio
 
 ### 2.1 Action tools. Vedi context.png
-- [ ] **web_search:** Buddy cerca in rete con Tavily
-- [ ] **get_current_time:** Buddy deve sempre avere chiaro che ora è.
-- [ ] **get_current_temp:** Buddy deve sempre avere chiaro temperatura ed umidità.
-- [ ] **get_current_position:** Buddy deve sempre avere chiaro dove è.
 - [ ] **get_presence_events:** Buddy deve sapere gli ultimi eventi di presenza/assenza per decidere se parlare, spegnere le luci, ... 
 - [ ] **set_lights_off:** Buddy spegne le luci
 - [ ] **set_lights_on:** Buddy accende le luci

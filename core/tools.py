@@ -72,3 +72,17 @@ def web_search(query: str):
         
     except Exception as e:
         return f"Errore ricerca: {e}"
+
+def get_current_position():
+    """
+    Restituisce la posizione geografica esatta (GPS) di Buddy (Casa).
+    Usa questo tool quando l'utente chiede informazioni sulla posizione geografica di Buddy.
+    """
+    logger.info("🛠️ Tool get_current_position called")
+
+    return {
+        "latitude": 48.556880087844924, 
+        "longitude": 7.746873007622421,
+        "city": "Strasburgo",    # Opzionale, aiuta Gemini nel contesto
+        "country": "Francia"
+    }
