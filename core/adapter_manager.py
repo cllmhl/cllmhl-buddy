@@ -5,6 +5,45 @@ from core.commands import AdapterCommand
 from core.events import InputEvent, InputEventType
 
 class AdapterManager:
+
+    def start_interrupt_handler(self, running_flag_getter):
+        """
+        Starts the interrupt handler thread. running_flag_getter is a callable returning True if the system is running.
+        """
+        import threading
+        self._interrupt_handler_thread = threading.Thread(
+            target=self._interrupt_handler_loop,
+            args=(running_flag_getter,),
+            daemon=True
+        )
+        self._interrupt_handler_thread.start()
+
+    def _interrupt_handler_loop(self, running_flag_getter):
+        """
+        Loop del thread di interruzione. Ascolta sulla interrupt_queue e delega la gestione.
+        """
+        self.logger.info("🚨 Interrupt handler thread started")
+        while running_flag_getter():
+            try:
+                interrupt_event = self.interrupt_queue.get(timeout=1.0)
+                from core.events import InputEventType, create_input_event, EventPriority
+                if interrupt_event.type == InputEventType.INTERRUPT:
+                    self.logger.warning(f"⚡ INTERRUPT received: {interrupt_event.content}")
+                    self.handle_interrupt(interrupt_event)
+                    # Inserisci l'evento di interruzione nella coda principale per l'elaborazione
+                    event = create_input_event(
+                        InputEventType.USER_SPEECH,
+                        interrupt_event.content,
+                        source="interrupt",
+                        priority=EventPriority.HIGH
+                    )
+                    self.input_queue.put(event)
+                self.interrupt_queue.task_done()
+            except Exception as e:
+                import queue
+                if isinstance(e, queue.Empty):
+                    continue
+                self.logger.error(f"Error in interrupt handler loop: {e}", exc_info=True)
     def __init__(self, config: Dict[str, Any], input_queue, interrupt_queue, logger: logging.Logger):
         self.config = config
         self.input_queue = input_queue
@@ -64,6 +103,24 @@ class AdapterManager:
                 out_adapter.stop()
             except Exception as e:
                 self.logger.error(f"Error stopping {out_adapter.name}: {e}")
+
+    def handle_interrupt(self, interrupt_event):
+        """
+        Handles interrupt event: stops voice output on all output adapters.
+        """
+        handled = 0
+        for adapter in self.output_adapters:
+            if "VoiceOutput" in adapter.name:
+                try:
+                    if adapter.handle_command(AdapterCommand.VOICE_OUTPUT_STOP):
+                        handled += 1
+                        self.logger.debug(f"✅ {adapter.name} handled VOICE_OUTPUT_STOP")
+                except Exception as e:
+                    self.logger.error(f"❌ Error executing VOICE_OUTPUT_STOP on {adapter.name}: {e}", exc_info=True)
+        if handled == 0:
+            self.logger.warning("⚠️  VOICE_OUTPUT_STOP not handled by any adapter")
+        else:
+            self.logger.info(f"🎯 VOICE_OUTPUT_STOP handled by {handled} adapter(s)")
 
     def handle_event(self, event: InputEvent):
         """
