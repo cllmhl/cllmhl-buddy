@@ -106,6 +106,7 @@ def get_current_temp() -> str:
     Restituisce la temperatura e l'umidità correnti rilevate dai sensori.
     Usa questo tool quando l'utente chiede informazioni sul clima nella stanza, temperatura o umidità.
     """
+    logger.info("🛠️ Tool get_current_temp called")
     global CURRENT_TEMPERATURE, CURRENT_HUMIDITY
     if CURRENT_TEMPERATURE is None:
         return "Dato temperatura non disponibile."

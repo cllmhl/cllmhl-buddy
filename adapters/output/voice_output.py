@@ -13,8 +13,6 @@ from typing import Optional
 from gtts import gTTS
 from google.cloud import texttospeech
 
-from gpiozero import LED
-
 from adapters.ports import OutputPort
 from adapters.shared_audio_state import is_speaking, find_jabra_alsa
 from core.events import OutputEvent, OutputEventType, EventPriority
@@ -194,14 +192,6 @@ class JabraVoiceOutput(OutputPort):
         try:
             is_speaking.set()
             
-            # Invia evento per accendere il LED 'parlo'
-            self.output_queue.put(OutputEvent(
-                type=OutputEventType.LED_CONTROL,
-                content="speak_start",
-                priority=EventPriority.HIGH,
-                metadata={'led': 'parlo', 'command': 'on'}
-            ))
-
             # TTS
             if self.tts_mode == "local":
                 self._speak_piper(text)
@@ -214,14 +204,6 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            # Invia evento per spegnere il LED 'parlo'
-            self.output_queue.put(OutputEvent(
-                type=OutputEventType.LED_CONTROL,
-                content="speak_end",
-                priority=EventPriority.HIGH,
-                metadata={'led': 'parlo', 'command': 'off'}
-            ))
-            
             is_speaking.clear()
     
     def _speak_gtts(self, text: str) -> None:
