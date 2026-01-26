@@ -46,16 +46,17 @@ class BuddyBrain:
             raise ValueError("Config 'model_id' is required")
         self.model_id = config["model_id"]
         
+        # FIXME: Timer archivista
         if "archivist_interval" not in config:
             raise ValueError("Config 'archivist_interval' is required - controls memory distillation frequency")
         self.archivist_interval = config["archivist_interval"]
         self.last_archivist_time = time.time()
         
-        # Timer per spegnimento luci
+        # FIXME: Timer per spegnimento luci
         self.presence_lost_timestamp: Optional[float] = None
         self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
         
-        # State for dynamic context injection
+        # FIXME: Stato dei sensori
         self.last_temperature: Optional[float] = None
         self.last_humidity: Optional[float] = None
         
@@ -88,9 +89,6 @@ class BuddyBrain:
                 config=types.GenerateContentConfig(
                     system_instruction=self.config["system_instruction"],
                     temperature=self.config["temperature"],
-                    # tools=[types.Tool(google_search=types.GoogleSearch())],
-                    # FIXME Disabilitato momentaneamente per issue 4312
-                    # https://github.com/vercel/ai/issues/4312
                     tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
                     thinking_config=types.ThinkingConfig(include_thoughts=False)
                 )
@@ -133,6 +131,7 @@ class BuddyBrain:
                 logger.warning(f"Unhandled event type: {input_event.type}")
             
             # Controllo polling archivist (dopo ogni evento)
+            # FIXME: Timer archivista
             output_events.extend(self._check_archivist_trigger())
         
         except KeyboardInterrupt:
@@ -370,6 +369,7 @@ class BuddyBrain:
         
         return []
     
+    # FIXME: Timer per spegnimento luci
     def check_timers(self) -> List[OutputEvent]:
         """
         Controlla tutti i timer attivi (es. spegnimento luci).

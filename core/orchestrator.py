@@ -64,6 +64,7 @@ class BuddyOrchestrator:
         self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
 
         # Inject queue into tools
+        # FIXME: questo per il giro di Alexa. Ha senso?
         tools.set_input_queue(self.input_queue)
 
         # Event Router
@@ -149,7 +150,8 @@ class BuddyOrchestrator:
                         input_event = queue_item
                 except queue.Empty:
                     # Timeout - nessuna coda. Controlliamo i timer.
-                    timer_events = self.brain.check_timers()
+                    # FIXME: Timer per spegnimento luci
+                    timer_events = self.brain.check_timers() 
                     if timer_events:
                         self.router.route_events(timer_events)
                     continue

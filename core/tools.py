@@ -15,11 +15,11 @@ from core.events import create_output_event, create_input_event, OutputEventType
 # Inizializza solo quando necessario (lazy-load)
 tavily: Optional[TavilyClient] = None
 
-# Global state for temperature/humidity
+# FIXME: Stato dei sensori
 CURRENT_TEMPERATURE: Optional[float] = None
 CURRENT_HUMIDITY: Optional[float] = None
 
-# Global event queue for side effects (DIRECT_OUTPUT)
+# FIXME: questo per il giro di Alexa. Ha senso?
 _INPUT_QUEUE: Optional[queue.PriorityQueue] = None
 
 logger = logging.getLogger(__name__)
