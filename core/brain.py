@@ -70,7 +70,6 @@ class BuddyBrain:
             InputEventType.USER_SPEECH: self._handle_user_input,
             InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
-            InputEventType.SHUTDOWN: self._handle_shutdown,
         }
         
         logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id}, archivist_interval: {self.archivist_interval}s)")
@@ -301,20 +300,6 @@ class BuddyBrain:
         # Esempio: logica combinata temperatura + umidità
         if temp > 28 and humidity and humidity > 70:
             logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
-        
-        return output_events
-    
-    def _handle_shutdown(self, event: InputEvent) -> List[OutputEvent]:
-        """Gestisce comando di shutdown"""
-        output_events: List[OutputEvent] = []
-        
-        # Se era vocale, saluta
-        if event.source == "voice":
-            output_events.append(create_output_event(
-                OutputEventType.SPEAK,
-                "Mi sto spegnendo. A presto!",
-                priority=EventPriority.CRITICAL
-            ))
         
         return output_events
     

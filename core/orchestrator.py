@@ -160,12 +160,6 @@ class BuddyOrchestrator:
                         self.router.route_events(timer_events)
                     continue
 
-                # Check shutdown
-                if input_event.type == InputEventType.SHUTDOWN:
-                    self.logger.info("Shutdown event received")
-                    self.running = False
-                    # Processa comunque per salutare se necessario
-
                 # 1. Orchestration Logic: AdapterManager handles system commands
                 self.adapter_manager.handle_event(input_event)
 

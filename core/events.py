@@ -28,11 +28,6 @@ class InputEventType(Enum):
     
     # Bypass Brain - per test e comandi diretti
     DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente
-    
-    # Sistema
-    SHUTDOWN = "shutdown"
-    RESTART = "restart"
-
 
 class OutputEventType(Enum):
     """
