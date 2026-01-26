@@ -20,8 +20,9 @@ from core.brain import BuddyBrain
 from core.commands import AdapterCommand
 import core.tools as tools
 
-# Adapters imports
-from adapters.factory import AdapterFactory
+
+# AdapterManager import
+from core.adapter_manager import AdapterManager
 
 if TYPE_CHECKING:
     from adapters.ports import InputPort, OutputPort
@@ -66,25 +67,29 @@ class BuddyOrchestrator:
 
         # Inject queue into tools
         tools.set_input_queue(self.input_queue)
-        
+
         # Event Router
         self.router = EventRouter()
-        
+
         # Brain
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found in environment")
-        
+
         self.brain = BuddyBrain(api_key, self.config['brain'])
-        
-        # Adapters - creati PRIMA del setup routes
-        self.input_adapters: List[InputPort] = []
-        self.output_adapters: List[OutputPort] = []
-        self._create_adapters()
-        
+
+        # AdapterManager handles all adapter logic
+        self.adapter_manager = AdapterManager(
+            self.config,
+            self.input_queue,
+            self.interrupt_queue,
+            self.logger
+        )
+        self.adapter_manager.create_adapters()
+
         # Setup routes DOPO aver creato gli adapters
         self._setup_routes()
-        
+
         self.logger.info("🚀 BuddyOrchestrator initialized")
     
     def _signal_handler(self, signum, frame):
@@ -100,7 +105,7 @@ class BuddyOrchestrator:
         Ogni adapter si registra direttamente al router.
         """
         # Registra ogni adapter per gli eventi che gestisce
-        for adapter in self.output_adapters:
+        for adapter in self.adapter_manager.output_adapters:
             handled_events = type(adapter).handled_events()
             for event_type in handled_events:
                 self.router.register_route(
@@ -108,106 +113,43 @@ class BuddyOrchestrator:
                     adapter,
                     adapter.name
                 )
-        
+
         # Count unique event types registered
         event_type_count = len(set(
-            event_type 
-            for adapter in self.output_adapters 
+            event_type
+            for adapter in self.adapter_manager.output_adapters
             for event_type in type(adapter).handled_events()
         ))
-        
+
         self.logger.info(
             f"📍 Router configured dynamically with {event_type_count} event types "
-            f"across {len(self.output_adapters)} adapters"
+            f"across {len(self.adapter_manager.output_adapters)} adapters"
         )
-    
-    def _create_adapters(self) -> None:
-        """Crea adapters dalla configurazione usando Factory"""
-        # Input Adapters - passano input_queue nel costruttore
-        for adapter_cfg in self.config['adapters']['input']:
-            class_name = adapter_cfg.get('class')
-            config = adapter_cfg.get('config', {})
-            
-            adapter = AdapterFactory.create_input_adapter(
-                class_name, 
-                config,
-                self.input_queue,
-                self.interrupt_queue
-            )
-            if adapter:
-                self.input_adapters.append(adapter)
-        
-        # Output Adapters - autocontenuti con code interne
-        for adapter_cfg in self.config['adapters']['output']:
-            class_name = adapter_cfg.get('class')
-            config = adapter_cfg.get('config', {})
-            
-            output_adapter = AdapterFactory.create_output_adapter(class_name, config)
-            if output_adapter:
-                self.output_adapters.append(output_adapter)
-        
-        self.logger.info(
-            f"✅ Adapters created: {len(self.input_adapters)} input, "
-            f"{len(self.output_adapters)} output"
-        )
-    
-    def _start_adapters(self) -> None:
-        """Avvia tutti gli adapters"""
-        # Start input adapters (non ricevono più la coda - ce l'hanno già)
-        for in_adapter in self.input_adapters:
-            try:
-                in_adapter.start()
-                self.logger.info(f"▶️  Started input adapter: {in_adapter.name}")
-            except Exception as e:
-                self.logger.error(f"❌ Failed to start {in_adapter.name}: {e}")
-        
-        # Start output adapters (non ricevono più la coda come parametro)
-        for out_adapter in self.output_adapters:
-            try:
-                out_adapter.start()
-                self.logger.info(f"▶️  Started output adapter: {out_adapter.name}")
-            except Exception as e:
-                self.logger.error(f"❌ Failed to start {out_adapter.name}: {e}")
-    
-    def _stop_adapters(self) -> None:
-        """Ferma tutti gli adapters"""
-        self.logger.info("Stopping adapters...")
-        
-        for in_adapter in self.input_adapters:
-            try:
-                in_adapter.stop()
-            except Exception as e:
-                self.logger.error(f"Error stopping {in_adapter.name}: {e}")
-        
-        for out_adapter in self.output_adapters:
-            try:
-                out_adapter.stop()
-            except Exception as e:
-                self.logger.error(f"Error stopping {out_adapter.name}: {e}")
+
     
     def run(self) -> None:
         """Main event loop"""
         self.running = True
-        
+
         # Avvia adapters
-        self._start_adapters()
-        
+        self.adapter_manager.start_adapters()
+
         # Avvia interrupt handler thread
         self._interrupt_handler_thread = threading.Thread(target=self._interrupt_handler_loop, daemon=True)
         self._interrupt_handler_thread.start()
-        
+
         # Banner
         self._print_banner()
-        
+
         self.logger.info("🧠 Entering main event loop")
-        
+
         try:
             while self.running:
                 # Preleva evento input (blocca se vuota, timeout 1s)
                 try:
                     queue_item = self.input_queue.get(timeout=1.0)
                     input_event: InputEvent
-                    
+
                     # PriorityQueue contiene (priority, event)
                     if isinstance(queue_item, tuple):
                         _, input_event = queue_item
@@ -219,93 +161,31 @@ class BuddyOrchestrator:
                     if timer_events:
                         self.router.route_events(timer_events)
                     continue
-                
+
                 # Check shutdown
                 if input_event.type == InputEventType.SHUTDOWN:
                     self.logger.info("Shutdown event received")
                     self.running = False
                     # Processa comunque per salutare se necessario
-                
-                # 1. Orchestration Logic: Calcola comandi di sistema basati sull'input
-                system_commands = self._get_system_commands(input_event)
-                self._execute_commands(system_commands)
-                
+
+                # 1. Orchestration Logic: AdapterManager handles system commands
+                self.adapter_manager.handle_event(input_event)
+
                 # 2. Business Logic: Brain processa evento
                 output_events = self.brain.process_event(input_event)
-                
+
                 # 3. Routing: Smista output events
                 self.router.route_events(output_events)
-                
+
                 self.input_queue.task_done()
-        
+
         except Exception as e:
             self.logger.error(f"Error in main loop: {e}", exc_info=True)
-        
+
         finally:
             self._shutdown()
     
-    def _get_system_commands(self, event: InputEvent) -> List[AdapterCommand]:
-        """
-        Definisce la logica di orchestrazione pura.
-        Mappa eventi di input su comandi di controllo per gli adapter.
-        """
-        commands: List[AdapterCommand] = []
-        
-        if event.type == InputEventType.WAKEWORD:
-            # Wake word rilevata -> Stop ascolto wakeword + Start input vocale
-            commands.append(AdapterCommand.WAKEWORD_LISTEN_STOP)
-            commands.append(AdapterCommand.VOICE_INPUT_START)
-            
-        elif event.type == InputEventType.CONVERSATION_END:
-            # Fine conversazione -> Riattiva ascolto wakeword
-            commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
-            
-        return commands
-
-    def _execute_commands(self, commands: List[AdapterCommand]) -> None:
-        """
-        Esegue comandi adapter SINCRONAMENTE broadcast a tutti gli adapter.
-        
-        Ogni adapter decide se gestire o ignorare il comando basandosi
-        su supported_commands(). Non c'è routing - tutti ricevono tutti i comandi.
-        
-        Args:
-            commands: Lista di comandi da eseguire
-        """
-        if not commands:
-            return
-        
-        for command in commands:
-            handled_count = 0
-            
-            # Broadcast a TUTTI gli input adapter
-            for adapter in self.input_adapters:
-                try:
-                    if adapter.handle_command(command):
-                        handled_count += 1
-                        self.logger.debug(f"✅ {adapter.name} handled {command.value}")
-                except Exception as e:
-                    self.logger.error(
-                        f"❌ Error executing {command.value} on {adapter.name}: {e}",
-                        exc_info=True
-                    )
-            
-            # Broadcast a TUTTI gli output adapter
-            for adapter in self.output_adapters:
-                try:
-                    if adapter.handle_command(command):
-                        handled_count += 1
-                        self.logger.debug(f"✅ {adapter.name} handled {command.value}")
-                except Exception as e:
-                    self.logger.error(
-                        f"❌ Error executing {command.value} on {adapter.name}: {e}",
-                        exc_info=True
-                    )
-            
-            if handled_count == 0:
-                self.logger.warning(f"⚠️  Command {command.value} not handled by any adapter")
-            else:
-                self.logger.info(f"🎯 Command {command.value} handled by {handled_count} adapter(s)")
+    # System command logic now handled by AdapterManager.handle_event
 
     def _interrupt_handler_loop(self) -> None:
         """
@@ -321,7 +201,7 @@ class BuddyOrchestrator:
                     self.logger.warning(f"⚡ INTERRUPT received: {interrupt_event.content}")
                     
                     # 1. Ferma immediatamente l'output vocale
-                    for adapter in self.output_adapters:
+                    for adapter in self.adapter_manager.output_adapters:
                         if "VoiceOutput" in adapter.name:
                             adapter.handle_command(AdapterCommand.VOICE_OUTPUT_STOP)
                             
@@ -348,7 +228,7 @@ class BuddyOrchestrator:
         # Disabilita flag running prima di stop
         self.running = False
         
-        self._stop_adapters()
+        self.adapter_manager.stop_adapters()
         
         # Statistiche router
         try:
@@ -365,6 +245,6 @@ class BuddyOrchestrator:
         print("🤖 BUDDY OS - Hexagonal Architecture")
         print("="*60)
         print(f"Brain Model: {self.config['brain']['model_id']}")
-        print(f"Input Adapters: {len(self.input_adapters)}")
-        print(f"Output Adapters: {len(self.output_adapters)}")
+        print(f"Input Adapters: {len(self.adapter_manager.input_adapters)}")
+        print(f"Output Adapters: {len(self.adapter_manager.output_adapters)}")
         print("="*60 + "\n")
