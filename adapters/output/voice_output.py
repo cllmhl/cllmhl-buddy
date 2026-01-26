@@ -75,6 +75,8 @@ class JabraVoiceOutput(OutputPort):
                 self._playback_process = None
                 is_speaking.clear()
                 return True
+            else:
+                logger.info("No active voice output to stop")
         return False
     
     def _setup_piper(self):

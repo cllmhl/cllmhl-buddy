@@ -62,7 +62,6 @@ class BuddyOrchestrator:
         # Setup coda di input centralizzata
         queue_config = self.config['queues']
         self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
-        self.interrupt_queue: queue.Queue = queue.Queue(maxsize=queue_config.get('interrupt_maxsize', 10))
 
         # Inject queue into tools
         tools.set_input_queue(self.input_queue)
@@ -80,9 +79,7 @@ class BuddyOrchestrator:
         # AdapterManager handles all adapter logic
         self.adapter_manager = AdapterManager(
             self.config,
-            self.input_queue,
-            self.interrupt_queue,
-            self.logger
+            self.input_queue
         )
         self.adapter_manager.create_adapters()
 
@@ -132,9 +129,6 @@ class BuddyOrchestrator:
 
         # Avvia adapters
         self.adapter_manager.start_adapters()
-
-        # Avvia interrupt handler thread tramite AdapterManager
-        self.adapter_manager.start_interrupt_handler(lambda: self.running)
 
         # Banner
         self._print_banner()

@@ -31,8 +31,8 @@ class EarInput(InputPort):
     - Coordina con AudioDeviceManager per evitare conflitti
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
-        super().__init__(name, config, input_queue, interrupt_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione
         self.stt_mode = config['stt_mode']
@@ -198,7 +198,7 @@ class EarInput(InputPort):
                         
                         # 4. Processa audio. Se sta parlando, è un'interruzione
                         is_barge_in = is_speaking.is_set()
-                        self._process_audio(audio, is_barge_in)
+                        self._process_audio(audio, False)
                     
                     except sr.WaitTimeoutError:
                         # Nessun audio, continua loop
@@ -244,24 +244,14 @@ class EarInput(InputPort):
             if not text:
                 return
 
-            if is_barge_in:
-                logger.info(f"⚡ Barge-in detected: {text}")
-                event = create_input_event(
-                    InputEventType.INTERRUPT,
-                    text,
-                    source="ear",
-                    priority=EventPriority.CRITICAL
-                )
-                self.interrupt_queue.put(event)
-            else:
-                logger.info(f"🗣️  Recognized: {text}")
-                event = create_input_event(
-                    InputEventType.USER_SPEECH,
-                    text,
-                    source="ear",
-                    priority=EventPriority.HIGH
-                )
-                self.input_queue.put(event)
+            logger.info(f"🗣️  Recognized: {text}")
+            event = create_input_event(
+                InputEventType.USER_SPEECH,
+                text,
+                source="ear",
+                priority=EventPriority.HIGH
+            )
+            self.input_queue.put(event)
         
         except sr.UnknownValueError:
             # Suono non riconosciuto, ignora

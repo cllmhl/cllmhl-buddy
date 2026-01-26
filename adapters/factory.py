@@ -28,8 +28,7 @@ class AdapterFactory:
         cls,
         class_name: str,
         config: dict,
-        input_queue: PriorityQueue,
-        interrupt_queue: Queue
+        input_queue: PriorityQueue
     ) -> InputPort:
         """
         Crea un input adapter dalla configurazione.
@@ -72,8 +71,7 @@ class AdapterFactory:
             adapter = adapter_class(
                 name=class_name,
                 config=config,
-                input_queue=input_queue,
-                interrupt_queue=interrupt_queue
+                input_queue=input_queue
             )
             
             logger.info(f"✅ Created input adapter: {adapter.name}")

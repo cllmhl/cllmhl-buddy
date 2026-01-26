@@ -34,8 +34,8 @@ class TemperatureInput(InputPort):
     Rileva temperatura e umidità tramite sensore GPIO.
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
-        super().__init__(name, config, input_queue, interrupt_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione DHT11
         self.pin = config['pin']

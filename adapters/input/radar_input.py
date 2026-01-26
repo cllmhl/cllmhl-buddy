@@ -21,8 +21,8 @@ class RadarInput(InputPort):
     Rileva presenza e movimento tramite radar UART.
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
-        super().__init__(name, config, input_queue, interrupt_queue)
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
+        super().__init__(name, config, input_queue)
         
         # Configurazione radar
         self.port = config['port']

@@ -38,14 +38,14 @@ class PipeInputAdapter(InputPort):
     }
     """
     
-    def __init__(self, name: str, config: dict, input_queue, interrupt_queue: Queue):
+    def __init__(self, name: str, config: dict, input_queue):
         """
         Args:
             name: Nome adapter
             config: Configurazione con 'pipe_path' (default: data/buddy.in)
             input_queue: Queue per pubblicare eventi
         """
-        super().__init__(name, config, input_queue, interrupt_queue)
+        super().__init__(name, config, input_queue)
         self.pipe_path = Path(config['pipe_path'])
         self._thread: Optional[threading.Thread] = None
         

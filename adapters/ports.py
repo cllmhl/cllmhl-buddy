@@ -88,17 +88,15 @@ class InputPort(AdapterPort):
     - Li pubblicano sulla input_queue
     """
     
-    def __init__(self, name: str, config: dict, input_queue: PriorityQueue, interrupt_queue: Queue):
+    def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         """
         Args:
             name: Nome identificativo dell'adapter
             config: Configurazione specifica dell'adapter
             input_queue: Coda centralizzata dove pubblicare gli InputEvent
-            interrupt_queue: Coda per eventi di interruzione ad alta priorità
         """
         super().__init__(name, config)
         self.input_queue = input_queue
-        self.interrupt_queue = interrupt_queue
 
 
 class OutputPort(AdapterPort):
