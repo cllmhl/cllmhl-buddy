@@ -7,7 +7,7 @@ from pathlib import Path
 import pvporcupine
 from pvrecorder import PvRecorder
 from adapters.ports import InputPort
-from adapters.shared_audio_state import SuppressStream, find_jabra_pvrecorder
+from adapters.audio_utils import SuppressStream, find_jabra_pvrecorder
 from core.events import InputEventType, InputEvent, EventPriority
 from core.commands import AdapterCommand
 

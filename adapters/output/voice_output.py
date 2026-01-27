@@ -14,7 +14,8 @@ from gtts import gTTS
 from google.cloud import texttospeech
 
 from adapters.ports import OutputPort
-from adapters.shared_audio_state import is_speaking, find_jabra_alsa
+from adapters.audio_utils import find_jabra_alsa
+from core.state import global_state
 from core.events import OutputEvent, OutputEventType, EventPriority
 from core.commands import AdapterCommand
 
@@ -73,7 +74,7 @@ class JabraVoiceOutput(OutputPort):
                 logger.info("🛑 Stopping voice output")
                 self._playback_process.terminate()
                 self._playback_process = None
-                is_speaking.clear()
+                global_state.is_speaking.clear()
                 return True
             else:
                 logger.info("No active voice output to stop")
@@ -192,7 +193,7 @@ class JabraVoiceOutput(OutputPort):
         logger.info(f"🗣️  Speaking: {text[:50]}...")
         
         try:
-            is_speaking.set()
+            global_state.is_speaking.set()
             
             # TTS
             if self.tts_mode == "local":
@@ -206,7 +207,7 @@ class JabraVoiceOutput(OutputPort):
             logger.error(f"TTS error: {e}")
         
         finally:
-            is_speaking.clear()
+            global_state.is_speaking.clear()
     
     def _speak_gtts(self, text: str) -> None:
         """TTS usando Google gTTS (cloud)

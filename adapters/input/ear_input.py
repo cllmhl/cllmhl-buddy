@@ -13,7 +13,8 @@ from typing import Optional
 import speech_recognition as sr
 
 from adapters.ports import InputPort
-from adapters.shared_audio_state import is_speaking, find_jabra_pyaudio, SuppressStream
+from adapters.audio_utils import find_jabra_pyaudio, SuppressStream
+from core.state import global_state
 from core.events import create_input_event, create_output_event, InputEventType, OutputEventType, EventPriority
 from core.commands import AdapterCommand
 
@@ -175,15 +176,15 @@ class EarInput(InputPort):
                 buddy_was_speaking = False
                 while self.running and not self._stop_conversation.is_set():
                     # Se Buddy ha appena smesso di parlare, resetta il timer
-                    if buddy_was_speaking and not is_speaking.is_set():
+                    if buddy_was_speaking and not global_state.is_speaking.is_set():
                         logger.debug("Buddy finished speaking, resetting silence timer.")
                         last_interaction_time = time.time()
 
                     # Aggiorna lo stato di "is_speaking" per il prossimo ciclo
-                    buddy_was_speaking = is_speaking.is_set()
+                    buddy_was_speaking = global_state.is_speaking.is_set()
                     
                     # 1. Check timeout se NON sta parlando
-                    if not is_speaking.is_set():
+                    if not global_state.is_speaking.is_set():
                         elapsed = time.time() - last_interaction_time
                         if elapsed > self.max_silence_seconds:
                             logger.info(f"⏳ Silence timeout ({self.max_silence_seconds}s), ending session")
@@ -197,7 +198,7 @@ class EarInput(InputPort):
                         last_interaction_time = time.time()
                         
                         # 4. Processa audio. Se sta parlando, è un'interruzione
-                        is_barge_in = is_speaking.is_set()
+                        is_barge_in = global_state.is_speaking.is_set()
                         self._process_audio(audio, False)
                     
                     except sr.WaitTimeoutError:

@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
+import threading
 
 @dataclass
 class BuddyState:
@@ -8,6 +9,7 @@ class BuddyState:
     """
     temperature: Optional[float] = None
     humidity: Optional[float] = None
+    is_speaking: threading.Event = field(default_factory=threading.Event)
 
 # Global state instance
 global_state = BuddyState()

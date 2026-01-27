@@ -1,10 +1,7 @@
-import threading
-
 import os
 import logging
 from typing import Optional
-# FIXME: Timer fine dialogo Jabra
-is_speaking = threading.Event() 
+
 logger = logging.getLogger(__name__)
 
 
