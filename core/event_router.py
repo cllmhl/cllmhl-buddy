@@ -63,23 +63,6 @@ class EventRouter:
                 f"{adapter_name} (#{route_count})"
             )
     
-    def unregister_route(
-        self,
-        event_type: OutputEventType,
-        output_adapter
-    ) -> bool:
-        """Rimuove una route registrata"""
-        with self._lock:
-            if event_type in self._routes:
-                try:
-                    self._routes[event_type].remove(output_adapter)
-                    logger.info(f"📍 Route unregistered: {event_type.value}")
-                    return True
-                except ValueError:
-                    logger.warning(f"📍 Adapter not found in routes for {event_type.value}")
-            else:
-                logger.warning(f"📍 No routes registered for {event_type.value}")
-        return False
     
     def route_event(self, event: OutputEvent) -> int:
         """
