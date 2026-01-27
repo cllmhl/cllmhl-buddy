@@ -79,10 +79,12 @@ class BuddyBrain:
             
             self.chat_session = self.client.chats.create(
                 model=self.model_id,
-                system_instruction=self.config["system_instruction"],
-                temperature=self.config["temperature"],
-                tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
-                thinking_config=types.ThinkingConfig(include_thoughts=False)
+                config=types.GenerateContentConfig(
+                    systemInstruction=self.config["system_instruction"],
+                    temperature=self.config["temperature"],
+                    tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
+                    thinkingConfig=types.ThinkingConfig(includeThoughts=False)
+                )
             )
             logger.info("✅ Chat session initialized")
             
