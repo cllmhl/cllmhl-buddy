@@ -47,11 +47,6 @@ class BuddyBrain:
             raise ValueError("Config 'model_id' is required")
         self.model_id = config["model_id"]
         
-        # FIXME: Timer per spegnimento luci
-        self.presence_lost_timestamp: Optional[float] = None
-        self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
-        
-        
         # Inizializza sessione chat
         self._init_chat_session()
         
@@ -64,6 +59,8 @@ class BuddyBrain:
             InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
             InputEventType.TRIGGER_ARCHIVIST: self._handle_trigger_archivist,
+            InputEventType.LIGHT_ON: self._handle_light_on,
+            InputEventType.LIGHT_OFF: self._handle_light_off,
         }
         
         logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id})")
@@ -228,48 +225,22 @@ class BuddyBrain:
     
     def _handle_presence_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di presenza."""
-        output_events: List[OutputEvent] = []
+
+        metadata = event.metadata or {}
+        mov_energy = metadata.get('mov_energy', 0)
+        static_energy = metadata.get('static_energy', 0)
+        distance = metadata.get('distance', 0)
+        logger.info(f"👤 Presence={event.content}, dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
         
         # --- Gestione Presenza Rilevata ---
         if event.content is True:
             global_state.last_presence = time.time()
             
-            # Se il timer di spegnimento era attivo, cancellalo e non fare altro
-            if self.presence_lost_timestamp is not None:
-                logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
-                self.presence_lost_timestamp = None
-                return []
-            
-            # Altrimenti, questa è una nuova presenza, applica la logica normale
-            metadata = event.metadata or {}
-            mov_energy = metadata.get('mov_energy', 0)
-            static_energy = metadata.get('static_energy', 0)
-            distance = metadata.get('distance', 0)
-            
-            logger.info(f"👤 New presence detected: dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
-
-            current_hour = time.localtime().tm_hour
-            if current_hour >= 17 or current_hour < 9:
-                logger.info("💡 Rilevata presenza in orario notturno, accendo le luci.")
-                # Tools inject events directly into input queue
-                tools.set_lights_on()
-            elif mov_energy < 20 and static_energy < 20:
-                logger.debug("👻 Presenza debole (possibile falso positivo)")
-            else:
-                logger.debug(f"👤 Presenza rilevata: dist={distance}cm")
-        
         # --- Gestione Assenza Rilevata ---
         elif event.content is False:
             global_state.last_absence = time.time()
-            
-            # Avvia il timer di spegnimento solo se non è già partito
-            if self.presence_lost_timestamp is None:
-                logger.info(f"👤 Absence detected, starting {self.light_off_timeout}s timer to turn off lights.")
-                self.presence_lost_timestamp = time.time()
-            else:
-                logger.debug("👤 Absence confirmed, light-off timer already running.")
-        
-        return output_events
+  
+        return []       
     
     def _handle_temperature_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di temperatura."""
@@ -285,6 +256,18 @@ class BuddyBrain:
         logger.info(f"🌡️  Temperature/Humidity updated in global state: {temp}°C / {humidity}%")
    
         return output_events
+
+    def _handle_light_on(self, event: InputEvent) -> List[OutputEvent]:
+        """Gestisce comando accensione luci."""
+        logger.info("💡 Received LIGHT_ON event. Invoking tools.set_lights_on()")
+        tools.set_lights_on()
+        return []
+
+    def _handle_light_off(self, event: InputEvent) -> List[OutputEvent]:
+        """Gestisce comando spegnimento luci."""
+        logger.info("💡 Received LIGHT_OFF event. Invoking tools.set_lights_off()")
+        tools.set_lights_off()
+        return []
     
     def _generate_response(self, user_text: str) -> str:
         """
@@ -340,25 +323,4 @@ class BuddyBrain:
             priority=EventPriority.LOW,
             metadata=event.metadata # Passa i metadata dall'InputEvent (es. elapsed_seconds)
         )]
-
-    # FIXME: Timer per spegnimento luci
-    def check_timers(self) -> List[OutputEvent]:
-        """
-        Controlla tutti i timer attivi (es. spegnimento luci).
-        Questo metodo è pensato per essere chiamato periodicamente dall'Orchestrator.
-        """
-        output_events: List[OutputEvent] = []
-
-        # --- Check light-off timer ---
-        if self.presence_lost_timestamp is not None:
-            elapsed = time.time() - self.presence_lost_timestamp
-            if elapsed >= self.light_off_timeout:
-                logger.info(f"💡 Light-off timer expired after {elapsed:.1f}s. Turning off lights.")
-
-                # Reset timer
-                self.presence_lost_timestamp = None
-
-                # Generate events to turn off lights
-                tools.set_lights_off()
-
-        return output_events
+    

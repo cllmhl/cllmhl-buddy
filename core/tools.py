@@ -71,23 +71,23 @@ def _send_alexa_sequence(command: str) -> None:
     )
     _INPUT_QUEUE.put(input_evt_2)
 
-def set_lights_on() -> str:
+def set_lights_on() -> None:
     """
     Accende tutte le luci di casa tramite Alexa.
     Usa questo tool quando l'utente chiede di accendere le luci o quando rilevi che è buio.
     """
     logger.info("💡 Tool set_lights_on called")
     _send_alexa_sequence("Accendi tutte le luci")
-    return "Sto accendendo le luci."
+    global_state.is_light_on = True
 
-def set_lights_off() -> str:
+def set_lights_off() -> None:
     """
     Spegne tutte le luci di casa tramite Alexa.
     Usa questo tool quando l'utente chiede di spegnere le luci o quando non c'è nessuno in casa.
     """
     logger.info("💡 Tool set_lights_off called")
     _send_alexa_sequence("Spegni tutte le luci")
-    return "Sto spegnendo le luci."
+    global_state.is_light_on = False
 
 def get_current_temp() -> str:
     """

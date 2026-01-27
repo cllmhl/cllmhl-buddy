@@ -5,6 +5,7 @@ from queue import PriorityQueue
 
 from adapters.ports import InputPort
 from core.events import create_input_event, InputEventType, EventPriority
+from core.state import global_state
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,14 @@ class SchedulerInput(InputPort):
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
         self.archivist_interval = config["archivist_interval"]
+        self.light_off_timeout = int(config["light_off_timeout"])
+        
+        # Inizializza il timer archivista se non impostato (evita trigger immediato all'avvio)
+        if global_state.last_archivist_trigger == 0.0:
+            global_state.last_archivist_trigger = time.time()
+
         self.worker_thread = None
-        logger.info(f"⏰ SchedulerInput initialized (archivist_interval: {self.archivist_interval}s)")
+        logger.info(f"⏰ SchedulerInput initialized (archivist_interval: {self.archivist_interval}s, light_off_timeout: {self.light_off_timeout}s)")
 
     def start(self) -> None:
         self.running = True
@@ -42,11 +49,19 @@ class SchedulerInput(InputPort):
     def _worker_loop(self) -> None:
         logger.info("⏰ SchedulerInput worker loop started")
         while self.running:
-            time.sleep(self.archivist_interval)
+            current_hour = time.localtime().tm_hour
+            time.sleep(1)  # Controlla ogni secondo
             if not self.running:
                 break
 
-            # Trigger archivista
+            self._check_archivist_trigger()
+
+            # Controlla luci solo tra le 17:00 e le 09:00
+            if current_hour >= 17 or current_hour < 9:
+                self._check_lights()
+
+    def _check_archivist_trigger(self) -> None:
+        if time.time() - global_state.last_archivist_trigger >= self.archivist_interval:
             archivist_event = create_input_event(
                 InputEventType.TRIGGER_ARCHIVIST,
                 None,
@@ -55,4 +70,45 @@ class SchedulerInput(InputPort):
                 metadata={"interval_seconds": self.archivist_interval}
             )
             self.input_queue.put(archivist_event)
-            logger.debug(f"⏰ Archivist trigger event sent (interval: {self.archivist_interval}s)")
+            global_state.last_archivist_trigger = time.time()
+            logger.info(f"⏰ Archivist trigger event sent (interval: {self.archivist_interval}s)")
+
+    def _check_lights(self) -> None:
+        # senza stato non faccio nulla
+        if not global_state.last_presence or not global_state.last_absence:
+            return
+        
+        # presenza e luse accesa: ignoro
+        if (global_state.last_presence > global_state.last_absence) and global_state.is_light_on:
+            return
+        
+        # assenza e luce spenta: ignoro
+        if (global_state.last_absence > global_state.last_presence) and not global_state.is_light_on:
+            return
+        
+        # presenza e luce spenta: accendo
+        if (global_state.last_presence > global_state.last_absence):
+            light_on_event = create_input_event(
+                InputEventType.LIGHT_ON,
+                None,
+                source=self.name,
+                priority=EventPriority.LOW,
+                metadata={}
+            )
+            self.input_queue.put(light_on_event)
+            logger.info("💡 Light on event sent")
+            global_state.is_light_on = True
+            return
+        
+        # assenza e luce accesa se arrivo qui! spengo dopo timeout
+        if (time.time() - global_state.last_absence) >= self.light_off_timeout:
+            light_off_event = create_input_event(
+                InputEventType.LIGHT_OFF,
+                None,
+                source=self.name,
+                priority=EventPriority.LOW,
+                metadata={"timeout_seconds": self.light_off_timeout}
+            )
+            self.input_queue.put(light_off_event)
+            logger.info(f"💡 Light off event sent (timeout: {self.light_off_timeout}s)")
+            global_state.is_light_on = False

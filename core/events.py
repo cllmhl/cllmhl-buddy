@@ -25,6 +25,10 @@ class InputEventType(Enum):
     # Sensori
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza
     SENSOR_TEMPERATURE = "sensor_temperature"
+    # Luci
+    LIGHT_ON = "light_on"                 # Segnala accensione luce
+    LIGHT_OFF = "light_off"               # Segnala spegnimento luce
+    
     # Bypass Brain - per test e comandi diretti
     DIRECT_OUTPUT = "direct_output"       # Wrapper che contiene un OutputEvent da inoltrare direttamente
 

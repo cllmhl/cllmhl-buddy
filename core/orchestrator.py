@@ -149,11 +149,7 @@ class BuddyOrchestrator:
                     else:
                         input_event = queue_item
                 except queue.Empty:
-                    # Timeout - nessuna coda. Controlliamo i timer.
-                    # FIXME: Timer per spegnimento luci
-                    timer_events = self.brain.check_timers() 
-                    if timer_events:
-                        self.router.route_events(timer_events)
+                    # Timeout - niente da gestire.
                     continue
 
                 # 1. Orchestration Logic: AdapterManager handles system commands
