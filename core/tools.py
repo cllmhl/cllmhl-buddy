@@ -9,15 +9,12 @@ import time
 import queue
 from typing import Optional
 from tavily import TavilyClient
+from core.state import global_state # Importa lo stato globale
 
 from core.events import create_output_event, create_input_event, OutputEventType, InputEventType, EventPriority
 
 # Inizializza solo quando necessario (lazy-load)
 tavily: Optional[TavilyClient] = None
-
-# FIXME: Stato dei sensori
-CURRENT_TEMPERATURE: Optional[float] = None
-CURRENT_HUMIDITY: Optional[float] = None
 
 # FIXME: questo per il giro di Alexa. Ha senso?
 _INPUT_QUEUE: Optional[queue.PriorityQueue] = None
@@ -92,27 +89,17 @@ def set_lights_off() -> str:
     _send_alexa_sequence("Spegni tutte le luci")
     return "Sto spegnendo le luci."
 
-def set_current_temp(temp: float, humidity: Optional[float] = None):
-    """
-    Aggiorna la temperatura e umidità correnti (chiamato dal Brain).
-    """
-    global CURRENT_TEMPERATURE, CURRENT_HUMIDITY
-    CURRENT_TEMPERATURE = temp
-    CURRENT_HUMIDITY = humidity
-    logger.debug(f"Tools state updated: T={temp}, H={humidity}")
-
 def get_current_temp() -> str:
     """
     Restituisce la temperatura e l'umidità correnti rilevate dai sensori.
     Usa questo tool quando l'utente chiede informazioni sul clima nella stanza, temperatura o umidità.
     """
     logger.info("🛠️ Tool get_current_temp called")
-    global CURRENT_TEMPERATURE, CURRENT_HUMIDITY
-    if CURRENT_TEMPERATURE is None:
+    if global_state.temperature is None:
         return "Dato temperatura non disponibile."
     
-    hum_str = f"{CURRENT_HUMIDITY}%" if CURRENT_HUMIDITY is not None else "N/D"
-    return f"Temperatura: {CURRENT_TEMPERATURE}°C, Umidità: {hum_str}"
+    hum_str = f"{global_state.humidity}%" if global_state.humidity is not None else "N/D"
+    return f"Temperatura: {global_state.temperature}°C, Umidità: {hum_str}"
 
 def get_current_time() -> str:
     """

@@ -10,8 +10,9 @@ from google import genai
 from google.genai import types
 
 from .events import Event, InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_output_event
-from .tools import get_current_time, web_search, set_current_temp, get_current_temp, get_current_position, set_lights_on, set_lights_off
+from .tools import get_current_time, web_search, get_current_temp, get_current_position, set_lights_on, set_lights_off
 import core.tools as tools
+from .state import global_state # Importa lo stato globale
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,6 @@ class BuddyBrain:
         self.presence_lost_timestamp: Optional[float] = None
         self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
         
-        # FIXME: Stato dei sensori
-        self.last_temperature: Optional[float] = None
-        self.last_humidity: Optional[float] = None
         
         # Inizializza sessione chat
         self._init_chat_session()
@@ -81,12 +79,10 @@ class BuddyBrain:
             
             self.chat_session = self.client.chats.create(
                 model=self.model_id,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.config["system_instruction"],
-                    temperature=self.config["temperature"],
-                    tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
-                    thinking_config=types.ThinkingConfig(include_thoughts=False)
-                )
+                system_instruction=self.config["system_instruction"],
+                temperature=self.config["temperature"],
+                tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
+                thinking_config=types.ThinkingConfig(include_thoughts=False)
             )
             logger.info("✅ Chat session initialized")
             
@@ -273,17 +269,14 @@ class BuddyBrain:
         """Gestisce eventi dal sensore di temperatura."""
         output_events: List[OutputEvent] = []
 
-        # Aggiorna lo stato interno del Brain
+        # Aggiorna lo stato globale
         temp = float(event.content)
         humidity = event.metadata.get('humidity') if event.metadata else None
         
-        self.last_temperature = temp
-        self.last_humidity = humidity
+        global_state.temperature = temp
+        global_state.humidity = humidity
         
-        # Aggiorna lo stato globale dei tools
-        set_current_temp(temp, humidity)
-        
-        logger.info(f"🌡️  Temperature/Humidity updated: {temp}°C / {humidity}%")
+        logger.info(f"🌡️  Temperature/Humidity updated in global state: {temp}°C / {humidity}%")
         
         if temp > 30:
             logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
