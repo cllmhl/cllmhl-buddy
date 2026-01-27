@@ -232,6 +232,8 @@ class BuddyBrain:
         
         # --- Gestione Presenza Rilevata ---
         if event.content is True:
+            global_state.last_presence = time.time()
+            
             # Se il timer di spegnimento era attivo, cancellalo e non fare altro
             if self.presence_lost_timestamp is not None:
                 logger.info("👤 Presence re-detected within timeout, cancelling light-off timer. Lights were never off.")
@@ -258,6 +260,8 @@ class BuddyBrain:
         
         # --- Gestione Assenza Rilevata ---
         elif event.content is False:
+            global_state.last_absence = time.time()
+            
             # Avvia il timer di spegnimento solo se non è già partito
             if self.presence_lost_timestamp is None:
                 logger.info(f"👤 Absence detected, starting {self.light_off_timeout}s timer to turn off lights.")
@@ -279,14 +283,7 @@ class BuddyBrain:
         global_state.humidity = humidity
         
         logger.info(f"🌡️  Temperature/Humidity updated in global state: {temp}°C / {humidity}%")
-        
-        if temp > 30:
-            logger.debug(f"🌡️  Temperatura alta: {temp}°C (Umidità: {humidity}%)")
-        
-        # Esempio: logica combinata temperatura + umidità
-        if temp > 28 and humidity and humidity > 70:
-            logger.debug(f"🥵 Clima afoso rilevato: {temp}°C, {humidity}%")
-        
+   
         return output_events
     
     def _generate_response(self, user_text: str) -> str:

@@ -9,6 +9,8 @@ class BuddyState:
     """
     temperature: Optional[float] = None
     humidity: Optional[float] = None
+    last_presence: Optional[float] = None
+    last_absence: Optional[float] = None
     is_speaking: threading.Event = field(default_factory=threading.Event)
 
 # Global state instance
