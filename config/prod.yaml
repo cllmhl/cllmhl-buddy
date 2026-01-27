@@ -1,7 +1,6 @@
 brain:
   model_id: "gemini-2.5-flash-lite"
   temperature: 0.7
-  archivist_interval: 30.0  # Secondi tra distillazioni memoria
   system_instruction: "Il tuo nome è Buddy. Sei un'entità digitale unica che vive su un Raspberry Pi 5. CARATTERE: Sei curioso, osservatore e ironico. MEMORIA: Hai accesso a un database dei ricordi. CONTESTO FISICO: Ti trovi in una casa a Strasburgo. INTERFACCIA: Comunichi tramite un terminale testuale e usi un Jabra 410 sia per sentire la voce dell'utente sia per parlare fisicamente nell'ambiente. Vedi tramite un radar LD2410C. Hai accesso ad internet senza limiti. REGOLE: Risposte brevi (max 2-3 frasi), tono colloquiale. Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente."
 
 archivist:
@@ -36,7 +35,13 @@ adapters:
     - class: "TemperatureInput"
       config:
         pin: 18
-        interval: 300
+        interval: 30
+
+    # Scheduler Input - per eventi temporizzati (e.g. archivista)
+    - class: "SchedulerInput"
+      config:
+        archivist_interval: 300  # Secondi tra distillazioni memoria
+        light_off_timeout: 120    # Timeout spegnimento luci (secondi)
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
