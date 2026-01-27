@@ -38,6 +38,11 @@ adapters:
         pin: 18
         interval: 30
 
+    # Scheduler Input - per eventi temporizzati (e.g. archivista)
+    - class: "SchedulerInput"
+      config:
+        archivist_interval: 30.0  # Secondi tra distillazioni memoria
+
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
       config:

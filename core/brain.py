@@ -46,12 +46,6 @@ class BuddyBrain:
             raise ValueError("Config 'model_id' is required")
         self.model_id = config["model_id"]
         
-        # FIXME: Timer archivista
-        if "archivist_interval" not in config:
-            raise ValueError("Config 'archivist_interval' is required - controls memory distillation frequency")
-        self.archivist_interval = config["archivist_interval"]
-        self.last_archivist_time = time.time()
-        
         # FIXME: Timer per spegnimento luci
         self.presence_lost_timestamp: Optional[float] = None
         self.light_off_timeout: int = 300 # Secondi. TODO: Spostare in config.
@@ -71,9 +65,10 @@ class BuddyBrain:
             InputEventType.USER_SPEECH: self._handle_user_input,
             InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
+            InputEventType.TRIGGER_ARCHIVIST: self._handle_trigger_archivist,
         }
         
-        logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id}, archivist_interval: {self.archivist_interval}s)")
+        logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id})")
     
     def _init_chat_session(self):
         """Inizializza la sessione LLM"""
@@ -130,9 +125,6 @@ class BuddyBrain:
             else:
                 logger.warning(f"Unhandled event type: {input_event.type}")
             
-            # Controllo polling archivist (dopo ogni evento)
-            # FIXME: Timer archivista
-            output_events.extend(self._check_archivist_trigger())
         
         except KeyboardInterrupt:
             logger.info("Brain interrupted by user")
@@ -345,30 +337,18 @@ class BuddyBrain:
         logger.info("Resetting chat session...")
         self._init_chat_session()
     
-    def _check_archivist_trigger(self) -> List[OutputEvent]:
+    def _handle_trigger_archivist(self, event: InputEvent) -> List[OutputEvent]:
         """
-        Controlla se è il momento di triggerare la distillazione memoria.
-        Chiamato dopo ogni evento processato.
-        
-        Returns:
-            Lista contenente evento DISTILL_MEMORY se necessario
+        Gestisce l'evento di trigger dell'archivista, generando un OutputEvent.DISTILL_MEMORY.
         """
-        current_time = time.time()
-        elapsed = current_time - self.last_archivist_time
-        
-        if elapsed >= self.archivist_interval:
-            logger.debug(f"⏰ Archivist trigger (elapsed: {elapsed:.1f}s)")
-            self.last_archivist_time = current_time
-            
-            return [create_output_event(
-                OutputEventType.DISTILL_MEMORY,
-                None,
-                priority=EventPriority.LOW,
-                metadata={"elapsed_seconds": elapsed}
-            )]
-        
-        return []
-    
+        logger.info("⏰ Received TRIGGER_ARCHIVIST event, sending DISTILL_MEMORY output event.")
+        return [create_output_event(
+            OutputEventType.DISTILL_MEMORY,
+            None,
+            priority=EventPriority.LOW,
+            metadata=event.metadata # Passa i metadata dall'InputEvent (es. elapsed_seconds)
+        )]
+
     # FIXME: Timer per spegnimento luci
     def check_timers(self) -> List[OutputEvent]:
         """
@@ -382,10 +362,10 @@ class BuddyBrain:
             elapsed = time.time() - self.presence_lost_timestamp
             if elapsed >= self.light_off_timeout:
                 logger.info(f"💡 Light-off timer expired after {elapsed:.1f}s. Turning off lights.")
-                
+
                 # Reset timer
                 self.presence_lost_timestamp = None
-                
+
                 # Generate events to turn off lights
                 tools.set_lights_off()
 

@@ -10,11 +10,13 @@ from .radar_input import RadarInput
 from .temperature_input import TemperatureInput
 from .pipe_input import PipeInputAdapter
 from .wakeword_input import WakewordInput
+from .scheduler_input import SchedulerInput
 
 __all__ = [
     'EarInput',
     'RadarInput',
     'TemperatureInput',
     'PipeInputAdapter',
-    'WakewordInput'
+    'WakewordInput',
+    'SchedulerInput'
 ]
