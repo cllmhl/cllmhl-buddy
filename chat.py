@@ -213,6 +213,24 @@ def build_adapter_command(command: str):
     }
 
 
+def build_light_on():
+    """Costruisce un LIGHT_ON input event"""
+    return {
+        "type": "light_on",
+        "priority": "normal",
+        "content": True
+    }
+
+
+def build_light_off():
+    """Costruisce un LIGHT_OFF input event"""
+    return {
+        "type": "light_off",
+        "priority": "normal",
+        "content": False
+    }
+
+
 # ===== MENU =====
 def print_menu():
     """Stampa il menu principale"""
@@ -234,6 +252,10 @@ def print_menu():
     print(f"  {color('lonp', Colors.GREEN)}         → LED Parlo ON")
     print(f"  {color('loffp', Colors.GREEN)}        → LED Parlo OFF")
     print(f"  {color('lbp', Colors.GREEN)} <n>      → LED Parlo BLINK (n volte)")
+    
+    print(f"\n{color('LUCI AMBIENTE:', Colors.YELLOW + Colors.BOLD)}")
+    print(f"  {color('lighton', Colors.YELLOW)}      → Accendi luci")
+    print(f"  {color('lightoff', Colors.YELLOW)}     → Spegni luci")
     
     print(f"\n{color('COMANDI ADAPTER:', Colors.MAGENTA + Colors.BOLD)}")
     print(f"  {color('cmd', Colors.MAGENTA)} <nome>   → Invia comando adapter")
@@ -352,6 +374,17 @@ def interactive_loop():
                     event = build_adapter_command(args)
                     send_event(event)
                     print(color(f"✅ Inviato: ADAPTER_COMMAND '{args}'", Colors.MAGENTA))
+                
+                # ===== LUCI AMBIENTE =====
+                elif action == 'lighton':  # Accendi luci
+                    event = build_light_on()
+                    send_event(event)
+                    print(color("✅ Inviato: LIGHT_ON", Colors.YELLOW))
+                    
+                elif action == 'lightoff':  # Spegni luci
+                    event = build_light_off()
+                    send_event(event)
+                    print(color("✅ Inviato: LIGHT_OFF", Colors.YELLOW))
                 
                 # ===== LED ASCOLTO (Blu) =====
                 elif action == 'lona':  # LED Ascolto ON

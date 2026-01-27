@@ -41,7 +41,7 @@ adapters:
     - class: "SchedulerInput"
       config:
         archivist_interval: 300  # Secondi tra distillazioni memoria
-        light_off_timeout: 5    # Timeout spegnimento luci (secondi)
+        light_off_timeout: 120    # Timeout spegnimento luci (secondi)
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
