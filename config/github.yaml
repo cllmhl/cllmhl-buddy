@@ -11,32 +11,6 @@ archivist:
 
 adapters:
   input:
-    # Wake word detection con Porcupine
-    - class: "WakewordInput"
-      config:
-        wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.7  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
-    
-    # Speech recognition con Jabra (attivato dopo wakeword)
-    - class: "EarInput"
-      config:
-        stt_mode: "cloud"  # "cloud" o "local"
-        max_silence_seconds: 7.0  # Timeout silenzio (come Alexa)
-
-    # Radar fisico
-    - class: "RadarInput"
-      config:
-        port: "/dev/ttyAMA0"
-        baudrate: 256000
-        interval: 0.5 # Intervallo di scansione in secondi
-        sensitivity: 3  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
-
-    # Sensore temperatura/umidità fisico
-    - class: "TemperatureInput"
-      config:
-        pin: 18
-        interval: 30
-
     # Scheduler Input - per eventi temporizzati (e.g. archivista)
     - class: "SchedulerInput"
       config:
@@ -54,23 +28,6 @@ adapters:
       config:
         pipe_path: "data/buddy.out"
         event_types: ["speak"]
-    
-    # Voice output con Jabra
-    - class: "JabraVoiceOutput"
-      config:
-        queue_maxsize: 50
-        tts_mode: "cloud"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
-        voice_name: "it-IT-Standard-A"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
-
-    # LED con GPIO
-    - class: "GPIOLEDOutput"
-      config:
-        queue_maxsize: 100
-        led_ascolto_pin: 26  # LED Blu
-        led_parlo_pin: 21    # LED Verde
-        blink_on_time: 1.0
-        blink_off_time: 1.0
-
 queues:
   input_maxsize: 100
   database_maxsize: 500
@@ -85,7 +42,7 @@ logging:
   handlers:
     file:
       class: logging.handlers.RotatingFileHandler
-      filename: logs/dev.log  # Resolved against BUDDY_HOME at runtime
+      filename: logs/github.log  # Resolved against BUDDY_HOME at runtime
       maxBytes: 10485760  # 10MB
       backupCount: 3
       formatter: standard

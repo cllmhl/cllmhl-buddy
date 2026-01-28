@@ -6,51 +6,13 @@ Minimal entry point for Buddy AI Assistant.
 import os
 import sys
 import logging
+import logging.config
 from pathlib import Path
 from typing import Dict, Any
-from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 from core import BuddyOrchestrator
 from config.config_loader import ConfigLoader
-
-
-def setup_logging(config: Dict[str, Any]) -> None:
-    """
-    Configura il sistema di logging.
-    
-    Args:
-        config: Configurazione completa di Buddy
-    """
-    log_config = config['logging']
-    buddy_home = Path(config['buddy_home'])
-    
-    log_file_path = log_config.get('log_file')
-    
-    # Risolvi il path del log rispetto a BUDDY_HOME
-    log_file = buddy_home / log_file_path
-    handler = RotatingFileHandler(
-        log_file,
-        maxBytes=log_config.get('max_bytes'),
-        backupCount=log_config.get('backup_count')
-    )
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
-        datefmt='%H:%M:%S',
-    )
-    handler.setFormatter(formatter)
-    
-    # Root logger
-    logger = logging.getLogger()
-    log_level_str = log_config.get('level').upper()
-    log_level = getattr(logging, log_level_str)
-    logger.setLevel(log_level)
-    logger.addHandler(handler)
-    
-    # Silence noisy libraries
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("chromadb").setLevel(logging.INFO)
-    logging.getLogger("posthog").setLevel(logging.ERROR)
 
 
 def main():
@@ -67,11 +29,16 @@ def main():
         print(f"❌ ERROR: {e}")
         sys.exit(1)
     
-    # 3. Setup logging
-    setup_logging(config)
+    # 3. Setup logging, resolve relative log file path against BUDDY_HOME
+    logging_config = config['logging']
+    log_filename = logging_config['handlers']['file']['filename']
+    logging_config['handlers']['file']['filename'] = str(Path(os.getenv('BUDDY_HOME', '.')).resolve() / log_filename)
+    
+    logging.config.dictConfig(logging_config)
     
     logger = logging.getLogger(__name__)
-    logger.info(f"🏠 BUDDY_HOME: {config['buddy_home']}")
+    logger.info(f"🏠 BUDDY_HOME: {os.getenv('BUDDY_HOME', '.')}")
+    logger.info(f"🏠 BUDDY_CONFIG: {os.getenv('BUDDY_CONFIG', '.')}")
     logger.info(f"🚀 Starting Buddy with config: {config.get('_config_file', 'unknown')}")
     
     try:

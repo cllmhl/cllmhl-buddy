@@ -18,5 +18,8 @@
     // 1. Se .env non esiste, lo crea da .env.example
     // 2. Aggiorna pip e installa le dipendenze da requirements.txt.
     "postCreateCommand": "if [ ! -f .env ]; then cp .env.example .env; fi && pip install --upgrade pip && pip install -r requirements.txt",
-    "remoteUser": "vscode"
+    "remoteUser": "vscode",
+    "remoteEnv": {
+        "BUDDY_HOME": "/workspaces/cllmhl-buddy"
+    }
 }

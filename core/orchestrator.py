@@ -192,10 +192,9 @@ class BuddyOrchestrator:
     
     def _print_banner(self) -> None:
         """Stampa banner di avvio"""
-        print("\n" + "="*60)
-        print("🤖 BUDDY OS - Hexagonal Architecture")
-        print("="*60)
-        print(f"Brain Model: {self.config['brain']['model_id']}")
-        print(f"Input Adapters: {len(self.adapter_manager.input_adapters)}")
-        print(f"Output Adapters: {len(self.adapter_manager.output_adapters)}")
-        print("="*60 + "\n")
+        self.logger.info("🤖 BUDDY OS - Hexagonal Architecture")
+        self.logger.info("="*60)
+        self.logger.info(f"Brain Model: {self.config['brain']['model_id']}")
+        self.logger.info(f"Input Adapters: {len(self.adapter_manager.input_adapters)}")
+        self.logger.info(f"Output Adapters: {len(self.adapter_manager.output_adapters)}")
+        self.logger.info("="*60)
