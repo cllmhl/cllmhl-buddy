@@ -28,6 +28,10 @@ adapters:
       config:
         pipe_path: "data/buddy.out"
         event_types: ["speak"]
+
+    # Pipe Output - IPC communication (monitor all events)
+    - class: "LogOutput"
+
 queues:
   input_maxsize: 100
   database_maxsize: 500
