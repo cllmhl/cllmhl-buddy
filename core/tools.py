@@ -7,6 +7,8 @@ import os
 import pytz
 import time
 import queue
+import requests
+import wikipedia
 from typing import Optional
 from tavily import TavilyClient
 from core.state import global_state # Importa lo stato globale
@@ -149,3 +151,126 @@ def get_current_position():
         "city": "Strasburgo",    # Opzionale, aiuta Gemini nel contesto
         "country": "Francia"
     }
+
+def get_weather_forecast(citta: Optional[str] = "Strasburgo", refresh_trigger: str = "0"):
+    """
+    Ottiene le previsioni meteo attuali e future.
+    Gestisce automaticamente la ricerca delle coordinate per qualsiasi città.
+    
+    Args:
+        citta: (Opzionale) Il nome della città.
+               Default: "Strasburgo" (casa).
+               IMPORTANTE: Se l'utente non specifica una città, USA IL DEFAULT. NON CHIEDERE CONFERMA.
+        refresh_trigger: Genera SEMPRE un numero casuale diverso qui.
+                         Serve a forzare l'aggiornamento dei dati meteo in tempo reale.
+    """
+    logger.info(f"🌦️ METEO: Analizzo meteo per '{citta}' (Trigger: {refresh_trigger})...")
+    
+    try:
+        # STEP 1: Geocoding (Trova coordinate dal nome città)
+        # Usiamo l'API gratuita di OpenMeteo anche per questo
+        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
+        geo_res = requests.get(geo_url, params={"name": citta, "count": 1, "language": "it"}).json()
+        
+        if not geo_res.get("results"):
+            return f"Non ho trovato la città '{citta}' sulle mappe."
+            
+        location = geo_res["results"][0]
+        lat, lon = location["latitude"], location["longitude"]
+        nome_reale = location["name"]
+        
+        # STEP 2: Previsioni Meteo
+        meteo_url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": ["temperature_2m", "relative_humidity_2m", "weather_code"],
+            "hourly": ["temperature_2m", "precipitation_probability", "weather_code"],
+            "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_probability_max"],
+            "timezone": "auto"
+        }
+        
+        data = requests.get(meteo_url, params=params).json()
+        
+        # Estraiamo i dati crudi per darli a Gemini
+        curr = data["current"]
+        daily = data["daily"]
+        hourly = data["hourly"]
+        
+        # Prepara previsioni per i prossimi 5 giorni
+        previsioni_giornaliere = []
+        for i in range(5):
+            try:
+                previsioni_giornaliere.append({
+                    "data": daily["time"][i],
+                    "max": f"{daily['temperature_2m_max'][i]}°C",
+                    "min": f"{daily['temperature_2m_min'][i]}°C",
+                    "prob_pioggia": f"{daily['precipitation_probability_max'][i]}%"
+                })
+            except IndexError:
+                break # Se ci sono meno giorni, fermati
+
+        # Prepara previsioni orarie (prossime 24 ore)
+        previsioni_orarie = []
+        now_iso = datetime.now().isoformat()
+        
+        for i in range(len(hourly["time"])):
+            # Cerca l'ora corrente o futura
+            if hourly["time"][i] >= now_iso[:13]: # Confronto approssimativo per ora (es. 2024-01-30T15)
+                # Prendi le prossime 24 ore da qui
+                end_idx = min(i + 24, len(hourly["time"]))
+                
+                for j in range(i, end_idx):
+                     previsioni_orarie.append({
+                        "ora": hourly["time"][j],
+                        "temp": f"{hourly['temperature_2m'][j]}°C",
+                        "pioggia": f"{hourly['precipitation_probability'][j]}%",
+                        "code": hourly['weather_code'][j]
+                    })
+                break
+
+        # Costruiamo un JSON pulito per l'LLM
+        report = {
+            "luogo": f"{nome_reale} ({location.get('country')})",
+            "adesso": {
+                "temperatura": f"{curr['temperature_2m']}°C",
+                "umidita": f"{curr['relative_humidity_2m']}%",
+                "codice_meteo": curr['weather_code'] # Gemini sa interpretare i codici WMO da solo
+            },
+            "previsioni_orarie": previsioni_orarie,
+            "previsioni_giornaliere": previsioni_giornaliere
+        }
+        return str(report)
+
+    except Exception as e:
+        return f"Errore nel recupero meteo: {e}"
+
+def search_wikipedia(query: str, lingua: str = "it"):
+    """
+    Cerca definizioni, biografie, eventi storici o spiegazioni tecniche su Wikipedia.
+    NON usare per notizie recenti (meteo, sport live), usa solo per cultura generale.
+    
+    Args:
+        query: L'argomento da cercare (es. "Alessandro Volta", "Teoria della Relatività").
+        lingua: La lingua della pagina ('it' per italiano, 'en' per inglese, 'fr' per francese).
+    """
+    logger.info(f"📚 WIKI: Cerco '{query}' in {lingua}...")
+    
+    wikipedia.set_lang(lingua)
+    
+    try:
+        # Cerchiamo e prendiamo un riassunto di massimo 3 frasi
+        # auto_suggest=False evita che cerchi cose a caso se sbaglia a digitare
+        summary = wikipedia.summary(query, sentences=3, auto_suggest=True)
+        return f"Da Wikipedia ({query}): {summary}"
+        
+    except wikipedia.exceptions.DisambiguationError as e:
+        # Se ci sono troppi risultati (es. "Riso"), restituiamo le opzioni
+        options = e.options[:5] # Prendiamo solo le prime 5 opzioni
+        return f"La ricerca è ambigua. Potresti riferirti a: {', '.join(options)}. Chiedi all'utente di specificare."
+        
+    except wikipedia.exceptions.PageError:
+        return f"Non ho trovato nessuna pagina Wikipedia chiamata '{query}'."
+        
+    except Exception as e:
+        return f"Errore Wikipedia: {e}"

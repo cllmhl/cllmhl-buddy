@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 
 from .events import Event, InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_output_event
-from .tools import get_current_time, web_search, get_current_temp, get_current_position, set_lights_on, set_lights_off
+from .tools import get_current_time, web_search, get_current_temp, get_current_position, set_lights_on, set_lights_off, get_weather_forecast, search_wikipedia
 import core.tools as tools
 from .state import global_state # Importa lo stato globale
 
@@ -79,7 +79,7 @@ class BuddyBrain:
                 config=types.GenerateContentConfig(
                     systemInstruction=self.config["system_instruction"],
                     temperature=self.config["temperature"],
-                    tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search],
+                    tools=[get_current_time, get_current_position, get_current_temp, set_lights_on, set_lights_off, web_search, get_weather_forecast, search_wikipedia],
                     thinkingConfig=types.ThinkingConfig(includeThoughts=False)
                 )
             )

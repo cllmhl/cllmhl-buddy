@@ -166,7 +166,8 @@ class EarInput(InputPort):
             
             # Prova ad aprire il microfono (context manager)
             try:
-                mic_source.__enter__()
+                with SuppressStream():
+                    mic_source.__enter__()
             except Exception as e:
                 logger.error(f"Failed to open microphone stream: {e}")
                 raise
