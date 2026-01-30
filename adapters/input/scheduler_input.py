@@ -19,13 +19,15 @@ class SchedulerInput(InputPort):
         super().__init__(name, config, input_queue)
         self.archivist_interval = config["archivist_interval"]
         self.light_off_timeout = int(config["light_off_timeout"])
+        self.conversation_chat_timeout = int(config["conversation_chat_timeout"])
         
         # Inizializza il timer archivista se non impostato (evita trigger immediato all'avvio)
         if global_state.last_archivist_trigger == 0.0:
             global_state.last_archivist_trigger = time.time()
 
+        self.last_processed_conversation_end = 0.0
         self.worker_thread = None
-        logger.info(f"⏰ SchedulerInput initialized (archivist_interval: {self.archivist_interval}s, light_off_timeout: {self.light_off_timeout}s)")
+        logger.info(f"⏰ SchedulerInput initialized (archivist_interval: {self.archivist_interval}s, light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s)")
 
     def start(self) -> None:
         self.running = True
@@ -55,10 +57,39 @@ class SchedulerInput(InputPort):
                 break
 
             self._check_archivist_trigger()
+            self._check_chat_timeout()
 
             # Controlla luci solo tra le 17:00 e le 09:00
             if current_hour >= 17 or current_hour < 9:
                 self._check_lights()
+
+    def _check_chat_timeout(self) -> None:
+        """Controlla se è necessario resettare la sessione chat per inattività"""
+        if global_state.last_conversation_start is None or global_state.last_conversation_end is None:
+            return
+            
+        # Se siamo in conversazione, ignoriamo
+        if global_state.last_conversation_start > global_state.last_conversation_end:
+            return
+            
+        # Se abbiamo già processato questo evento di fine conversazione, ignoriamo
+        if global_state.last_conversation_end == self.last_processed_conversation_end:
+            return
+            
+        # Se è passato il tempo di timeout
+        if time.time() - global_state.last_conversation_end >= self.conversation_chat_timeout:
+            reset_event = create_input_event(
+                InputEventType.CHAT_SESSION_RESET,
+                None,
+                source=self.name,
+                priority=EventPriority.LOW,
+                metadata={"reason": "timeout", "timeout_seconds": self.conversation_chat_timeout}
+            )
+            self.input_queue.put(reset_event)
+            logger.info(f"⏳ Chat session reset triggered (timeout: {self.conversation_chat_timeout}s)")
+            
+            # Segniamo come processato per non inviarlo di nuovo per la stessa sessione
+            self.last_processed_conversation_end = global_state.last_conversation_end
 
     def _check_archivist_trigger(self) -> None:
         if time.time() - global_state.last_archivist_trigger >= self.archivist_interval:

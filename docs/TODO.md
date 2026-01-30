@@ -22,7 +22,7 @@
 - [ ] **calendar:** Buddy accede al mio calendar e mi ricorda delle cose.
 
 ### 2.1 Log term Memory. Vedi context.png
-- [ ] **Come funziona Buddy:** Come funziona il gioco? quanto dura una chat? Quale è la dimensione ragionevole di un contesto per una AI? Posso recuperare intere chat del giorno prima a comando? Posso lierare spazio/contesto a comando?
+- [ ] **Gestione Sessione Chat:** Adesso distilliamo le cose a caso. Avrebbe senso distillare le sessioni invece? Ricordiamoci che le sessioni durano una conversazione + 15 minuti.
 - [ ] **Database SQLite e memoria:** Ottimizzazione storage per log conversazioni e metadati persistenti. Cosa salvo? Solo quello che dico io o anche quello che dice lui? Come impara cosa mi piace e cosa no delle sue risposte?
 - [ ] **Questionario? Cheklist?:** Esiste un set di domande standard per arricchirlo? 
 - [ ] **RAG (Il Diario):** Ricerca semantica nel DB per recupero contesto storico prima di rispondere (tifo Juvenus, mi piace il tennis, sono un fisico, sono sposato con due figli, ....). 

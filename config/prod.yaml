@@ -35,13 +35,14 @@ adapters:
     - class: "TemperatureInput"
       config:
         pin: 18
-        interval: 30
+        interval: 900  # Intervallo di lettura in secondi
 
     # Scheduler Input - per eventi temporizzati (e.g. archivista)
     - class: "SchedulerInput"
       config:
         archivist_interval: 300  # Secondi tra distillazioni memoria
         light_off_timeout: 120    # Timeout spegnimento luci (secondi)
+        conversation_chat_timeout: 900 # Timeout reset sessione chat (secondi)
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
@@ -85,7 +86,7 @@ adapters:
         sqlite_path: "data/system.db"
         chroma_path: "data/memory"
         archivist_config:
-          model_id: "gemini-2.5-flash-lite"
+          model_id: "gemini-pro-latest"
           temperature: 0.1
           system_instruction: "Sei l'Archivista di Buddy. Distilla la conversazione in fatti memorabili. Rispondi ESCLUSIVAMENTE con un array JSON di oggetti con chiavi: 'fatto', 'categoria', 'importanza' (1-5)."
 

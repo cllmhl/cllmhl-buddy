@@ -61,6 +61,7 @@ class BuddyBrain:
             InputEventType.TRIGGER_ARCHIVIST: self._handle_trigger_archivist,
             InputEventType.LIGHT_ON: self._handle_light_on,
             InputEventType.LIGHT_OFF: self._handle_light_off,
+            InputEventType.CHAT_SESSION_RESET: self._handle_chat_session_reset,
         }
         
         logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id})")
@@ -157,7 +158,10 @@ class BuddyBrain:
         Gestisce rilevamento wakeword.
         """
         output_events: List[OutputEvent] = []
-        
+
+        # --- Inizio conversazione ---
+        global_state.last_conversation_start = time.time()
+
         wakeword = event.metadata.get('wakeword', 'unknown') if event.metadata else 'unknown'
         logger.info(f"👂 Wakeword detected: {wakeword}")
         
@@ -177,6 +181,9 @@ class BuddyBrain:
         """
         output_events: List[OutputEvent] = []
         
+        # --- Fine conversazione ---
+        global_state.last_conversation_end = time.time()
+
         logger.info("🔊 Conversation ended - turning off LED and reactivating wakeword")
         
         # Spegne LED ascolto
@@ -307,11 +314,6 @@ class BuddyBrain:
             logger.error(f"LLM API error: {e}", exc_info=True)
             return "Mi dispiace, ho avuto un problema tecnico."
     
-    def reset_session(self) -> None:
-        """Reset della sessione chat (utile per testing)"""
-        logger.info("Resetting chat session...")
-        self._init_chat_session()
-    
     def _handle_trigger_archivist(self, event: InputEvent) -> List[OutputEvent]:
         """
         Gestisce l'evento di trigger dell'archivista, generando un OutputEvent.DISTILL_MEMORY.
@@ -323,4 +325,13 @@ class BuddyBrain:
             priority=EventPriority.LOW,
             metadata=event.metadata # Passa i metadata dall'InputEvent (es. elapsed_seconds)
         )]
+
+    def _handle_chat_session_reset(self, event: InputEvent) -> List[OutputEvent]:
+        """
+        Gestisce reset sessione chat per timeout.
+        """
+        reason = (event.metadata or {}).get('reason', 'unknown')
+        logger.info(f"🔄 Received CHAT_SESSION_RESET (reason: {reason}). Resetting session.")
+        self._init_chat_session()
+        return []
     

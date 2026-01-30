@@ -34,6 +34,7 @@ class InputEventType(Enum):
 
     # System triggers
     TRIGGER_ARCHIVIST = "trigger_archivist" # Trigger per distillazione memoria archivista
+    CHAT_SESSION_RESET = "chat_session_reset" # Reset sessione LLM per timeout
 
 class OutputEventType(Enum):
     """
