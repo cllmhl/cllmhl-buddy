@@ -16,11 +16,8 @@
 ## 2.0 Ufficio
 
 ### 2.1 Action tools. Vedi context.png
-- [ ] **get_presence_events:** Buddy deve sapere gli ultimi eventi di presenza/assenza per decidere se parlare, spegnere le luci, ... 
-- [ ] **weather_forecast:** Buddy mi dice le previsioni usando Open-Meteo
 - [ ] **local_newst:** Buddy mi dice notizie (Glebali, Locali, ..) usando degli RSS feeds
 - [ ] **sport_newst:** Verificare come fare...
-- [ ] **wikipedia:** Buddy cerca definizioni, storia e biografie su Wikipedia.
 - [ ] **mail:** Buddy accede alle mie mail e se sono in casa me la legge.
 - [ ] **calendar:** Buddy accede al mio calendar e mi ricorda delle cose.
 
