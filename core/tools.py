@@ -105,7 +105,7 @@ def get_current_temp() -> str:
 
 def get_current_time() -> str:
     """
-    Ritorna l'ora corrente in formato ISO 8601 per il fuso orario specificato (Europe/Rome).
+    Ritorna l'ora corrente in formato ISO 8601.
     """
     logger.info("🛠️ Tool get_current_time called")
     time_zone = "Europe/Rome"
@@ -140,8 +140,8 @@ def web_search(query: str):
 
 def get_current_position():
     """
-    Restituisce la posizione geografica esatta (GPS) di Buddy (Casa).
-    Usa questo tool quando l'utente chiede informazioni sulla posizione geografica di Buddy.
+    Restituisce la posizione geografica corrente di Buddy e Michele.
+    Usalo per sapere latitudine, longitudine, città e paese.
     """
     logger.info("🛠️ Tool get_current_position called")
 
@@ -152,32 +152,47 @@ def get_current_position():
         "country": "Francia"
     }
 
-def get_weather_forecast(citta: Optional[str] = "Strasburgo", refresh_trigger: str = "0"):
+def get_weather_forecast(citta: Optional[str] = None, refresh_trigger: str = "0"):
     """
     Ottiene le previsioni meteo attuali e future.
+    Se l'utente non specifica una città, usa la posizione corrente. NON CHIEDER ALL'UTENTE LA CITTÀ.
     Gestisce automaticamente la ricerca delle coordinate per qualsiasi città.
     
     Args:
         citta: (Opzionale) Il nome della città.
-               Default: "Strasburgo" (casa).
-               IMPORTANTE: Se l'utente non specifica una città, USA IL DEFAULT. NON CHIEDERE CONFERMA.
+               Se non specificato, usa la posizione corrente.
         refresh_trigger: Genera SEMPRE un numero casuale diverso qui.
                          Serve a forzare l'aggiornamento dei dati meteo in tempo reale.
     """
     logger.info(f"🌦️ METEO: Analizzo meteo per '{citta}' (Trigger: {refresh_trigger})...")
     
     try:
-        # STEP 1: Geocoding (Trova coordinate dal nome città)
-        # Usiamo l'API gratuita di OpenMeteo anche per questo
-        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
-        geo_res = requests.get(geo_url, params={"name": citta, "count": 1, "language": "it"}).json()
-        
-        if not geo_res.get("results"):
-            return f"Non ho trovato la città '{citta}' sulle mappe."
+        lat = None
+        lon = None
+        nome_reale = None
+        country = None
+
+        if not citta:
+            # Usa posizione corrente se nessuna città è specificata
+            logger.info("📍 Nessuna città specificata, uso get_current_position()")
+            pos = get_current_position()
+            lat = pos["latitude"]
+            lon = pos["longitude"]
+            nome_reale = pos.get("city", "Posizione Corrente")
+            country = pos.get("country", "")
+        else:
+            # STEP 1: Geocoding (Trova coordinate dal nome città)
+            # Usiamo l'API gratuita di OpenMeteo anche per questo
+            geo_url = "https://geocoding-api.open-meteo.com/v1/search"
+            geo_res = requests.get(geo_url, params={"name": citta, "count": 1, "language": "it"}).json()
             
-        location = geo_res["results"][0]
-        lat, lon = location["latitude"], location["longitude"]
-        nome_reale = location["name"]
+            if not geo_res.get("results"):
+                return f"Non ho trovato la città '{citta}' sulle mappe."
+                
+            location = geo_res["results"][0]
+            lat, lon = location["latitude"], location["longitude"]
+            nome_reale = location["name"]
+            country = location.get("country", "")
         
         # STEP 2: Previsioni Meteo
         meteo_url = "https://api.open-meteo.com/v1/forecast"
@@ -231,7 +246,7 @@ def get_weather_forecast(citta: Optional[str] = "Strasburgo", refresh_trigger: s
 
         # Costruiamo un JSON pulito per l'LLM
         report = {
-            "luogo": f"{nome_reale} ({location.get('country')})",
+            "luogo": f"{nome_reale} ({country})",
             "adesso": {
                 "temperatura": f"{curr['temperature_2m']}°C",
                 "umidita": f"{curr['relative_humidity_2m']}%",

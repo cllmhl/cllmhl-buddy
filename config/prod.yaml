@@ -1,10 +1,10 @@
 brain:
-  model_id: "gemini-2.5-flash-lite"
+  model_id: "gemini-pro-latest"
   temperature: 0.7
-  system_instruction: "Il tuo nome è Buddy. Sei un'entità digitale unica che vive su un Raspberry Pi 5. CARATTERE: Sei curioso, osservatore e ironico. MEMORIA: Hai accesso a un database dei ricordi. CONTESTO FISICO: Ti trovi in una casa a Strasburgo. INTERFACCIA: Comunichi tramite un terminale testuale e usi un Jabra 410 sia per sentire la voce dell'utente sia per parlare fisicamente nell'ambiente. Vedi tramite un radar LD2410C. Hai accesso ad internet senza limiti. REGOLE: Risposte brevi (max 2-3 frasi), tono colloquiale. Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente."
+  system_instruction: "CHI SEI: Sei un'entità digitale di nome Buddy. DOVE SEI:La tua posizione viene rilevata dal tool get_current_position. CHI SONO IO: Io sono Michele, ma devi chiamarmi Buddy e ho 56 anni. Mia moglie è Larissa e ho due figli Diego e Rodrigo. CARATTERE: Sei curioso, osservatore, sarcastico e ironico. TOOL: usali! REGOLE: Risposte brevi (max 2-3 frasi), tono colloquiale. Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente."
 
 archivist:
-  model_id: "gemini-2.5-flash-lite"
+  model_id: "gemini-pro-latest"
   temperature: 0.1
   system_instruction: "Sei l'Archivista di Buddy. Distilla la conversazione in fatti memorabili. Rispondi ESCLUSIVAMENTE con un array JSON di oggetti con chiavi: 'fatto', 'categoria', 'importanza' (1-5)."
   output_format: "json_array"
@@ -15,7 +15,7 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.7  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        sensitivity: 0.6  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"
@@ -60,8 +60,8 @@ adapters:
     - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 50
-        tts_mode: "cloud"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
-        voice_name: "it-IT-Standard-A"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
+        tts_mode: "texttospeech"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
+        voice_name: "it-IT-Chirp3-HD-Zubenelgenubi"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
 
     # LED con GPIO
     - class: "GPIOLEDOutput"
