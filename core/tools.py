@@ -19,7 +19,7 @@ from core.events import create_output_event, create_input_event, OutputEventType
 # Inizializza solo quando necessario (lazy-load)
 tavily: Optional[TavilyClient] = None
 
-# FIXME: questo per il giro di Alexa. Ha senso?
+# Global input queue for tools
 _INPUT_QUEUE: Optional[queue.PriorityQueue] = None
 
 logger = logging.getLogger(__name__)

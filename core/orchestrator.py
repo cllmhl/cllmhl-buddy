@@ -63,8 +63,7 @@ class BuddyOrchestrator:
         queue_config = self.config['queues']
         self.input_queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=queue_config['input_maxsize'])
 
-        # Inject queue into tools
-        # FIXME: questo per il giro di Alexa. Ha senso?
+        # Inject queue into tools module
         tools.set_input_queue(self.input_queue)
 
         # Event Router
