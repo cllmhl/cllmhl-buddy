@@ -46,9 +46,7 @@ class EarInput(InputPort):
         logger.info(f"✅ Jabra auto-detected for EarInput: PyAudio index={self.device_index}")
         
         # Stato conversazione
-        self._conversation_active = False
         self._conversation_thread: Optional[threading.Thread] = None
-        self._stop_conversation = threading.Event()
         
         # Riconoscitore configurato
         self._recognizer = self._setup_recognizer()
@@ -78,18 +76,15 @@ class EarInput(InputPort):
         self.running = False
         
         # Ferma conversazione se attiva
-        if self._conversation_active:
-            self._stop_conversation.set()
-            if self._conversation_thread and self._conversation_thread.is_alive():
-                self._conversation_thread.join(timeout=3.0)
+        if self._conversation_thread and self._conversation_thread.is_alive():
+            self._conversation_thread.join(timeout=3.0)
         
         logger.info(f"⏹️  {self.name} stopped")
     
     def supported_commands(self):
         """Dichiara comandi supportati"""
         return {
-            AdapterCommand.VOICE_INPUT_START,
-            AdapterCommand.VOICE_INPUT_STOP
+            AdapterCommand.VOICE_INPUT_START
         }
     
     def handle_command(self, command: AdapterCommand) -> bool:
@@ -103,31 +98,20 @@ class EarInput(InputPort):
             True se gestito, False se ignorato
         """
         if command == AdapterCommand.VOICE_INPUT_START:
-            if not self._conversation_active:
+            if not (self._conversation_thread and self._conversation_thread.is_alive()):
                 self._start_conversation()
                 return True
             else:
                 logger.debug("Conversation already active, ignoring START")
                 return True
         
-        elif command == AdapterCommand.VOICE_INPUT_STOP:
-            if self._conversation_active:
-                self._stop_conversation.set()
-                return True
-            else:
-                logger.debug("No conversation active, ignoring STOP")
-                return True
-        
         return False
     
     def _start_conversation(self) -> None:
         """Avvia thread conversazione"""
-        if self._conversation_active:
+        if self._conversation_thread and self._conversation_thread.is_alive():
             logger.warning("⚠️  Conversation already active")
             return
-        
-        self._conversation_active = True
-        self._stop_conversation.clear()
         
         self._conversation_thread = threading.Thread(
             target=self._conversation_loop,
@@ -146,7 +130,7 @@ class EarInput(InputPort):
         logger.info("👂 Ear conversation session started")
         
         # Piccolo delay per dare tempo al wakeword di rilasciare il dispositivo
-        time.sleep(0.2)
+        # time.sleep(0.2)
         
         last_interaction_time = time.time()
         mic_source = None
@@ -175,7 +159,7 @@ class EarInput(InputPort):
             try:
                 source = mic_source
                 buddy_was_speaking = False
-                while self.running and not self._stop_conversation.is_set():
+                while self.running:
                     # Se Buddy ha appena smesso di parlare, resetta il timer
                     if buddy_was_speaking and not global_state.is_speaking.is_set():
                         logger.debug("Buddy finished speaking, resetting silence timer.")
@@ -198,9 +182,8 @@ class EarInput(InputPort):
                         # 3. Se sente qualcosa, resetta il timeout
                         last_interaction_time = time.time()
                         
-                        # 4. Processa audio. Se sta parlando, è un'interruzione
-                        is_barge_in = global_state.is_speaking.is_set()
-                        self._process_audio(audio, False)
+                        # 4. Processa audio
+                        self._process_audio(audio)
                     
                     except sr.WaitTimeoutError:
                         # Nessun audio, continua loop
@@ -230,15 +213,13 @@ class EarInput(InputPort):
             )
             self.input_queue.put(conversation_end_event)
             
-            self._conversation_active = False
             logger.info("👂 Ear conversation session ended")
     
-    def _process_audio(self, audio, is_barge_in: bool = False) -> None:
+    def _process_audio(self, audio) -> None:
         """Processa audio e crea evento.
         
         Args:
             audio: Dati audio da processare
-            is_barge_in: Se True, invia un evento INTERRUPT
         """
         try:
             text = self._recognizer.recognize_google(audio, language="it-IT")  # type: ignore[attr-defined]

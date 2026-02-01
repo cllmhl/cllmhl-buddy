@@ -74,7 +74,7 @@ class AdapterManager:
             commands.append(AdapterCommand.VOICE_INPUT_START)
         elif event.type == InputEventType.CONVERSATION_END:
             commands.append(AdapterCommand.WAKEWORD_LISTEN_START)
-        elif event.type == InputEventType.INTERRUPT or event.type == InputEventType.USER_SPEECH:
+        elif event.type == InputEventType.USER_SPEECH: # barge-in
             commands.append(AdapterCommand.VOICE_OUTPUT_STOP)
         if not commands:
             return

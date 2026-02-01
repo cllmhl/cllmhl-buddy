@@ -169,6 +169,7 @@ class WakewordInput(InputPort):
                             priority=EventPriority.HIGH,
                             metadata={'wakeword': self._wakeword}
                         )
+                        logger.info("🎤 Wake word detected")
                         self.input_queue.put(event)
                 except (OSError, IOError) as e:
                     # Stream closed by stop() - exit cleanly
