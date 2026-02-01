@@ -256,6 +256,10 @@ def print_menu():
     print(f"\n{color('LUCI AMBIENTE:', Colors.YELLOW + Colors.BOLD)}")
     print(f"  {color('lighton', Colors.YELLOW)}      → Accendi luci")
     print(f"  {color('lightoff', Colors.YELLOW)}     → Spegni luci")
+
+    print(f"\n{color('TAPO CONTROL:', Colors.CYAN + Colors.BOLD)}")
+    print(f"  {color('tapo on [target]', Colors.CYAN)}    → Accendi (target: stanza/ingresso/tutto)")
+    print(f"  {color('tapo off [target]', Colors.CYAN)}   → Spegni (target: stanza/ingresso/tutto)")
     
     print(f"\n{color('COMANDI ADAPTER:', Colors.MAGENTA + Colors.BOLD)}")
     print(f"  {color('cmd', Colors.MAGENTA)} <nome>   → Invia comando adapter")
@@ -386,6 +390,28 @@ def interactive_loop():
                     send_event(event)
                     print(color("✅ Inviato: LIGHT_OFF", Colors.YELLOW))
                 
+                # ===== TAPO CONTROL =====
+                elif action == 'tapo':
+                    parts = args.split()
+                    if not parts:
+                         print(color("⚠️  Uso: tapo <on|off> [stanza|ingresso|tutto]", Colors.RED))
+                         continue
+                         
+                    sub_cmd = parts[0].lower()
+                    target = parts[1].lower() if len(parts) > 1 else "tutto"
+                    
+                    if sub_cmd == 'on':
+                        event = build_direct_output("light_on", target)
+                        print(color(f"✅ Inviato: LIGHT_ON target='{target}'", Colors.CYAN))
+                    elif sub_cmd == 'off':
+                        event = build_direct_output("light_off", target)
+                        print(color(f"✅ Inviato: LIGHT_OFF target='{target}'", Colors.CYAN))
+                    else:
+                        print(color(f"❌ Comando sconosciuto: {sub_cmd}", Colors.RED))
+                        continue
+                    
+                    send_event(event)
+
                 # ===== LED ASCOLTO (Blu) =====
                 elif action == 'lona':  # LED Ascolto ON
                     event = build_led_control('ascolto', 'on')

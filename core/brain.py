@@ -251,7 +251,6 @@ class BuddyBrain:
     
     def _handle_temperature_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di temperatura."""
-        output_events: List[OutputEvent] = []
 
         # Aggiorna lo stato globale
         temp = float(event.content)
@@ -262,19 +261,23 @@ class BuddyBrain:
         
         logger.info(f"🌡️  Temperature/Humidity updated in global state: {temp}°C / {humidity}%")
    
-        return output_events
+        return []
 
     def _handle_light_on(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce comando accensione luci."""
         logger.info("💡 Received LIGHT_ON event. Invoking tools.set_lights_on()")
-        tools.set_lights_on()
-        return []
+        return [create_output_event(
+            OutputEventType.LIGHT_ON,
+            "Tutto"
+        )]
 
     def _handle_light_off(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce comando spegnimento luci."""
         logger.info("💡 Received LIGHT_OFF event. Invoking tools.set_lights_off()")
-        tools.set_lights_off()
-        return []
+        return [create_output_event(
+            OutputEventType.LIGHT_OFF,
+            "Tutto"
+        )]
     
     def _generate_response(self, user_text: str) -> str:
         """

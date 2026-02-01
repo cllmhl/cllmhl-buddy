@@ -11,6 +11,7 @@ from .database_output import DatabaseOutput
 from .archivist_output import ArchivistOutput
 from .pipe_output import PipeOutputAdapter
 from .log_output import LogOutput
+from .tapo_output import TapoOutput
 
 __all__ = [
     'JabraVoiceOutput',
@@ -18,5 +19,6 @@ __all__ = [
     'DatabaseOutput',
     'ArchivistOutput',
     'PipeOutputAdapter',
-    'LogOutput'
+    'LogOutput',
+    'TapoOutput'
 ]

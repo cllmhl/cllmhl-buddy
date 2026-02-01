@@ -50,6 +50,10 @@ class OutputEventType(Enum):
     SAVE_MEMORY = "save_memory"           # Salva in memoria permanente
     DISTILL_MEMORY = "distill_memory"     # Avvia distillazione memoria (Archivist)
 
+    # Lights
+    LIGHT_ON = "light_on"
+    LIGHT_OFF = "light_off"
+
 
 class EventPriority(Enum):
     """
@@ -116,8 +120,8 @@ Event = Union[InputEvent, OutputEvent]
 
 def create_input_event(
     event_type: InputEventType,
-    content: Any,
-    source: str,
+    content: Any = None,
+    source: Optional[str] = None,
     priority: EventPriority = EventPriority.NORMAL,
     metadata: Optional[dict] = None
 ) -> InputEvent:
@@ -133,7 +137,7 @@ def create_input_event(
 
 def create_output_event(
     event_type: OutputEventType,
-    content: Any,
+    content: Any = None,
     priority: EventPriority = EventPriority.NORMAL,
     metadata: Optional[dict] = None
 ) -> OutputEvent:

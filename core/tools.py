@@ -8,6 +8,7 @@ import pytz
 import time
 import queue
 import requests
+import functools
 import wikipedia
 from typing import Optional
 from tavily import TavilyClient
@@ -23,6 +24,15 @@ _INPUT_QUEUE: Optional[queue.PriorityQueue] = None
 
 logger = logging.getLogger(__name__)
 
+def requires_input_queue(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if _INPUT_QUEUE is None:
+             logger.error(f"❌ Cannot execute {func.__name__}: Input queue not set in tools")
+             return
+        return func(*args, **kwargs)
+    return wrapper
+
 def set_input_queue(q: queue.PriorityQueue):
     """
     Imposta la coda di input globale per permettere ai tool di inviare eventi.
@@ -31,14 +41,11 @@ def set_input_queue(q: queue.PriorityQueue):
     _INPUT_QUEUE = q
     logger.info("✅ Tools: Input queue injected")
 
+@requires_input_queue
 def _send_alexa_sequence(command: str) -> None:
     """
     Invia una sequenza di comandi Alexa (Wakeword + Command) alla input queue.
     """
-    if _INPUT_QUEUE is None:
-        logger.error("❌ Cannot send Alexa command: Input queue not set in tools")
-        return
-
     # 1. Evento Wakeword "Alexa;"
     wakeword_event = create_output_event(
         OutputEventType.SPEAK,
@@ -73,23 +80,31 @@ def _send_alexa_sequence(command: str) -> None:
     )
     _INPUT_QUEUE.put(input_evt_2)
 
+@requires_input_queue
 def set_lights_on() -> None:
     """
-    Accende tutte le luci di casa tramite Alexa.
+    Accende tutte le luci di casa.
     Usa questo tool quando l'utente chiede di accendere le luci o quando rilevi che è buio.
     """
     logger.info("💡 Tool set_lights_on called")
-    _send_alexa_sequence("Accendi tutte le luci")
-    global_state.is_light_on = True
+    
+    _INPUT_QUEUE.put(create_input_event(
+        InputEventType.LIGHT_ON,
+        "Tutto"
+    ))
 
+@requires_input_queue
 def set_lights_off() -> None:
     """
-    Spegne tutte le luci di casa tramite Alexa.
+    Spegne tutte le luci di casa.
     Usa questo tool quando l'utente chiede di spegnere le luci o quando non c'è nessuno in casa.
     """
     logger.info("💡 Tool set_lights_off called")
-    _send_alexa_sequence("Spegni tutte le luci")
-    global_state.is_light_on = False
+    
+    _INPUT_QUEUE.put(create_input_event(
+        InputEventType.LIGHT_OFF,
+        "Tutto"
+    ))
 
 def get_current_temp() -> str:
     """

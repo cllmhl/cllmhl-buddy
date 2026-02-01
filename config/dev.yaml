@@ -59,18 +59,28 @@ adapters:
     # Voice output con Jabra
     - class: "JabraVoiceOutput"
       config:
-        queue_maxsize: 50
+        queue_maxsize: 10
         tts_mode: "cloud"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
         voice_name: "it-IT-Standard-A"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
 
     # LED con GPIO
     - class: "GPIOLEDOutput"
       config:
-        queue_maxsize: 100
+        queue_maxsize: 10
         led_ascolto_pin: 26  # LED Blu
         led_parlo_pin: 21    # LED Verde
         blink_on_time: 1.0
         blink_off_time: 1.0
+
+    # Tapo Smart Plugs
+    - class: "TapoOutput"
+      config:
+        queue_maxsize: 10
+        email: "YOUR_TAPO_EMAIL"
+        password: "YOUR_TAPO_PASSWORD"
+        devices:
+          stanza: "192.168.1.82"    # IP address of the 'stanza' bulb
+          ingresso: "192.168.1.158"  # IP address of the 'ingresso' bulb
 
 queues:
   input_maxsize: 100
