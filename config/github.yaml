@@ -30,8 +30,26 @@ adapters:
         pipe_path: "data/buddy.out"
         event_types: ["speak"]
 
-    # Pipe Output - IPC communication (monitor all events)
+    # Log Output - IPC communication (monitor all events)
     - class: "LogOutput"
+
+    # Database
+    - class: "DatabaseOutput"
+      config:
+        queue_maxsize: 500
+        sqlite_path: "data/system.db"
+        chroma_path: "data/memory"
+    
+    # Archivist - Distillazione memoria
+    - class: "ArchivistOutput"
+      config:
+        queue_maxsize: 50
+        sqlite_path: "data/system.db"
+        chroma_path: "data/memory"
+        archivist_config:
+          model_id: "gemini-pro-latest"
+          temperature: 0.1
+          system_instruction: "Sei l'Archivista di Buddy. Distilla la conversazione in fatti memorabili. Rispondi ESCLUSIVAMENTE con un array JSON di oggetti con chiavi: 'fatto', 'categoria', 'importanza' (1-5)."
 
 queues:
   input_maxsize: 100

@@ -31,7 +31,7 @@ class LogOutput(OutputPort):
         while self.running:
             try:
                 event: OutputEvent = self.output_queue.get(timeout=1)
-                logger.info(f"Event received: {event.content}")
+                logger.info(f"Event received: {event.type} - {event.content}")
                 self.output_queue.task_done()
             except Empty:
                 continue

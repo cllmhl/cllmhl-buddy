@@ -47,7 +47,6 @@ class OutputEventType(Enum):
     
     # Storage
     SAVE_HISTORY = "save_history"         # Salva in history DB
-    SAVE_MEMORY = "save_memory"           # Salva in memoria permanente
     DISTILL_MEMORY = "distill_memory"     # Avvia distillazione memoria (Archivist)
 
     # Lights

@@ -42,7 +42,7 @@ class DatabaseOutput(OutputPort):
     @classmethod
     def handled_events(cls):
         """Eventi gestiti da questo adapter"""
-        return [OutputEventType.SAVE_HISTORY, OutputEventType.SAVE_MEMORY]
+        return [OutputEventType.SAVE_HISTORY]
     
     def start(self) -> None:
         """Avvia worker che consuma dalla coda interna"""
@@ -86,8 +86,6 @@ class DatabaseOutput(OutputPort):
                 
                 if event.type == OutputEventType.SAVE_HISTORY:
                     self._handle_save_history(event)
-                elif event.type == OutputEventType.SAVE_MEMORY:
-                    self._handle_save_memory(event)
                 
                 self.output_queue.task_done()
                 
@@ -110,6 +108,7 @@ class DatabaseOutput(OutputPort):
         
         try:
             # event.content deve essere dict con 'role' e 'text'
+            logger.info(f"Saving history event: {event.content}")
             data = event.content
             if isinstance(data, dict) and 'role' in data and 'text' in data:
                 self.db.add_history(data['role'], data['text'])
@@ -119,28 +118,4 @@ class DatabaseOutput(OutputPort):
         
         except Exception as e:
             logger.error(f"Error saving history: {e}")
-    
-    def _handle_save_memory(self, event: OutputEvent) -> None:
-        """Salva in memoria permanente (ChromaDB)"""
-        if not self.db:
-            logger.warning("Database not available, skipping save_memory")
-            return
-        
-        try:
-            # event.content deve essere dict con 'fact', 'category', 'notes', 'importance'
-            data = event.content
-            if isinstance(data, dict):
-                fact = data.get('fact', '')
-                category = data.get('category', 'generale')
-                notes = data.get('notes', '')
-                importance = data.get('importance', 1)
-                
-                self.db.add_permanent_memory(fact, category, notes, importance)
-                logger.debug(f"🧠 Memory saved: {fact[:50]}...")
-            else:
-                logger.warning(f"Invalid memory data format: {data}")
-        
-        except Exception as e:
-            logger.error(f"Error saving memory: {e}")
-
 
