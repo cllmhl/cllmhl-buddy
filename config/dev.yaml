@@ -1,3 +1,7 @@
+memory:
+  sqlite_path: "data/system.db"
+  chroma_path: "data/memory"
+
 brain:
   model_id: "gemini-2.5-flash"
   temperature: 0.7
@@ -41,7 +45,7 @@ adapters:
     - class: "SchedulerInput"
       config:
         light_off_timeout: 120    # Timeout spegnimento luci (secondi)
-        conversation_chat_timeout: 900 # Timeout reset sessione chat (secondi)
+        conversation_chat_timeout: 600 # Timeout reset sessione chat (secondi)
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
@@ -75,15 +79,22 @@ adapters:
     - class: "TapoOutput"
       config:
         queue_maxsize: 10
-        email: "YOUR_TAPO_EMAIL"
-        password: "YOUR_TAPO_PASSWORD"
         devices:
           stanza: "192.168.1.82"    # IP address of the 'stanza' bulb
           ingresso: "192.168.1.158"  # IP address of the 'ingresso' bulb
+            
+    # Database
+    - class: "DatabaseOutput"
+      config:
+        queue_maxsize: 10
+    
+    # Archivist - Distillazione memoria
+    - class: "ArchivistOutput"
+      config:
+        queue_maxsize: 10
 
 queues:
-  input_maxsize: 100
-  database_maxsize: 500
+  input_maxsize: 10
 
 logging:
   version: 1

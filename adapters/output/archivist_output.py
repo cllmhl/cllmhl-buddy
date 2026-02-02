@@ -9,7 +9,6 @@ from typing import Optional
 
 from core.events import OutputEvent, OutputEventType
 from adapters.ports import OutputPort
-from infrastructure.memory_store import MemoryStore
 from core.archivist import BuddyArchivist
 import os
 
@@ -25,32 +24,9 @@ class ArchivistOutput(OutputPort):
     def __init__(self, name: str, config: dict):
         queue_maxsize = config['queue_maxsize']
         super().__init__(name, config, queue_maxsize)
-        # Configurazione
-        self.archivist_config = config['archivist_config']
-        sqlite_path = config['sqlite_path']
-        chroma_path = config['chroma_path']
         
-        # Inizializza database
-        self.db: Optional[MemoryStore]
-        try:
-            self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
-            logger.info(f"✅ Archivist database initialized")
-        except Exception as e:
-            logger.error(f"❌ Archivist database initialization failed: {e}")
-            self.db = None
-        
-        # Inizializza Archivist
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found for Archivist")
-        
-        self.archivist: Optional[BuddyArchivist]
-        try:
-            self.archivist = BuddyArchivist(api_key, self.archivist_config)
-            logger.info(f"✅ BuddyArchivist initialized (model: {self.archivist_config.get('model_id')})")
-        except Exception as e:
-            logger.error(f"❌ BuddyArchivist initialization failed: {e}")
-            self.archivist = None
+        # Inizializza Archivist (singleton)
+        self.archivist = BuddyArchivist.get_instance()
         
         self.worker_thread: Optional[threading.Thread] = None
     
@@ -109,22 +85,12 @@ class ArchivistOutput(OutputPort):
     
     def _handle_distill_memory(self, event: OutputEvent) -> None:
         """Esegue distillazione della memoria"""
-        if not self.db or not self.archivist:
-            logger.warning("Archivist or database not available, skipping distillation")
-            return
         
         try:
-            # Controlla se ci sono conversazioni non processate
-            unprocessed = self.db.get_unprocessed_history()
-            
-            if len(unprocessed) == 0:
-                logger.debug("📚 No unprocessed history to distill")
-                return
-            
-            logger.info(f"📚 Starting memory distillation ({len(unprocessed)} messages)")
+            logger.info("📚 Handling memory distillation")
             
             # Esegui distillazione
-            self.archivist.distill_and_save(self.db)
+            self.archivist.distill_and_save()
             
             logger.info(f"✅ Memory distillation completed")
             

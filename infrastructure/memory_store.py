@@ -9,10 +9,29 @@ import time
 
 
 class MemoryStore:
-    def __init__(self, db_name="data/system.db", chroma_path="data/memory"):
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+             raise RuntimeError("MemoryStore not initialized. Call initialize() first.")
+        return cls._instance
+
+    @classmethod
+    def initialize(cls, db_name, chroma_path):
+        if cls._instance is not None:
+             # Idempotente: se già inizializzato, ignoriamo (o potremmo loggare warning)
+             return cls._instance
+        cls._instance = cls(db_name, chroma_path)
+        return cls._instance
+
+    def __init__(self, db_name, chroma_path):
+        if MemoryStore._instance is not None and MemoryStore._instance != self:
+             raise RuntimeError("Use MemoryStore.get_instance()")
+        
         # 1. Setup SQLite per History (fatti)
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
-        self.conn.execute("PRAGMA journal_mode=WAL;") 
+        self.conn.execute("PRAGMA journal_mode=WAL;")
         self.cursor = self.conn.cursor()
         
         # 2. Setup ChromaDB per Memoria Permanente

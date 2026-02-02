@@ -17,7 +17,9 @@ from typing import Dict, Any, List, TYPE_CHECKING
 from core.events import InputEvent, OutputEvent, InputEventType, OutputEventType, EventPriority, create_input_event
 from core.event_router import EventRouter
 from core.brain import BuddyBrain
+from core.archivist import BuddyArchivist
 from core.commands import AdapterCommand
+from infrastructure.memory_store import MemoryStore
 import core.tools as tools
 
 
@@ -69,12 +71,24 @@ class BuddyOrchestrator:
         # Event Router
         self.router = EventRouter()
 
-        # Brain
+        # Initialize Memory Store
+        memory_config = self.config['memory']
+        sqlite_path = memory_config['sqlite_path']
+        chroma_path = memory_config['chroma_path']
+        MemoryStore.initialize(sqlite_path, chroma_path)
+        self.logger.info(f"🧠 MemoryStore initialized (SQLite: {sqlite_path}, Chroma: {chroma_path})")
+
+        # Brain & Archivist
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found in environment")
 
         self.brain = BuddyBrain(api_key, self.config['brain'])
+
+        # Initialize Archivist
+        archivist_config = self.config.get('archivist', {})
+        BuddyArchivist.initialize(api_key, archivist_config)
+        self.logger.info(f"📚 Archivist initialized (model: {archivist_config.get('model_id')})")
 
         # AdapterManager handles all adapter logic
         self.adapter_manager = AdapterManager(
@@ -180,6 +194,15 @@ class BuddyOrchestrator:
         
         self.adapter_manager.stop_adapters()
         
+        # Close MemoryStore
+        try:
+            memory = MemoryStore.get_instance()
+            if memory:
+                memory.close()
+                self.logger.info("🧠 MemoryStore closed")
+        except Exception as e:
+            self.logger.warning(f"Could not close MemoryStore: {e}")
+
         # Statistiche router
         try:
             stats = self.router.get_stats()

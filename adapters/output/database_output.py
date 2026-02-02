@@ -24,19 +24,10 @@ class DatabaseOutput(OutputPort):
         queue_maxsize = config['queue_maxsize']  # Fail-fast: must be present
         super().__init__(name, config, queue_maxsize)
         
-        # Configurazione database
-        sqlite_path = config['sqlite_path']
-        chroma_path = config['chroma_path']
+        # Inizializza database (singleton)
+        self.memory_store = MemoryStore.get_instance()
         
-        # Inizializza database
-        self.db: Optional[MemoryStore]
-        try:
-            self.db = MemoryStore(db_name=sqlite_path, chroma_path=chroma_path)
-            logger.info(f"✅ Database initialized (SQLite: {sqlite_path}, Chroma: {chroma_path})")
-        except Exception as e:
-            logger.error(f"❌ Database initialization failed: {e}")
-            self.db = None
-        
+        # maintain worker thread reference
         self.worker_thread: Optional[threading.Thread] = None
     
     @classmethod
@@ -69,12 +60,8 @@ class DatabaseOutput(OutputPort):
                 logger.warning(f"⚠️  {self.name} thread did not terminate")
         
         # Cleanup database
-        if self.db:
-            try:
-                self.db.close()
-                logger.debug("Database closed")
-            except Exception as e:
-                logger.debug(f"Database close error: {e}")
+        # Non chiudiamo il db qui perché è un singleton condiviso
+        pass
         
         logger.info(f"⏹️  {self.name} stopped")
     
@@ -102,17 +89,14 @@ class DatabaseOutput(OutputPort):
     
     def _handle_save_history(self, event: OutputEvent) -> None:
         """Salva in history (conversazione temporanea)"""
-        if not self.db:
-            logger.warning("Database not available, skipping save_history")
-            return
-        
+
         try:
             # event.content deve essere dict con 'role' e 'text'
             logger.info(f"Saving history event: {event.content}")
             data = event.content
             if isinstance(data, dict) and 'role' in data and 'text' in data:
                 session_id = data.get('session_id') # Extract session_id, default to None if not present
-                self.db.add_history(data['role'], data['text'], session_id)
+                self.memory_store.add_history(data['role'], data['text'], session_id)
                 logger.debug(f"💾 History saved: {data['role']} (session: {session_id})")
             else:
                 logger.warning(f"Invalid history data format: {data}")
