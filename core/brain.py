@@ -5,7 +5,7 @@ Zero dipendenze da I/O, hardware, code.
 
 import logging
 import time
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from google import genai
 from google.genai import types
 
@@ -47,9 +47,6 @@ class BuddyBrain:
             raise ValueError("Config 'model_id' is required")
         self.model_id = config["model_id"]
         
-        # Inizializza sessione chat
-        self._init_chat_session()
-        
         # Setup event handlers
         self.handlers = {
             InputEventType.DIRECT_OUTPUT: self._handle_direct_output,
@@ -63,7 +60,9 @@ class BuddyBrain:
             InputEventType.LIGHT_OFF: self._handle_light_off,
             InputEventType.CHAT_SESSION_RESET: self._handle_chat_session_reset,
         }
-        
+        self.chat_session: Optional[Any] = None
+        self.current_session_id: Optional[str] = None
+
         logger.info(f"🧠 BuddyBrain initialized (model: {self.model_id})")
     
     def _init_chat_session(self):
@@ -84,8 +83,10 @@ class BuddyBrain:
                     thinkingConfig=types.ThinkingConfig(includeThoughts=False)
                 )
             )
-            logger.info("✅ Chat session initialized")
-            
+            # Generate unique session ID with human-readable timestamp format
+            self.current_session_id = time.strftime("%Y%m%d%H%M%S", time.localtime())
+            logger.info(f"✅ Chat session initialized with ID: {self.current_session_id}")
+
         except (ValueError, TypeError) as e:
             # Configuration errors - fail fast
             logger.error(f"❌ Invalid chat configuration: {e}", exc_info=True)
@@ -94,6 +95,7 @@ class BuddyBrain:
             # Network/API errors - critical but allow retry
             logger.error(f"❌ Failed to initialize chat session: {e}", exc_info=True)
             self.chat_session = None
+            self.current_session_id = None # Reset session ID on failure
     
     def process_event(self, input_event: InputEvent) -> List[OutputEvent]:
         """
@@ -200,21 +202,35 @@ class BuddyBrain:
         """Gestisce input testuale/vocale dell'utente"""
         output_events: List[OutputEvent] = []
         user_text = str(event.content)
+
+        logger.info(f"🗣️ User input received: {user_text}")
+        # Inizializza sessione chat se non esiste
+        if not self.chat_session:
+            logger.info("Chat session not available - creating new session.")
+            self._init_chat_session()
+            if not self.chat_session:
+                output_events.append(create_output_event(
+                    OutputEventType.SPEAK,
+                    "Mi dispiace, non sono momentaneamente disponibile.",
+                    priority=EventPriority.HIGH,
+                    metadata={"triggered_by": "ERROR"}
+                ))
+                return output_events
         
-        # Salva in history
+        # Salva in history input utente
         output_events.append(create_output_event(
             OutputEventType.SAVE_HISTORY,
-            {"role": "user", "text": user_text},
+            {"role": "user", "text": user_text, "session_id": self.current_session_id},
             priority=EventPriority.LOW
         ))
         
         # Genera risposta LLM
         response_text = self._generate_response(user_text)
         
-        # Salva risposta in history
+        # Salva risposta in history risposta
         output_events.append(create_output_event(
             OutputEventType.SAVE_HISTORY,
-            {"role": "model", "text": response_text},
+            {"role": "model", "text": response_text, "session_id": self.current_session_id},
             priority=EventPriority.LOW
         ))
         
@@ -284,9 +300,6 @@ class BuddyBrain:
         Genera risposta usando LLM.
         Logica isolata per facilitare testing/mocking.
         """
-        if not self.chat_session:
-            logger.error("Chat session not available - cannot generate response")
-            return "Mi dispiace, non sono momentaneamente disponibile."
         
         try:
             logger.debug(f"Sending prompt to LLM:\n{user_text}")
@@ -335,6 +348,7 @@ class BuddyBrain:
         """
         reason = (event.metadata or {}).get('reason', 'unknown')
         logger.info(f"🔄 Received CHAT_SESSION_RESET (reason: {reason}). Resetting session.")
-        self._init_chat_session()
+        self.chat_session = None
+        self.current_session_id = None
         return []
     

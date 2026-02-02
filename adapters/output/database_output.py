@@ -111,8 +111,9 @@ class DatabaseOutput(OutputPort):
             logger.info(f"Saving history event: {event.content}")
             data = event.content
             if isinstance(data, dict) and 'role' in data and 'text' in data:
-                self.db.add_history(data['role'], data['text'])
-                logger.debug(f"💾 History saved: {data['role']}")
+                session_id = data.get('session_id') # Extract session_id, default to None if not present
+                self.db.add_history(data['role'], data['text'], session_id)
+                logger.debug(f"💾 History saved: {data['role']} (session: {session_id})")
             else:
                 logger.warning(f"Invalid history data format: {data}")
         

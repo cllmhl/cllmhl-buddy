@@ -231,6 +231,24 @@ def build_light_off():
     }
 
 
+def build_wakeword():
+    """Costruisce un WAKEWORD input event"""
+    return {
+        "type": "wakeword",
+        "priority": "high",
+        "content": "wakeword_detected"
+    }
+
+
+def build_conversation_end():
+    """Costruisce un CONVERSATION_END input event"""
+    return {
+        "type": "conversation_end",
+        "priority": "normal",
+        "content": None
+    }
+
+
 # ===== MENU =====
 def print_menu():
     """Stampa il menu principale"""
@@ -241,6 +259,8 @@ def print_menu():
     print(f"\n{color('COMANDI RAPIDI:', Colors.YELLOW + Colors.BOLD)}")
     print(f"  {color('s', Colors.GREEN)} <testo>    → Speak (emetti voce)")
     print(f"  {color('t', Colors.GREEN)} <testo>    → Talk (invia speech utente)")
+    print(f"  {color('ww', Colors.GREEN)}           → Wakeword (simula sveglia)")
+    print(f"  {color('end', Colors.GREEN)}          → Conversation End (termina conversazione)")
     
     print(f"\n{color('LED ASCOLTO (Blu):', Colors.BLUE + Colors.BOLD)}")
     print(f"  {color('lona', Colors.BLUE)}         → LED Ascolto ON")
@@ -369,6 +389,16 @@ def interactive_loop():
                     event = build_user_speech(args)
                     send_event(event)
                     print(color(f"✅ Inviato: USER_SPEECH '{args}'", Colors.GREEN))
+                
+                elif action == 'ww':  # Wakeword
+                    event = build_wakeword()
+                    send_event(event)
+                    print(color("✅ Inviato: WAKEWORD", Colors.GREEN))
+                
+                elif action == 'end':  # Conversation End
+                    event = build_conversation_end()
+                    send_event(event)
+                    print(color("✅ Inviato: CONVERSATION_END", Colors.GREEN))
                 
                 elif action == 'cmd':  # Adapter Command
                     if not args:

@@ -17,17 +17,12 @@ class SchedulerInput(InputPort):
 
     def __init__(self, name: str, config: dict, input_queue: PriorityQueue):
         super().__init__(name, config, input_queue)
-        self.archivist_interval = config["archivist_interval"]
         self.light_off_timeout = int(config["light_off_timeout"])
         self.conversation_chat_timeout = int(config["conversation_chat_timeout"])
-        
-        # Inizializza il timer archivista se non impostato (evita trigger immediato all'avvio)
-        if global_state.last_archivist_trigger == 0.0:
-            global_state.last_archivist_trigger = time.time()
 
         self.last_processed_conversation_end = 0.0
         self.worker_thread = None
-        logger.info(f"⏰ SchedulerInput initialized (archivist_interval: {self.archivist_interval}s, light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s)")
+        logger.info(f"⏰ SchedulerInput initialized (light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s)")
 
     def start(self) -> None:
         self.running = True
@@ -56,7 +51,6 @@ class SchedulerInput(InputPort):
             if not self.running:
                 break
 
-            self._check_archivist_trigger()
             self._check_chat_timeout()
 
             # Controlla luci solo tra le 17:00 e le 09:00
@@ -91,18 +85,15 @@ class SchedulerInput(InputPort):
             # Segniamo come processato per non inviarlo di nuovo per la stessa sessione
             self.last_processed_conversation_end = global_state.last_conversation_end
 
-    def _check_archivist_trigger(self) -> None:
-        if time.time() - global_state.last_archivist_trigger >= self.archivist_interval:
+            # Facciamo partire anche un nuovo trigger archivista
             archivist_event = create_input_event(
                 InputEventType.TRIGGER_ARCHIVIST,
                 None,
                 source=self.name,
-                priority=EventPriority.LOW,
-                metadata={"interval_seconds": self.archivist_interval}
+                priority=EventPriority.LOW
             )
             self.input_queue.put(archivist_event)
-            global_state.last_archivist_trigger = time.time()
-            logger.info(f"⏰ Archivist trigger event sent (interval: {self.archivist_interval}s)")
+            logger.info("⏰ Archivist trigger event sent)")
 
     def _check_lights(self) -> None:
         # senza stato non faccio nulla

@@ -18,10 +18,8 @@
 ### 2.1 Long term Memory. Vedi context.png
 
 #### 2.1.1 Ristrutturazione del Workflow (Trigger e Timing)
-- [ ] **Disabilitare il Cron Job a 5 minuti**: Fermare l'attuale processo di archiviazione periodica.
-- [ ] **Hook su Session Timeout**: Modificare la logica del timer "Memoria Immediata" (15 min). Quando il timer scade e la sessione viene chiusa:
-Marca la sessione come "conclusa". Avvia immediatamente il processo Archivist passando tutti i log della sessione corrente (history) non ancora processati.
-- [ ] **Gestione Fallimenti (Opzionale ma consigliato)**: Prevedere un flag o un job di pulizia all'avvio del sistema per processare eventuali sessioni rimaste "appese" (es. riavvio del server durante i 15 minuti di attesa).
+- [ ] **Hook su Session Timeout**: Quando il timer scade e la sessione viene chiusa archiviare per sessione. Non per numero di record.
+- [ ] **Gestione Fallimenti**: All'avvio del sistema archiviare eventuali sessioni rimaste "appese" (es. riavvio del server durante i 15 minuti di attesa).
 
 #### 2.1.2 Raffinamento dell'Archivista (Ingestione Intelligente)
 - [ ] **Prompt Engineering "Filtro Rumore"**: Modificare il System Prompt dell'Archivista. Istruirlo esplicitamente a ignorare: Dati effimeri (Meteo attuale, ora esatta, news del giorno). Chiacchiere di cortesia ("Ciao", "Come stai"). Output di sistema grezzi (log di errori, conferme di esecuzione comandi domotici standard).

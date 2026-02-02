@@ -29,6 +29,7 @@ class MemoryStore:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 role TEXT,
                 content TEXT,
+                session_id TEXT, -- New column for session tracking
                 ts DATETIME DEFAULT CURRENT_TIMESTAMP,
                 processed INTEGER DEFAULT 0
             )
@@ -36,8 +37,8 @@ class MemoryStore:
         self.conn.commit()
 
     # --- METODI SQLITE (HISTORY) ---
-    def add_history(self, role, content):
-        self.cursor.execute("INSERT INTO history (role, content) VALUES (?, ?)", (role, content))
+    def add_history(self, role, content, session_id=None):
+        self.cursor.execute("INSERT INTO history (role, content, session_id) VALUES (?, ?, ?)", (role, content, session_id))
         self.conn.commit()
 
     def get_unprocessed_history(self):
