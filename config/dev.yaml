@@ -45,7 +45,7 @@ adapters:
     - class: "SchedulerInput"
       config:
         light_off_timeout: 120    # Timeout spegnimento luci (secondi)
-        conversation_chat_timeout: 600 # Timeout reset sessione chat (secondi)
+        conversation_chat_timeout: 60 # Timeout reset sessione chat (secondi)
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
