@@ -111,5 +111,58 @@ class MemoryStore:
         )
         return results['documents']
 
+    # --- DATA MANAGEMENT METHODS ---
+    def reset_all_processed_flags(self):
+        """Reset all processed flags to 0 in SQLite history table."""
+        self.cursor.execute("UPDATE history SET processed = 0")
+        self.conn.commit()
+        affected_rows = self.cursor.rowcount
+        return affected_rows
+
+    def clear_all_permanent_memories(self):
+        """Remove all data from ChromaDB collection."""
+        # Get all IDs first
+        results = self.collection.get()
+        if results['ids']:
+            self.collection.delete(ids=results['ids'])
+            return len(results['ids'])
+        return 0
+
+    def get_all_history(self, limit=None):
+        """Get all history records ordered by most recent first."""
+        if limit:
+            self.cursor.execute("SELECT id, role, content, session_id, ts, processed FROM history ORDER BY id DESC LIMIT ?", (limit,))
+        else:
+            self.cursor.execute("SELECT id, role, content, session_id, ts, processed FROM history ORDER BY id DESC")
+        return self.cursor.fetchall()
+
+    def get_all_permanent_memories(self):
+        """Get all permanent memories from ChromaDB."""
+        results = self.collection.get()
+        return {
+            'ids': results['ids'] or [],
+            'documents': results['documents'] or [],
+            'metadatas': results['metadatas'] or []
+        }
+
+    def get_memory_stats(self):
+        """Get statistics about stored data."""
+        # SQLite stats
+        self.cursor.execute("SELECT COUNT(*) FROM history")
+        total_history = self.cursor.fetchone()[0]
+        
+        self.cursor.execute("SELECT COUNT(*) FROM history WHERE processed = 0")
+        unprocessed_history = self.cursor.fetchone()[0]
+        
+        # ChromaDB stats
+        permanent_count = self.collection.count()
+        
+        return {
+            'total_history': total_history,
+            'unprocessed_history': unprocessed_history,
+            'processed_history': total_history - unprocessed_history,
+            'permanent_memories': permanent_count
+        }
+
     def close(self):
         self.conn.close()
