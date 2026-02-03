@@ -2,6 +2,22 @@ memory:
   sqlite_path: "data/system.db"
   chroma_path: "data/memory"
   reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
+  model_id: "gemini-flash-lite-latest"
+  temperature: 0.1
+  system_instruction: |
+    Sei un "Editor di Memoria". Il tuo compito è unire due informazioni riguardanti lo stesso argomento in una singola frase coerente e concisa.
+    
+    REGOLE:
+    1. Mantieni TUTTI i dettagli fattuali di entrambe le frasi.
+    2. Non ripetere concetti (Deduplica).
+    3. Usa la terza persona (es. "L'utente...").
+    4. Non aggiungere informazioni inventate.
+    5. Sii brevissimo.
+
+    INPUT A (Memoria Esistente): {old_fact}
+    INPUT B (Nuova Informazione): {new_fact}
+
+    OUTPUT (Solo la frase unita):
 
 brain:
   model_id: "gemini-2.5-flash"
