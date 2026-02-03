@@ -92,9 +92,8 @@ class BuddyArchivist:
                         # Uso del nuovo metodo per ChromaDB
                         self.memory_store.add_permanent_memory(
                             fact=r['fatto'],  # Required
-                            category=r.get('categoria', 'generale'),  # Default ok
-                            notes="", # Note opzionali
-                            importance=r.get('importanza', 1)
+                            category=r['categoria'], # Required
+                            importance=r['importanza'] # Required
                         )
                 
                 # Segna come processati SOLO i log di questa sessione

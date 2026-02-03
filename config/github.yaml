@@ -1,6 +1,7 @@
 memory:
   sqlite_path: "data/system.db"
   chroma_path: "data/memory"
+  reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
 
 brain:
   model_id: "gemini-2.5-flash"

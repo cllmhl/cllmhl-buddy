@@ -5,6 +5,7 @@ Memory Store - Gestione persistenza SQLite + ChromaDB
 import sqlite3
 import chromadb
 from chromadb.config import Settings
+import logging
 import time
 
 
@@ -18,16 +19,23 @@ class MemoryStore:
         return cls._instance
 
     @classmethod
-    def initialize(cls, db_name, chroma_path):
+    def initialize(cls, memory_config):
         if cls._instance is not None:
              # Idempotente: se già inizializzato, ignoriamo (o potremmo loggare warning)
              return cls._instance
-        cls._instance = cls(db_name, chroma_path)
+        cls._instance = cls(memory_config)
         return cls._instance
 
-    def __init__(self, db_name, chroma_path):
+    def __init__(self, memory_config):
         if MemoryStore._instance is not None and MemoryStore._instance != self:
              raise RuntimeError("Use MemoryStore.get_instance()")
+        
+        self.logger = logging.getLogger(__name__)
+        
+        # Estrae parametri dal config (fail-fast se mancanti)
+        db_name = memory_config['sqlite_path']
+        chroma_path = memory_config['chroma_path']
+        reinforce_threshold = memory_config['reinforce_threshold']
         
         # 1. Setup SQLite per History (fatti)
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
@@ -36,8 +44,11 @@ class MemoryStore:
         
         # 2. Setup ChromaDB per Memoria Permanente
         self.chroma_client = chromadb.PersistentClient(path=chroma_path)
-        # Creiamo o recuperiamo la collezione per i fatti
-        self.collection = self.chroma_client.get_or_create_collection(name="memoria_buddy")
+        # Creiamo o recuperiamo la collezione per i fatti con spazio vettoriale cosine per similarità
+        self.collection = self.chroma_client.get_or_create_collection(name="memoria_buddy",metadata={"hnsw:space": "cosine"})
+        
+        # 3. Configurazione soglia reinforcement per evitare duplicati
+        self.reinforce_threshold = float(reinforce_threshold)
         
         self.create_tables()
 
@@ -81,18 +92,79 @@ class MemoryStore:
         self.conn.commit()
 
     # --- METODI CHROMADB (PERMANENT MEMORY) ---
-    def add_permanent_memory(self, fact, category, notes, importance):
-        """Salva un fatto in modo vettoriale su ChromaDB."""
+    def add_permanent_memory(self, fact, category, importance):
+        """Salva un fatto in modo vettoriale su ChromaDB.
+        
+        Se esiste già una memoria simile (distanza <= reinforce_threshold) nella stessa categoria,
+        rinforza quella esistente invece di crearne una nuova.
+        """
+        # Cerca memorie simili nella stessa categoria
+        results = self.collection.query(
+            query_texts=[fact],
+            n_results=5,  # Prendiamo top 5 per controllare la categoria
+            where={"category": category}
+        )
+        
+        # Se troviamo risultati simili nella stessa categoria
+        if (results.get('ids') and results['ids'] and results['ids'][0] and 
+            results.get('distances') and results['distances'] and results['distances'][0] and
+            results.get('documents') and results['documents'] and results['documents'][0] and
+            results.get('metadatas') and results['metadatas'] and results['metadatas'][0]):
+            
+            for i, distance in enumerate(results['distances'][0]):
+                # Se la distanza è sotto la soglia, rinforziamo
+                if distance <= self.reinforce_threshold:
+                    existing_id = results['ids'][0][i]
+                    existing_doc = results['documents'][0][i]
+                    existing_metadata = results['metadatas'][0][i]
+                    
+                    # Usa la frase più lunga
+                    updated_doc = fact if len(fact) > len(existing_doc) else existing_doc
+                    
+                    # Incrementa reinforcement_count (type-safe cast, fail-fast se campo mancante)
+                    old_count = existing_metadata['reinforcement_count']
+                    new_reinforcement_count = int(old_count) + 1 if isinstance(old_count, (int, float)) else 1
+                    
+                    # Access count (type-safe cast, fail-fast se campo mancante)
+                    old_access = existing_metadata['access_count']
+                    access_count = int(old_access) if isinstance(old_access, (int, float)) else 0
+                    
+                    # Timestamp (type-safe cast, fail-fast se campo mancante)
+                    old_ts = existing_metadata['ts']
+                    ts_value = float(old_ts) if isinstance(old_ts, (int, float)) else time.time()
+                    
+                    # Aggiorna la memoria esistente
+                    self.collection.update(
+                        ids=[existing_id],
+                        documents=[updated_doc],
+                        metadatas=[{
+                            "category": category,
+                            "importance": int(importance),
+                            "ts": ts_value,
+                            "reinforcement_count": new_reinforcement_count,
+                            "access_count": access_count
+                        }]
+                    )
+                    self.logger.info(
+                        f"🔄 Memory reinforced [category={category}, importance={importance}, "
+                        f"reinforcements={new_reinforcement_count}, distance={distance:.3f}]: {updated_doc[:100]}"
+                    )
+                    return  # Memoria rinforzata, non inseriamo
+        
+        # Nessuna memoria simile trovata, inseriamo nuova
         self.collection.add(
             documents=[fact],
             metadatas=[{
                 "category": category, 
-                "notes": notes, 
                 "importance": int(importance),
                 "ts": time.time(),
+                "reinforcement_count": 0,
                 "access_count": 0
             }],
             ids=[f"mem_{time.time()}"]
+        )
+        self.logger.info(
+            f"✨ New memory stored [category={category}, importance={importance}]: {fact[:100]}"
         )
 
     def get_semantic_memories(self, query_text, limit=5):

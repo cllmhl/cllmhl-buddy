@@ -18,8 +18,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from infrastructure.memory_store import MemoryStore
 
-DB_NAME = "data/system.db"
-CHROMA_PATH = "data/memory"
+# Memory configuration (matching config YAML structure)
+MEMORY_CONFIG = {
+    'sqlite_path': "data/system.db",
+    'chroma_path': "data/memory",
+    'reinforce_threshold': 0.3
+}
 
 
 def show_stats(store):
@@ -77,7 +81,9 @@ def show_permanent_memories(store):
         print(f"  Document: {doc}")
         print(f"  Category: {meta.get('category', 'N/A')}")
         print(f"  Importance: {meta.get('importance', 'N/A')}")
-        print(f"  Notes: {meta.get('notes', 'N/A')}")
+        print(f"  Timestamp: {meta.get('ts', 'N/A')}")
+        print(f"  Reinforcements: {meta.get('reinforcement_count', 0)}")
+        print(f"  Access count: {meta.get('access_count', 0)}")
 
 
 def reset_processed_flags(store):
@@ -133,11 +139,12 @@ Examples:
     
     # Initialize MemoryStore
     print(f"Initializing MemoryStore...")
-    print(f"  SQLite: {DB_NAME}")
-    print(f"  ChromaDB: {CHROMA_PATH}")
+    print(f"  SQLite: {MEMORY_CONFIG['sqlite_path']}")
+    print(f"  ChromaDB: {MEMORY_CONFIG['chroma_path']}")
+    print(f"  Reinforce threshold: {MEMORY_CONFIG['reinforce_threshold']}")
     
     try:
-        store = MemoryStore.initialize(DB_NAME, CHROMA_PATH)
+        store = MemoryStore.initialize(MEMORY_CONFIG)
     except Exception as e:
         print(f"❌ Error initializing MemoryStore: {e}")
         return 1

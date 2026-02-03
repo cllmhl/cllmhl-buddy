@@ -72,11 +72,8 @@ class BuddyOrchestrator:
         self.router = EventRouter()
 
         # Initialize Memory Store
-        memory_config = self.config['memory']
-        sqlite_path = memory_config['sqlite_path']
-        chroma_path = memory_config['chroma_path']
-        MemoryStore.initialize(sqlite_path, chroma_path)
-        self.logger.info(f"🧠 MemoryStore initialized (SQLite: {sqlite_path}, Chroma: {chroma_path})")
+        MemoryStore.initialize(self.config['memory'])
+        self.logger.info(f"🧠 MemoryStore initialized")
 
         # Brain & Archivist
         api_key = os.getenv("GOOGLE_API_KEY")
