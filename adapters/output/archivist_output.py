@@ -62,13 +62,17 @@ class ArchivistOutput(OutputPort):
         logger.info(f"⏹️  {self.name} stopped")
     
     def _worker_loop(self) -> None:
+        # Recover pending records non eventualmente processati prima della chiusura
+        logger.info("Distilling any pending unprocessed records before starting the main loop...")
+        self._handle_distill_memory()
+        
         """Loop principale"""
         while self.running:
             try:
                 event = self.output_queue.get(timeout=0.5)
                 
                 if event.type == OutputEventType.DISTILL_MEMORY:
-                    self._handle_distill_memory(event)
+                    self._handle_distill_memory()
                 
                 self.output_queue.task_done()
                 
@@ -83,7 +87,7 @@ class ArchivistOutput(OutputPort):
                     exc_info=True
                 )
     
-    def _handle_distill_memory(self, event: OutputEvent) -> None:
+    def _handle_distill_memory(self) -> None:
         """Esegue distillazione della memoria"""
         
         try:

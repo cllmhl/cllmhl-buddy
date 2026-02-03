@@ -64,6 +64,16 @@ class MemoryStore:
         self.cursor.execute("SELECT id, role, content FROM history WHERE processed = 0")
         return self.cursor.fetchall()
 
+    def get_unarchived_sessions(self):
+        """Restituisce le sessioni che hanno almeno un record non processato."""
+        self.cursor.execute("SELECT DISTINCT session_id FROM history WHERE processed = 0 AND session_id IS NOT NULL ORDER BY session_id")
+        return [row[0] for row in self.cursor.fetchall()]
+
+    def get_unprocessed_history_by_session(self, session_id):
+        """Restituisce i record non processati di una specifica sessione."""
+        self.cursor.execute("SELECT id, role, content FROM history WHERE processed = 0 AND session_id = ?", (session_id,))
+        return self.cursor.fetchall()
+
     def mark_as_processed(self, ids):
         if not ids: return
         placeholders = ', '.join(['?'] * len(ids))

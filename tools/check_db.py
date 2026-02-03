@@ -8,8 +8,8 @@ print(f"--- Controllo Database SQLite: {DB_NAME} ---")
 try:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    print("\n--- STORIA (Ultime 5 conversazioni) ---")
-    for row in cursor.execute("SELECT id, role, content, ts FROM history ORDER BY id DESC LIMIT 5"):
+    print("\n--- STORIA (Ultime 100 conversazioni) ---")
+    for row in cursor.execute("SELECT id, role, content, ts FROM history ORDER BY id DESC LIMIT 100"):
         print(row)
     conn.close()
 except Exception as e:
