@@ -2,9 +2,12 @@
 Memory Store - Gestione persistenza SQLite + ChromaDB
 """
 
+from http import client
 import sqlite3
 import chromadb
 from chromadb.config import Settings
+from google import genai
+from google.genai import types
 import logging
 import time
 
@@ -19,39 +22,39 @@ class MemoryStore:
         return cls._instance
 
     @classmethod
-    def initialize(cls, memory_config):
+    def initialize(cls, api_key: str, memory_config):
         if cls._instance is not None:
              # Idempotente: se già inizializzato, ignoriamo (o potremmo loggare warning)
              return cls._instance
-        cls._instance = cls(memory_config)
+        cls._instance = cls(api_key, memory_config)
         return cls._instance
 
-    def __init__(self, memory_config):
+    def __init__(self, api_key: str, memory_config):
         if MemoryStore._instance is not None and MemoryStore._instance != self:
              raise RuntimeError("Use MemoryStore.get_instance()")
         
         self.logger = logging.getLogger(__name__)
-        
-        # Estrae parametri dal config (fail-fast se mancanti)
-        db_name = memory_config['sqlite_path']
-        chroma_path = memory_config['chroma_path']
-        reinforce_threshold = memory_config['reinforce_threshold']
-        
+
         # 1. Setup SQLite per History (fatti)
-        self.conn = sqlite3.connect(db_name, check_same_thread=False)
+        self.conn = sqlite3.connect(memory_config['sqlite_path'], check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.cursor = self.conn.cursor()
-        
+        self.create_tables()
+
         # 2. Setup ChromaDB per Memoria Permanente
-        self.chroma_client = chromadb.PersistentClient(path=chroma_path)
+        self.chroma_client = chromadb.PersistentClient(path=memory_config['chroma_path'])
         # Creiamo o recuperiamo la collezione per i fatti con spazio vettoriale cosine per similarità
         self.collection = self.chroma_client.get_or_create_collection(name="memoria_buddy",metadata={"hnsw:space": "cosine"})
         
-        # 3. Configurazione soglia reinforcement per evitare duplicati
-        self.reinforce_threshold = float(reinforce_threshold)
+        # 3. Inizializzazione del Client e della config per il merge
+        self.reinforce_threshold = float(memory_config['reinforce_threshold'])
+        self.model_id = memory_config['model_id']
+        self.client = genai.Client(api_key=api_key)
+        self.merge_config = types.GenerateContentConfig(
+            system_instruction=memory_config['system_instruction'],
+            temperature=memory_config['temperature']
+        )
         
-        self.create_tables()
-
     def create_tables(self):
         # Tabella history per i fatti
         self.cursor.execute('''
@@ -118,8 +121,20 @@ class MemoryStore:
                     existing_doc = results['documents'][0][i]
                     existing_metadata = results['metadatas'][0][i]
                     
-                    # Usa la frase più lunga
-                    updated_doc = fact if len(fact) > len(existing_doc) else existing_doc
+                    # Merge del fatto nuovo con quello esistente usando LLM 
+                    prompt = f"""
+                    Informazione A (Esistente): {existing_doc}
+                    Informazione B (Nuova): {fact}
+
+                    Uniscile in una sola frase coerente senza preamboli:
+                    """
+                    # Chiamiamo il modello per il merge
+                    result = self.client.models.generate_content(
+                        model=self.model_id,
+                        config=self.merge_config,
+                        contents=prompt
+                    )
+                    updated_doc = (result.text or '').strip()
                     
                     # Incrementa reinforcement_count (type-safe cast, fail-fast se campo mancante)
                     old_count = existing_metadata['reinforcement_count']

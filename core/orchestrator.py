@@ -71,16 +71,17 @@ class BuddyOrchestrator:
         # Event Router
         self.router = EventRouter()
 
-        # Initialize Memory Store
-        MemoryStore.initialize(self.config['memory'])
-        self.logger.info(f"🧠 MemoryStore initialized")
-
-        # Brain & Archivist
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found in environment")
+        
+        # Initialize Memory Store
+        MemoryStore.initialize(api_key, self.config['memory'])
+        self.logger.info(f"🗄️ MemoryStore initialized (model: {self.config['memory']['model_id']})")
 
+        # Brain & Archivist
         self.brain = BuddyBrain(api_key, self.config['brain'])
+        self.logger.info(f"🧠 Brain initialized (model: {self.config['brain']['model_id']})")
 
         # Initialize Archivist
         archivist_config = self.config.get('archivist', {})

@@ -22,7 +22,24 @@ from infrastructure.memory_store import MemoryStore
 MEMORY_CONFIG = {
     'sqlite_path': "data/system.db",
     'chroma_path': "data/memory",
-    'reinforce_threshold': 0.3
+    'reinforce_threshold': 0.3,
+    'model_id': "gemini-flash-lite-latest",
+    'temperature': 0.1,
+    'system_instruction': """
+        Sei un "Editor di Memoria". 
+        Il tuo compito è unire due informazioni riguardanti lo stesso argomento in una singola frase coerente e concisa.
+
+        REGOLE:
+        - Mantieni TUTTI i dettagli fattuali di entrambe le frasi.
+        - Non ripetere concetti (Deduplica).
+        - Usa la terza persona (es. "L'utente...").
+        - Non aggiungere informazioni inventate.
+        - Sii breve e conciso.
+        INPUT A (Memoria Esistente): {old_fact}
+        INPUT B (Nuova Informazione): {new_fact}
+
+        OUTPUT (Solo la frase unita):
+    """
 }
 
 
@@ -144,7 +161,7 @@ Examples:
     print(f"  Reinforce threshold: {MEMORY_CONFIG['reinforce_threshold']}")
     
     try:
-        store = MemoryStore.initialize(MEMORY_CONFIG)
+        store = MemoryStore.initialize("INSERISCI",MEMORY_CONFIG)
     except Exception as e:
         print(f"❌ Error initializing MemoryStore: {e}")
         return 1
