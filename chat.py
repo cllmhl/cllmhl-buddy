@@ -249,6 +249,15 @@ def build_conversation_end():
     }
 
 
+def build_trigger_archivist():
+    """Costruisce un TRIGGER_ARCHIVIST input event"""
+    return {
+        "type": "trigger_archivist",
+        "priority": "normal",
+        "content": None
+    }
+
+
 # ===== MENU =====
 def print_menu():
     """Stampa il menu principale"""
@@ -287,6 +296,7 @@ def print_menu():
     
     print(f"\n{color('MENU AVANZATO:', Colors.YELLOW + Colors.BOLD)}")
     print(f"  {color('menu', Colors.BLUE)}         → Mostra questo menu")
+    print(f"  {color('archive', Colors.BLUE)}      → Triggera archiviazione memoria")
     print(f"  {color('json', Colors.BLUE)}         → Invia JSON custom")
     print(f"  {color('test', Colors.BLUE)}         → Test sequenza LED+Voce")
     print(f"  {color('barge', Colors.BLUE)}        → Testa barge-in")
@@ -408,6 +418,11 @@ def interactive_loop():
                     event = build_adapter_command(args)
                     send_event(event)
                     print(color(f"✅ Inviato: ADAPTER_COMMAND '{args}'", Colors.MAGENTA))
+                
+                elif action == 'archive':  # Trigger Archivist
+                    event = build_trigger_archivist()
+                    send_event(event)
+                    print(color("✅ Inviato: TRIGGER_ARCHIVIST", Colors.GREEN))
                 
                 # ===== LUCI AMBIENTE =====
                 elif action == 'lighton':  # Accendi luci

@@ -3,7 +3,7 @@
 Database inspection and management tool using MemoryStore.
 
 Usage:
-    python check_db.py              # Show all data
+    python check_db.py --list       # Show all data
     python check_db.py --stats      # Show statistics only
     python check_db.py --reset      # Reset all processed flags to 0
     python check_db.py --clear      # Clear all permanent memories (WARNING!)
@@ -136,13 +136,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python check_db.py              # Show all data
+  python check_db.py --list       # Show all data
   python check_db.py --stats      # Show statistics only
   python check_db.py --reset      # Reset processed flags
   python check_db.py --clear      # Clear permanent memories
         """
     )
     
+    parser.add_argument('--list', action='store_true', 
+                       help='Show all data (history and permanent memories)')
     parser.add_argument('--stats', action='store_true', 
                        help='Show database statistics only')
     parser.add_argument('--reset', action='store_true',
@@ -151,6 +153,10 @@ Examples:
                        help='Clear all permanent memories (DESTRUCTIVE!)')
     parser.add_argument('--limit', type=int, default=100,
                        help='Limit number of history records to show (default: 100)')
+    
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        return 1
     
     args = parser.parse_args()
     
@@ -177,9 +183,11 @@ Examples:
             return 0
         
         # Show data
-        show_stats(store)
+        if args.stats:
+            show_stats(store)
         
-        if not args.stats:
+        if args.list:
+            show_stats(store)
             show_history(store, limit=args.limit)
             show_permanent_memories(store)
         
