@@ -225,7 +225,9 @@ class BuddyBrain:
         ))
         
         # Genera risposta LLM
+        global_state.is_thinking.set()
         response_text = self._generate_response(user_text)
+        global_state.is_thinking.clear()
         
         # Salva risposta in history risposta
         output_events.append(create_output_event(
@@ -315,11 +317,8 @@ class BuddyBrain:
                 
                 # Query ChromaDB per i fatti più rilevanti
                 # Usa una soglia di distanza ragionevole per cosine similarity
-                memories = memory_store.get_semantic_memories(
-                    query_text=last_sentence, 
-                    limit=memory_store.context_limit,
-                    threshold_distance=memory_store.context_threshold 
-                )
+                memories = memory_store.get_semantic_memories(last_sentence)
+
             except Exception as e:
                 logger.error(f"Failed to query MemoryStore for recall: {e}", exc_info=True)
                 memories = []
@@ -328,6 +327,7 @@ class BuddyBrain:
             if memories:
                 context_block = "[Context from Long Term Memory]\n"
                 for i, memory in enumerate(memories, 1):
+                    logger.info(f"🧠 Context Injecting. Memorie retrieved: {memory}")
                     context_block += f"- {memory}\n"
                 
                 enriched_prompt = f"{context_block}\nUser Input: {user_text}"

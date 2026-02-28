@@ -48,8 +48,8 @@ class MemoryStore:
         
         # 3. Inizializzazione del Client e della config per il merge
         self.reinforce_threshold = float(memory_config['reinforce_threshold'])
-        self.limit = int(memory_config.get['limit'])
-        self.threshold_distance = float(memory_config.get['threshold_distance'])
+        self.limit = int(memory_config['limit'])
+        self.threshold_distance = float(memory_config['threshold_distance'])
         self.model_id = memory_config['model_id']
         self.client = genai.Client(api_key=api_key)
         self.merge_config = types.GenerateContentConfig(
@@ -184,11 +184,11 @@ class MemoryStore:
             f"✨ New memory stored [category={category}, importance={importance}]: {fact[:100]}"
         )
 
-    def get_semantic_memories(self, query_text, limit=5, threshold_distance=None):
+    def get_semantic_memories(self, query_text):
         """Cerca i ricordi più simili a quello che dice l'utente."""
         results = self.collection.query(
             query_texts=[query_text],
-            n_results=limit
+            n_results=self.limit,
         )
         if not results.get('documents') or not results['documents']:
             return []
@@ -196,9 +196,11 @@ class MemoryStore:
         docs = results['documents'][0]
         
         # Filtra in base alla distanza se specificato
-        if threshold_distance is not None and results.get('distances') and results['distances']:
+        if self.threshold_distance is not None and results.get('distances') and results['distances']:
             distances = results['distances'][0]
-            docs = [doc for doc, dist in zip(docs, distances) if dist <= threshold_distance]
+            # ChromaDB with cosine distance returns lower values for MORE similar items (1.0 = completely dissimilar, 0.0 = identical)
+            # Make sure we only keep documents that are closer than the threshold distance (dist <= threshold)
+            docs = [doc for doc, dist in zip(docs, distances) if dist <= self.threshold_distance]
             
         return docs
 

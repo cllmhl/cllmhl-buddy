@@ -5,7 +5,7 @@ memory:
   model_id: "gemini-flash-lite-latest"
   temperature: 0.1
   limit: 3
-  threshold_distance: 0.6
+  threshold_distance: 0.3
   system_instruction: |
     Sei un "Editor di Memoria". 
     Il tuo compito è unire due informazioni riguardanti lo stesso argomento in una singola frase coerente e concisa.

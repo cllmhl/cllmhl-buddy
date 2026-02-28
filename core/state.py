@@ -17,6 +17,7 @@ class BuddyState:
     last_conversation_end: Optional[float] = None # Valorizzato da _handle_conversation_end del brain
     is_light_on: bool = True
     is_speaking: threading.Event = field(default_factory=threading.Event)
+    is_thinking: threading.Event = field(default_factory=threading.Event)
 
 # Global state instance
 global_state = BuddyState()
