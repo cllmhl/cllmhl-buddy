@@ -48,6 +48,8 @@ class MemoryStore:
         
         # 3. Inizializzazione del Client e della config per il merge
         self.reinforce_threshold = float(memory_config['reinforce_threshold'])
+        self.limit = int(memory_config.get['limit'])
+        self.threshold_distance = float(memory_config.get['threshold_distance'])
         self.model_id = memory_config['model_id']
         self.client = genai.Client(api_key=api_key)
         self.merge_config = types.GenerateContentConfig(
@@ -182,14 +184,23 @@ class MemoryStore:
             f"✨ New memory stored [category={category}, importance={importance}]: {fact[:100]}"
         )
 
-    def get_semantic_memories(self, query_text, limit=5):
+    def get_semantic_memories(self, query_text, limit=5, threshold_distance=None):
         """Cerca i ricordi più simili a quello che dice l'utente."""
         results = self.collection.query(
             query_texts=[query_text],
             n_results=limit
         )
-        # Restituiamo solo i testi (documents) trovati
-        return results['documents'][0] if results['documents'] else []
+        if not results.get('documents') or not results['documents']:
+            return []
+            
+        docs = results['documents'][0]
+        
+        # Filtra in base alla distanza se specificato
+        if threshold_distance is not None and results.get('distances') and results['distances']:
+            distances = results['distances'][0]
+            docs = [doc for doc, dist in zip(docs, distances) if dist <= threshold_distance]
+            
+        return docs
 
     def get_high_priority_memories(self, threshold=4):
         """Recupera le memorie ad alta priorità (es. importanza >= 4)."""

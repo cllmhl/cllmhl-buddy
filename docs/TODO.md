@@ -18,8 +18,8 @@
 ### 2.1 Long term Memory. Vedi context.png
 
 #### 2.1.1 Attivazione della Memoria (Retrieval & RAG)
-- [ ] **Implementazione "Recall" (Smart Trigger)**: Prima di inviare il prompt dell'utente all'LLM principale (Chat): Vettorializzare l'ultima frase dell'utente. Query su ChromaDB per estrarre i "Fatti" più rilevanti (Top-K).
-- [ ] **Context Injection**: Iniettare i fatti recuperati nel System Prompt della chat corrente (es. in una sezione [Context from Long Term Memory]).
+- [x] **Implementazione "Recall" (Smart Trigger)**: Prima di inviare il prompt dell'utente all'LLM principale (Chat): Vettorializzare l'ultima frase dell'utente. Query su ChromaDB per estrarre i "Fatti" più rilevanti (Top-K).
+- [x] **Context Injection**: Iniettare i fatti recuperati nel System Prompt della chat corrente (es. in una sezione [Context from Long Term Memory]).
 - [ ] **Personalizzazione Dinamica**: Assicurarsi che le preferenze recuperate sovrascrivano i default generici.
 
 #### 2.1.2 Il "Giardiniere" (Dimenticatoio Selettivo (Decay))

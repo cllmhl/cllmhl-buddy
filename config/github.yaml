@@ -4,6 +4,8 @@ memory:
   reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
   model_id: "gemini-flash-lite-latest"
   temperature: 0.1
+  limit: 3
+  threshold_distance: 0.6
   system_instruction: |
     Sei un "Editor di Memoria". 
     Il tuo compito è unire due informazioni riguardanti lo stesso argomento in una singola frase coerente e concisa.

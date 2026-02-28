@@ -4,6 +4,8 @@ memory:
   reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
   model_id: "gemini-flash-lite-latest"
   temperature: 0.1
+  limit: 3
+  threshold_distance: 0.6
   system_instruction: |
     Sei un "Editor di Memoria". 
     Il tuo compito è unire due informazioni riguardanti lo stesso argomento in una singola frase coerente e concisa.
@@ -67,7 +69,7 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.6  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        sensitivity: 0.5  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"

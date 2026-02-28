@@ -302,10 +302,44 @@ class BuddyBrain:
         """
         
         try:
-            logger.debug(f"Sending prompt to LLM:\n{user_text}")
+            logger.debug(f"Original user_text:\n{user_text}")
             
-            # Invia il prompt completo
-            response = self.chat_session.send_message(user_text)
+            # 1. Recupero Fatti Rilevanti (Smart Trigger & Recall)
+            # Estraiamo l'ultima frase dell'utente
+            sentences = [s.strip() for s in user_text.replace('?', '.').replace('!', '.').split('.') if s.strip()]
+            last_sentence = sentences[-1] if sentences else user_text
+            
+            try:
+                from infrastructure.memory_store import MemoryStore
+                memory_store = MemoryStore.get_instance()
+                
+                # Query ChromaDB per i fatti più rilevanti
+                # Usa una soglia di distanza ragionevole per cosine similarity
+                memories = memory_store.get_semantic_memories(
+                    query_text=last_sentence, 
+                    limit=memory_store.context_limit,
+                    threshold_distance=memory_store.context_threshold 
+                )
+            except Exception as e:
+                logger.error(f"Failed to query MemoryStore for recall: {e}", exc_info=True)
+                memories = []
+
+            # 2. Context Injection
+            if memories:
+                context_block = "[Context from Long Term Memory]\n"
+                for i, memory in enumerate(memories, 1):
+                    context_block += f"- {memory}\n"
+                
+                enriched_prompt = f"{context_block}\nUser Input: {user_text}"
+                logger.info(f"🧠 Context Injected. Memories retrieved: {len(memories)}")
+                logger.debug(f"Sending enriched prompt to LLM:\n{enriched_prompt}")
+                
+                # Invia il prompt arricchito
+                response = self.chat_session.send_message(enriched_prompt)
+            else:
+                logger.debug(f"Sending prompt to LLM:\n{user_text}")
+                # Invia il prompt originale
+                response = self.chat_session.send_message(user_text)
             
             # Fail fast: response deve esistere
             if not response:
