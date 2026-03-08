@@ -19,10 +19,13 @@ class SchedulerInput(InputPort):
         super().__init__(name, config, input_queue)
         self.light_off_timeout = int(config["light_off_timeout"])
         self.conversation_chat_timeout = int(config["conversation_chat_timeout"])
+        self.light_control_enabled = config["light_control_enabled"]
+        self.light_control_start_hour = int(config["light_control_start_hour"])
+        self.light_control_end_hour = int(config["light_control_end_hour"])
 
         self.last_processed_conversation_end = 0.0
         self.worker_thread = None
-        logger.info(f"⏰ SchedulerInput initialized (light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s)")
+        logger.info(f"⏰ SchedulerInput initialized (light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s, light_control: {self.light_control_enabled}, {self.light_control_start_hour}-{self.light_control_end_hour})")
 
     def start(self) -> None:
         self.running = True
@@ -53,9 +56,16 @@ class SchedulerInput(InputPort):
 
             self._check_chat_timeout()
 
-            # Controlla luci solo tra le 17:00 e le 09:00
-            if current_hour >= 17 or current_hour < 9:
-                self._check_lights()
+            # Controlla luci in base alla configurazione
+            if self.light_control_enabled:
+                if self.light_control_start_hour > self.light_control_end_hour:
+                    # Caso in cui scavalca la mezzanotte (es. 17 - 9)
+                    if current_hour >= self.light_control_start_hour or current_hour < self.light_control_end_hour:
+                        self._check_lights()
+                else:
+                    # Caso nello stesso giorno (es. 8 - 20)
+                    if self.light_control_start_hour <= current_hour < self.light_control_end_hour:
+                        self._check_lights()
 
     def _check_chat_timeout(self) -> None:
         """Controlla se è necessario resettare la sessione chat per inattività"""

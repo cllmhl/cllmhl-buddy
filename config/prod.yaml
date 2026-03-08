@@ -2,7 +2,7 @@ memory:
   sqlite_path: "data/system.db"
   chroma_path: "data/memory"
   reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
-  model_id: "gemini-flash-lite-latest"
+  model_id: "gemini-3.1-pro-preview"
   temperature: 0.1
   limit: 3
   threshold_distance: 0.3 # Soglia di similarità per memorie dainiettare nel contesto (0=identico, 2=opposto)
@@ -22,8 +22,8 @@ memory:
     OUTPUT (Solo la frase unita):
 
 brain:
-  model_id: "gemini-2.5-flash"
-  temperature: 0.7
+  model_id: "gemini-3.1-pro-preview"
+  temperature: 0.70
   system_instruction: | 
     CHI SEI: Sei un'entità digitale di nome Buddy.
     DOVE SEI:La tua posizione viene rilevata dal tool get_current_position.
@@ -33,7 +33,7 @@ brain:
     Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente.
 
 archivist:
-  model_id: "gemini-2.5-flash"
+  model_id: "gemini-3.1-pro-preview"
   temperature: 0.1
   system_instruction: |
     Sei l'Archivista della memoria a lungo termine di Buddy.
@@ -69,7 +69,7 @@ adapters:
     - class: "WakewordInput"
       config:
         wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.5  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        sensitivity: 0.35  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"
@@ -96,6 +96,9 @@ adapters:
       config:
         light_off_timeout: 120    # Timeout spegnimento luci (secondi)
         conversation_chat_timeout: 600 # Timeout reset sessione chat (secondi)
+        light_control_enabled: false  # Abilita controllo automatico luci in base all'orario
+        light_control_start_hour: 17
+        light_control_end_hour: 9
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"
