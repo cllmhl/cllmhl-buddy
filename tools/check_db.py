@@ -23,6 +23,8 @@ MEMORY_CONFIG = {
     'sqlite_path': "data/system.db",
     'chroma_path': "data/memory",
     'reinforce_threshold': 0.3,
+    'limit': 5,
+    'threshold_distance': 1.0,
     'model_id': "gemini-flash-lite-latest",
     'temperature': 0.1,
     'system_instruction': """
