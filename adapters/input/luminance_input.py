@@ -48,6 +48,7 @@ class LuminanceInput(InputPort):
         try:
             self.ser = serial.Serial(self.port, self.baud_rate, timeout=1)
             time.sleep(2) # L'Arduino si riavvia all'apertura della seriale
+            self.ser.reset_input_buffer()
             logger.info(f"✅ Connesso alla seriale {self.port} per LDR")
             return True
         except serial.SerialException as e:
