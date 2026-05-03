@@ -56,6 +56,7 @@ class BuddyBrain:
             InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
             InputEventType.SENSOR_LUMINANCE: self._handle_luminance_input,
+            InputEventType.SENSOR_DOOR: self._handle_door_input,
             InputEventType.TRIGGER_ARCHIVIST: self._handle_trigger_archivist,
             InputEventType.LIGHT_ON: self._handle_light_on,
             InputEventType.LIGHT_OFF: self._handle_light_off,
@@ -286,6 +287,15 @@ class BuddyBrain:
         """Gestisce eventi dal sensore di luminosità."""
         luminance = event.content
         logger.info(f"🔆 Luminance updated: {luminance}")
+        return []
+
+    def _handle_door_input(self, event: InputEvent) -> List[OutputEvent]:
+        """Gestisce eventi dal sensore della porta."""
+        is_closed = event.content
+        if is_closed:
+            logger.info("🚪 Chiusura porta")
+        else:
+            logger.info("🚪 Apertura porta")
         return []
 
     def _handle_light_on(self, event: InputEvent) -> List[OutputEvent]:

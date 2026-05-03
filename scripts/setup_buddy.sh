@@ -33,7 +33,10 @@ sudo apt-get install -y \
     wget \
     sox \
     libsox-fmt-all \
-    libgpiod3
+    libgpiod3 \
+    mosquitto \
+    mosquitto-clients \
+    nodejs
 
 echo "--- 3. Installazione pacchetti Python da requirements.txt ---"
 # Aggiorniamo prima pip e setuptools per evitare problemi con pacchetti binari

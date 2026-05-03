@@ -6,8 +6,8 @@
 - [ ] **Bentornato a casa:** capisce che entro in casa: Saluto ed inizio dialogo (dipendiamo dal sensore porta).
 
 ### 1.2 Integrazione Hardware
-- [ ] **Sensore Luminosita:** Integrazione LDR (Luce): questo su GPIO non va perchè analogico. DObbiamo fare una catena. Mettiamo il sensore su arduino, colleghiamo arduino alla porta USB del Raspberry. Leggiamo dalla porta USB i dati di luminosità. In pratica la porta USB alimenta Arduino ed allo stesso tempo è un input di segnale di luce.
-- [ ] **Sensore Porta:** Qui il giro e' un pochino lungo e si spendono 40 euro: 20 euro per il capo dei sensori ZigBee: "SONOFF ZigBee 3.0 USB Dongle Plus, TI CC2652P" e 20 euro per "Aqara Détecteur d'Ouverture Porte/Fenêtre"
+- [x] **Sensore Luminosita:** Integrazione LDR (Luce): questo su GPIO non va perchè analogico. DObbiamo fare una catena. Mettiamo il sensore su arduino, colleghiamo arduino alla porta USB del Raspberry. Leggiamo dalla porta USB i dati di luminosità. In pratica la porta USB alimenta Arduino ed allo stesso tempo è un input di segnale di luce.
+- [x] **Sensore Porta:** Qui il giro e' un pochino lungo e si spendono 40 euro: 20 euro per il capo dei sensori ZigBee: "SONOFF ZigBee 3.0 USB Dongle Plus, TI CC2652P" e 20 euro per "Aqara Détecteur d'Ouverture Porte/Fenêtre"
 - [ ] **Display 7-Segment (TM1637):** Visualizzazione codici stato (es. "Err", "On")
 - [ ] **LED a piacere:** ci possiamo mettere tutti i led che vogliamo
 - [ ] **Migliorare meccanismo di Feedback:** Sviluppo di un sistema per notificare l'utente sullo stato del sistema (es. tramite LED, display o notifiche vocali).

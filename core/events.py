@@ -24,6 +24,7 @@ class InputEventType(Enum):
     SENSOR_PRESENCE = "sensor_presence"   # Radar presenza
     SENSOR_TEMPERATURE = "sensor_temperature"
     SENSOR_LUMINANCE = "sensor_luminance" # Sensore luminosità LDR
+    SENSOR_DOOR = "sensor_door"           # Sensore porta ingresso
     # Luci
     LIGHT_ON = "light_on"                 # Segnala accensione luce
     LIGHT_OFF = "light_off"               # Segnala spegnimento luce
