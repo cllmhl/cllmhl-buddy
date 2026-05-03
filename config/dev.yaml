@@ -111,8 +111,6 @@ adapters:
         light_off_timeout: 120    # Timeout spegnimento luci (secondi)
         conversation_chat_timeout: 600 # Timeout reset sessione chat (secondi)
         light_control_enabled: false  # Abilita controllo automatico luci in base all'orario
-        light_control_start_hour: 17
-        light_control_end_hour: 9
 
     # Pipe Input - IPC communication
     - class: "PipeInputAdapter"

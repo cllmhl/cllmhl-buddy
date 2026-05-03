@@ -20,12 +20,10 @@ class SchedulerInput(InputPort):
         self.light_off_timeout = int(config["light_off_timeout"])
         self.conversation_chat_timeout = int(config["conversation_chat_timeout"])
         self.light_control_enabled = config["light_control_enabled"]
-        self.light_control_start_hour = int(config["light_control_start_hour"])
-        self.light_control_end_hour = int(config["light_control_end_hour"])
 
         self.last_processed_conversation_end = 0.0
         self.worker_thread = None
-        logger.info(f"⏰ SchedulerInput initialized (light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s, light_control: {self.light_control_enabled}, {self.light_control_start_hour}-{self.light_control_end_hour})")
+        logger.info(f"⏰ SchedulerInput initialized (light_off_timeout: {self.light_off_timeout}s, chat_timeout: {self.conversation_chat_timeout}s, light_control: {self.light_control_enabled})")
 
     def start(self) -> None:
         self.running = True
@@ -58,14 +56,7 @@ class SchedulerInput(InputPort):
 
             # Controlla luci in base alla configurazione
             if self.light_control_enabled:
-                if self.light_control_start_hour > self.light_control_end_hour:
-                    # Caso in cui scavalca la mezzanotte (es. 17 - 9)
-                    if current_hour >= self.light_control_start_hour or current_hour < self.light_control_end_hour:
-                        self._check_lights()
-                else:
-                    # Caso nello stesso giorno (es. 8 - 20)
-                    if self.light_control_start_hour <= current_hour < self.light_control_end_hour:
-                        self._check_lights()
+                self._check_lights()
 
     def _check_chat_timeout(self) -> None:
         """Controlla se è necessario resettare la sessione chat per inattività"""
