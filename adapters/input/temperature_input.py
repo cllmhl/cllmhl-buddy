@@ -157,7 +157,7 @@ class TemperatureInput(InputPort):
                         }
                     )
                     self.input_queue.put(climate_event)
-                    logger.info(f"🌡️  Evento DHT11 inviato: T={temperature:.1f}°C, H={humidity:.1f}%")
+                    logger.debug(f"🌡️  Evento DHT11 inviato: T={temperature:.1f}°C, H={humidity:.1f}%")
 
             except RuntimeError as e:
                 # Errore comune con DHT11, non critico

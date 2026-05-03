@@ -184,7 +184,7 @@ class RadarInput(InputPort):
     
     def _send_presence_event(self, presence: bool, data: Dict[str, Any]):
         """Invia un evento di presenza al cervello."""
-        logger.info(
+        logger.debug(
             f"📡 Radar Event: Presence={presence} | "
             f"Distance={data['distance']}cm | "
             f"Movement Energy={data['mov_energy']} | "
