@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import time
 from typing import Optional
 import threading
 
@@ -12,7 +13,8 @@ class BuddyState:
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     luminance: Optional[int] = None
-    is_door_closed: Optional[bool] = None
+    is_door_closed: bool = True
+    last_door_closed: float = field(default_factory=time.time)
     last_presence: Optional[float] = None
     last_absence: Optional[float] = None
     last_conversation_start: Optional[float] = None # Valorizzato da _handle_wakeword del brain

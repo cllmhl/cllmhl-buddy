@@ -5,6 +5,7 @@ Door Input Adapter - Door sensor via MQTT
 import logging
 import threading
 import json
+import time
 import paho.mqtt.client as mqtt
 from queue import PriorityQueue
 
@@ -33,9 +34,6 @@ class DoorInput(InputPort):
         self.client.on_message = self._on_message
         self.worker_thread = None
         
-        # Stato locale per evitare eventi doppi
-        self.last_state = None
-        
         logger.info(
             f"🚪 DoorInput initialized "
             f"(broker: {self.broker}, topic: {self.topic})"
@@ -51,28 +49,25 @@ class DoorInput(InputPort):
             if "contact" in payload:
                 is_closed = payload["contact"] == True
                 
-                # Invia l'evento solo se c'è un reale cambio di stato
-                if self.last_state != is_closed:
-                    self.last_state = is_closed
-                    
-                    # Aggiorna lo stato globale
-                    global_state.is_door_closed = is_closed
-                    
-                    door_event = create_input_event(
-                        InputEventType.SENSOR_DOOR,
-                        is_closed,
-                        source=self.name,
-                        priority=EventPriority.NORMAL,
-                        metadata={
-                            'battery': payload.get('battery', 'N/A')
-                        }
-                    )
-                    self.input_queue.put(door_event)
-                    
-                    if is_closed:
-                        logger.debug("🚪 STATO: La porta è CHIUSA 🟢")
-                    else:
-                        logger.debug("🚨 STATO: La porta è APERTA 🔴")
+                # Aggiorna lo stato globale
+                global_state.is_door_closed = is_closed
+                if is_closed:
+                    global_state.last_door_closed = time.time()
+                door_event = create_input_event(
+                    InputEventType.SENSOR_DOOR,
+                    is_closed,
+                    source=self.name,
+                    priority=EventPriority.NORMAL,
+                    metadata={
+                        'battery': payload.get('battery', 'N/A')
+                    }
+                )
+                self.input_queue.put(door_event)
+                
+                if is_closed:
+                    logger.debug("🚪 STATO: La porta è CHIUSA 🟢")
+                else:
+                    logger.debug("🚨 STATO: La porta è APERTA 🔴")
         except Exception as e:
             logger.error(f"Errore parsing messaggio MQTT da {self.topic}: {e}")
 
