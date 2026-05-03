@@ -2,7 +2,7 @@ memory:
   sqlite_path: "data/system.db"
   chroma_path: "data/memory"
   reinforce_threshold: 0.3  # Soglia di similarità per reinforcement memorie (0=identico, 2=opposto)
-  model_id: "gemini-3.1-pro-preview"
+  model_id: "gemini-flash-lite-latest"
   temperature: 0.1
   limit: 3
   threshold_distance: 0.3 # Soglia di similarità per memorie dainiettare nel contesto (0=identico, 2=opposto)
@@ -22,7 +22,7 @@ memory:
     OUTPUT (Solo la frase unita):
 
 brain:
-  model_id: "gemini-3.1-pro-preview"
+  model_id: "gemini-flash-lite-latest"
   temperature: 0.70
   system_instruction: | 
     CHI SEI: Sei un'entità digitale di nome Buddy.
@@ -33,7 +33,7 @@ brain:
     Se non trovi dati certi, non inventare: dillo chiaramente e usa la tua curiosità per fare domande all'utente.
 
 archivist:
-  model_id: "gemini-3.1-pro-preview"
+  model_id: "gemini-flash-lite-latest"
   temperature: 0.1
   system_instruction: |
     Sei l'Archivista della memoria a lungo termine di Buddy.
@@ -90,6 +90,14 @@ adapters:
       config:
         pin: 18
         interval: 900  # Intervallo di lettura in secondi
+
+    # Sensore di luminosità (LDR via Arduino)
+    - class: "LuminanceInput"
+      config:
+        port: "/dev/ttyACM0"
+        baud_rate: 9600
+        interval: 900  # Intervallo di lettura in secondi
+        threshold: 50
 
     # Scheduler Input - per eventi temporizzati (e.g. archivista)
     - class: "SchedulerInput"

@@ -55,6 +55,7 @@ class BuddyBrain:
             InputEventType.USER_SPEECH: self._handle_user_input,
             InputEventType.SENSOR_PRESENCE: self._handle_presence_input,
             InputEventType.SENSOR_TEMPERATURE: self._handle_temperature_input,
+            InputEventType.SENSOR_LUMINANCE: self._handle_luminance_input,
             InputEventType.TRIGGER_ARCHIVIST: self._handle_trigger_archivist,
             InputEventType.LIGHT_ON: self._handle_light_on,
             InputEventType.LIGHT_OFF: self._handle_light_off,
@@ -279,6 +280,12 @@ class BuddyBrain:
         
         logger.info(f"🌡️  Temperature/Humidity updated in global state: {temp}°C / {humidity}%")
    
+        return []
+
+    def _handle_luminance_input(self, event: InputEvent) -> List[OutputEvent]:
+        """Gestisce eventi dal sensore di luminosità."""
+        luminance = event.content
+        logger.info(f"🔆 Luminance updated: {luminance}")
         return []
 
     def _handle_light_on(self, event: InputEvent) -> List[OutputEvent]:
