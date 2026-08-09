@@ -19,38 +19,6 @@ class SuppressStream:
         os.close(self.old_err)
 
 
-def find_jabra_pvrecorder() -> Optional[int]:
-    """
-    Trova l'indice del dispositivo Jabra in PvRecorder.
-    
-    Returns:
-        Indice del device Jabra, o None se non trovato
-        
-    Raises:
-        ImportError: Se PvRecorder non è disponibile
-    """
-    try:
-        from pvrecorder import PvRecorder
-    except ImportError:
-        logger.error("PvRecorder not available")
-        raise ImportError("PvRecorder required for Jabra detection")
-    
-    available_devices = PvRecorder.get_available_devices()
-    logger.info("Available PvRecorder audio devices:")
-    
-    jabra_index = None
-    for i, device in enumerate(available_devices):
-        logger.info(f"  PvRecorder Index {i}: {device}")
-        if "Jabra" in device:
-            jabra_index = i
-            logger.info(f"✅ Jabra found in PvRecorder at index {i}: {device}")
-    
-    if jabra_index is None:
-        logger.error("❌ Jabra device not found in PvRecorder device list")
-    
-    return jabra_index
-
-
 def find_jabra_pyaudio() -> Optional[int]:
     """
     Trova l'indice del dispositivo Jabra in PyAudio (per speech_recognition).

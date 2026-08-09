@@ -6,8 +6,8 @@ gTTS
 pyaudio
 gpiozero
 lgpio
-pvporcupine
-pvrecorder
+numpy
+openwakeword
 pyserial
 adafruit-circuitpython-dht
 pytest

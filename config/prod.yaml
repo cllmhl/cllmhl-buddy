@@ -68,8 +68,8 @@ adapters:
     # Wake word detection con Porcupine
     - class: "WakewordInput"
       config:
-        wakeword: "models/Ei-Buddy_en_raspberry-pi_v4_0_0.ppn"
-        sensitivity: 0.35  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
+        wakeword: "models/Hey_Buddy_20260524_215927.onnx"
+        sensitivity: 0.5  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
     
     # Speech recognition con Jabra (attivato dopo wakeword)
     - class: "EarInput"
