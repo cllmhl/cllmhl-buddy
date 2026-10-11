@@ -250,23 +250,18 @@ class BuddyBrain:
         
         return output_events
     
+
     def _handle_presence_input(self, event: InputEvent) -> List[OutputEvent]:
         """Gestisce eventi dal sensore di presenza."""
 
+        # lo stato globale viene aggiornato nel radar_input.py; questo metodo serve solo per loggare
         metadata = event.metadata or {}
         mov_energy = metadata.get('mov_energy', 0)
         static_energy = metadata.get('static_energy', 0)
         distance = metadata.get('distance', 0)
         logger.info(f"👤 Presence={event.content}, dist={distance}cm, mov_energy={mov_energy}, static_energy={static_energy}")
-        
-        # --- Gestione Presenza Rilevata ---
-        if event.content is True:
-            global_state.last_presence = time.time()
-            
-        # --- Gestione Assenza Rilevata ---
-        elif event.content is False:
-            global_state.last_absence = time.time()
-  
+        logger.info(f"👤 isSomebodyAtHome={global_state.isSomebodyAtHome()}")
+
         return []       
     
     def _handle_temperature_input(self, event: InputEvent) -> List[OutputEvent]:
@@ -296,6 +291,53 @@ class BuddyBrain:
             logger.info("🚪 Chiusura porta")
         else:
             logger.info("🚪 Apertura porta")
+            
+            # Creiamo una lista per accumulare gli eventi da restituire
+            output_events: List[OutputEvent] = []
+            
+            if global_state.isSomebodyAtHome():
+                # Qualcuno è in casa, quindi sta uscendo
+                logger.info("🚪 Porta aperta con qualcuno in casa: saluto in uscita e spengo le luci")
+                
+                output_events.append(
+                    create_output_event(
+                        OutputEventType.SPEAK,
+                        "Arrivederci! A presto.",
+                        priority=EventPriority.HIGH
+                    )
+                )
+                output_events.append(
+                    create_output_event(
+                        OutputEventType.LIGHT_OFF,
+                        None,
+                        priority=EventPriority.HIGH
+                    )
+                )
+            else:
+                # Nessuno è in casa, quindi sta entrando
+                logger.info("🚪 Porta aperta con casa vuota: saluto di benvenuto")
+                
+                output_events.append(
+                    create_output_event(
+                        OutputEventType.SPEAK,
+                        "Ciao! Benvenuto a casa!",
+                        priority=EventPriority.HIGH
+                    )
+                )
+                
+                # Controllo aggiuntivo per l'illuminazione
+                if global_state.luminance is not None and global_state.luminance < 100:
+                    logger.info("💡 Bassa luminosità rilevata all'ingresso, accendo le luci")
+                    output_events.append(
+                        create_output_event(
+                            OutputEventType.LIGHT_ON,
+                            None,
+                            priority=EventPriority.HIGH
+                        )
+                    )
+                    
+            return output_events
+            
         return []
 
     def _handle_light_on(self, event: InputEvent) -> List[OutputEvent]:
