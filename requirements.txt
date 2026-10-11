@@ -22,3 +22,4 @@ requests
 wikipedia
 git+https://github.com/almottier/TapoP100.git@main#egg=PyP100
 paho-mqtt
+tapo
