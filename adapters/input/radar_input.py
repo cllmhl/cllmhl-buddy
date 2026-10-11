@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any
 
 from adapters.ports import InputPort
 from core.events import create_input_event, InputEventType, EventPriority
+from core.state import global_state
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,12 @@ class RadarInput(InputPort):
                 
                 if data:
                     current_presence = data['presence']
+                    # aggiorna lo stato globale della presenza
+                    logger.info(f"📡 Presence={current_presence}")
+                    if current_presence == True:
+                        global_state.last_presence = time.time()
+                    else:
+                        global_state.last_absence = time.time()
                     
                     # Inizializza o controlla il cambio di stato per la presenza
                     if last_presence_state is None:
