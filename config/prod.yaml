@@ -65,25 +65,13 @@ archivist:
 
 adapters:
   input:
-    # Wake word detection con Porcupine
-    - class: "WakewordInput"
-      config:
-        wakeword: "models/Hey_Buddy_20260524_215927.onnx"
-        sensitivity: 0.5  # 0.0 (meno sensibile) - 1.0 (più sensibile), default: 0.5
-    
-    # Speech recognition con Jabra (attivato dopo wakeword)
-    - class: "EarInput"
-      config:
-        stt_mode: "cloud"  # "cloud" o "local"
-        max_silence_seconds: 7.0  # Timeout silenzio (come Alexa)
-
     # Radar fisico
     - class: "RadarInput"
       config:
         port: "/dev/ttyAMA0"
         baudrate: 256000
-        interval: 0.5 # Intervallo di scansione in secondi
-        sensitivity: 3  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
+        interval: 2 # Intervallo di scansione in secondi
+        sensitivity: 2  # Valori possibili: 1 (bassa), 2 (media), 3 (alta)
 
     # Sensore temperatura/umidità fisico
     - class: "TemperatureInput"
@@ -128,8 +116,8 @@ adapters:
     - class: "JabraVoiceOutput"
       config:
         queue_maxsize: 10
-        tts_mode: "texttospeech"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
-        voice_name: "it-IT-Chirp3-HD-Zubenelgenubi"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
+        tts_mode: "cloud"  # "cloud" (gTTS), "local" (Piper) o "texttospeech" (Google Cloud)
+        voice_name: "it-IT-Standard-A"  # "riccardo" per Piper, "it-IT-Standard-A" per gTTS, it-IT-Chirp3-HD-Zubenelgenubi per voci Google Cloud: https://cloud.google.com/text-to-speech/docs/voices
 
     # LED con GPIO
     - class: "GPIOLEDOutput"
@@ -147,16 +135,6 @@ adapters:
         devices:
           stanza: "192.168.1.82"    # IP address of the 'stanza' bulb
           ingresso: "192.168.1.158"  # IP address of the 'ingresso' bulb
-
-    # Database
-    - class: "DatabaseOutput"
-      config:
-        queue_maxsize: 10
-    
-    # Archivist - Distillazione memoria
-    - class: "ArchivistOutput"
-      config:
-        queue_maxsize: 10
 
 queues:
   input_maxsize: 10
