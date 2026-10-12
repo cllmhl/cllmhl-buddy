@@ -161,7 +161,7 @@ class RadarInput(InputPort):
                 if data:
                     current_presence = data['presence']
                     # aggiorna lo stato globale della presenza
-                    logger.info(f"📡 Presence={current_presence}")
+                    logger.debug(f"📡 Presence={current_presence}")
                     if current_presence == True:
                         global_state.last_presence = time.time()
                     else:
@@ -171,7 +171,7 @@ class RadarInput(InputPort):
                     if last_presence_state is None:
                         # Inizializza e invia il primo stato
                         last_presence_state = current_presence
-                        logger.info(f"📡 Radar initialized with state: Presence={last_presence_state}")
+                        logger.debug(f"📡 Radar initialized with state: Presence={last_presence_state}")
                         self._send_presence_event(last_presence_state, data)
 
                     elif current_presence != last_presence_state:
