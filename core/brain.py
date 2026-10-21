@@ -326,7 +326,7 @@ class BuddyBrain:
                 )
                 
                 # Controllo aggiuntivo per l'illuminazione
-                if global_state.luminance is not None and global_state.luminance < 100:
+                if global_state.luminance is None or global_state.luminance < 150:
                     logger.info("💡 Bassa luminosità rilevata all'ingresso, accendo le luci")
                     output_events.append(
                         create_output_event(
@@ -335,6 +335,8 @@ class BuddyBrain:
                             priority=EventPriority.HIGH
                         )
                     )
+                else: 
+                    logger.info(f"💡 Luminosità sufficiente: {global_state.luminance}, non accendo le luci")
                     
             return output_events
             
